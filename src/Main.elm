@@ -25,11 +25,33 @@ type alias Model =
 
 
 type alias Config =
-    { fooFontSize : Float
-    , fooString : String
-    , barFontSize : Float
-    , barString : String
-    , barColor : Color
+    { fooFontSize : CFloat
+    , fooString : CString
+    , barFontSize : CFloat
+    , barString : CString
+    , barColor : CColor
+    , someNum : CInt
+    }
+
+
+type alias CInt =
+    { val : Int
+    }
+
+
+type alias CFloat =
+    { val : Float
+    }
+
+
+type alias CString =
+    { val : String
+    }
+
+
+type alias CColor =
+    { val : Color
+    , state : ColorPicker.State
     }
 
 
@@ -41,11 +63,12 @@ type Msg
 init : Model
 init =
     { config =
-        { fooFontSize = 24
-        , fooString = "hi im foo"
-        , barFontSize = 36
-        , barString = "hello im bar"
-        , barColor = Color.rgb 0 0.4 0.9
+        { fooFontSize = CFloat 24
+        , fooString = CString "hi im foo"
+        , barFontSize = CFloat 36
+        , barString = CString "hello im bar"
+        , barColor = CColor (Color.rgba 0 0.4 0.9 0.5) ColorPicker.empty
+        , someNum = CInt 5
         }
     }
 
@@ -65,14 +88,14 @@ view { config } =
     E.layout [ E.padding 20 ]
         (E.column []
             [ E.row
-                [ EFont.size (round config.fooFontSize)
+                [ EFont.size (round config.fooFontSize.val)
                 ]
-                [ E.text <| "Foo: " ++ config.fooString ]
+                [ E.text <| "Foo: " ++ config.fooString.val ]
             , E.row
-                [ EFont.size (round config.barFontSize)
-                , EBackground.color (colorForE config.barColor)
+                [ EFont.size (round config.barFontSize.val)
+                , EBackground.color (colorForE config.barColor.val)
                 ]
-                [ E.text <| "Bar: " ++ config.barString ]
+                [ E.text <| "Bar: " ++ config.barString.val ]
             , E.row [] [ E.text " " ]
             , E.row [] [ E.text "---" ]
             , E.row [] [ E.text " " ]
@@ -100,10 +123,10 @@ px num =
 
 
 type ConfigVal
-    = String (Config -> String) (String -> Config -> Config)
-    | Int (Config -> Int) (Int -> Config -> Config)
-    | Float (Config -> Float) (Float -> Config -> Config)
-    | Color (Config -> Color) (Color -> Config -> Config)
+    = String (Config -> CString) (CString -> Config -> Config)
+    | Int (Config -> CInt) (CInt -> Config -> Config)
+    | Float (Config -> CFloat) (CFloat -> Config -> Config)
+    | Color (Config -> CColor) (CColor -> Config -> Config)
 
 
 formList : List ( String, ConfigVal )
@@ -113,34 +136,48 @@ formList =
     , ( "Bar font size", Float .barFontSize (\a c -> { c | barFontSize = a }) )
     , ( "Bar string", String .barString (\a c -> { c | barString = a }) )
     , ( "Bar color", Color .barColor (\a c -> { c | barColor = a }) )
+    , ( "Some num", Int .someNum (\a c -> { c | someNum = a }) )
     ]
 
 
 viewConfig : Config -> Element Msg
 viewConfig config =
-    E.column []
-        (List.map (viewConfigRow config) formList)
+    E.table []
+        { data = formList
+        , columns =
+            [ { header = E.none
+              , width = E.fill
+              , view =
+                    \( label, configVal ) ->
+                        E.text label
+              }
+            , { header = E.none
+              , width = E.fill
+              , view = viewChanger config
+              }
+            ]
+        }
 
 
-viewConfigRow : Config -> ( String, ConfigVal ) -> Element Msg
-viewConfigRow config ( label, configVal ) =
+viewChanger : Config -> ( String, ConfigVal ) -> Element Msg
+viewChanger config ( label, configVal ) =
     case configVal of
         String getter setter ->
             textInputHelper
                 { label = label
-                , valStr = getter config
-                , setterMsg = \newStr -> ChangeConfig (setter newStr)
+                , valStr = (getter config).val
+                , setterMsg = \newStr -> ChangeConfig (setter (CString newStr))
                 }
 
         Int getter setter ->
             textInputHelper
                 { label = label
-                , valStr = String.fromInt (getter config)
+                , valStr = String.fromInt (getter config).val
                 , setterMsg =
                     \newStr ->
                         case String.toInt newStr of
                             Just newNum ->
-                                ChangeConfig (setter newNum)
+                                ChangeConfig (setter (CInt newNum))
 
                             Nothing ->
                                 ChangeConfig identity
@@ -149,33 +186,44 @@ viewConfigRow config ( label, configVal ) =
         Float getter setter ->
             textInputHelper
                 { label = label
-                , valStr = String.fromFloat (getter config)
+                , valStr = String.fromFloat (getter config).val
                 , setterMsg =
                     \newStr ->
                         case String.toFloat newStr of
                             Just newNum ->
-                                ChangeConfig (setter newNum)
+                                ChangeConfig (setter (CFloat newNum))
 
                             Nothing ->
                                 ChangeConfig identity
                 }
 
-        Color _ _ ->
-            Debug.todo ""
-
-
-
---ColorPicker.view model.colour model.colorPicker
---    |> Html.map ColorPickerMsg
+        Color getter setter ->
+            ColorPicker.view
+                (getter config).val
+                (getter config).state
+                |> E.html
+                |> E.map
+                    (\pickerMsg ->
+                        let
+                            ( newPickerState, newColor ) =
+                                ColorPicker.update
+                                    pickerMsg
+                                    (getter config).val
+                                    (getter config).state
+                        in
+                        ChangeConfig <|
+                            setter
+                                { val = newColor |> Maybe.withDefault (getter config).val
+                                , state = newPickerState
+                                }
+                    )
 
 
 textInputHelper : { label : String, valStr : String, setterMsg : String -> Msg } -> Element Msg
 textInputHelper { label, valStr, setterMsg } =
-    E.row []
-        [ EInput.text []
-            { label = EInput.labelLeft [] (E.text label)
-            , text = valStr
-            , onChange = setterMsg
-            , placeholder = Nothing
-            }
-        ]
+    EInput.text []
+        { label = EInput.labelHidden label
+        , text = valStr
+        , onChange = setterMsg
+        , placeholder = Nothing
+        }
