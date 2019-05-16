@@ -1,4 +1,25 @@
-module ConfigForm exposing (ColorField, FieldData(..), FloatField, IntField, Msg, StringField, color, float, int, string, update, view)
+module ConfigForm exposing
+    ( ColorField
+    , FieldData(..)
+    , FloatField
+    , IntField
+    , Msg
+    , StringField
+    , color
+    , colorDecoder
+    , encodeColor
+    , encodeFloat
+    , encodeInt
+    , encodeString
+    , float
+    , floatDecoder
+    , int
+    , intDecoder
+    , string
+    , stringDecoder
+    , update
+    , view
+    )
 
 import Color exposing (Color)
 import ColorPicker
@@ -7,6 +28,9 @@ import Element.Background as EBackground
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
+import Json.Decode as JD
+import Json.Decode.Pipeline as JDP
+import Json.Encode as JE
 
 
 type alias IntField =
@@ -213,3 +237,83 @@ colorForE col =
         |> (\{ red, green, blue, alpha } ->
                 E.rgba red green blue alpha
            )
+
+
+
+-- JSON
+
+
+encodeInt : IntField -> JE.Value
+encodeInt field =
+    JE.object
+        [ ( "val", JE.int field.val )
+        ]
+
+
+encodeFloat : FloatField -> JE.Value
+encodeFloat field =
+    JE.object
+        [ ( "val", JE.float field.val )
+        ]
+
+
+encodeString : StringField -> JE.Value
+encodeString field =
+    JE.object
+        [ ( "val", JE.string field.val )
+        ]
+
+
+encodeColor : ColorField -> JE.Value
+encodeColor field =
+    field.val
+        |> Color.toRgba
+        |> (\{ red, green, blue, alpha } ->
+                JE.object
+                    [ ( "val"
+                      , JE.object
+                            [ ( "r", JE.float red )
+                            , ( "g", JE.float green )
+                            , ( "b", JE.float blue )
+                            , ( "a", JE.float alpha )
+                            ]
+                      )
+                    ]
+           )
+
+
+intDecoder : JD.Decoder IntField
+intDecoder =
+    JD.int
+        |> JD.map
+            (\num ->
+                { val = num }
+            )
+
+
+floatDecoder : JD.Decoder FloatField
+floatDecoder =
+    JD.float
+        |> JD.map
+            (\num ->
+                { val = num }
+            )
+
+
+stringDecoder : JD.Decoder StringField
+stringDecoder =
+    JD.string
+        |> JD.map
+            (\str ->
+                { val = str }
+            )
+
+
+colorDecoder : JD.Decoder ColorField
+colorDecoder =
+    JD.map4 Color.rgba
+        (JD.field "r" JD.float)
+        (JD.field "g" JD.float)
+        (JD.field "b" JD.float)
+        (JD.field "a" JD.float)
+        |> JD.map color

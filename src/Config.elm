@@ -1,8 +1,11 @@
-module Config exposing (Config, formFields, new)
+module Config exposing (Config, decoder, formFields, new)
 
 import Color exposing (Color)
 import ColorPicker
 import ConfigForm as CF
+import Json.Decode as JD
+import Json.Decode.Pipeline as JDP
+import Json.Encode as JE
 
 
 type alias Config =
@@ -13,6 +16,17 @@ type alias Config =
     , barColor : CF.ColorField
     , someNum : CF.IntField
     }
+
+
+decoder : JD.Decoder Config
+decoder =
+    JD.succeed Config
+        |> JDP.required "fooFontSize" CF.floatDecoder
+        |> JDP.required "fooString" CF.stringDecoder
+        |> JDP.required "barFontSize" CF.floatDecoder
+        |> JDP.required "barString" CF.stringDecoder
+        |> JDP.required "barColor" CF.colorDecoder
+        |> JDP.required "someNum" CF.intDecoder
 
 
 new =
