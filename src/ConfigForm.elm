@@ -1,5 +1,6 @@
 module ConfigForm exposing
     ( ColorField
+    , EncodeOptions
     , FieldData(..)
     , FloatField
     , IntField
@@ -7,6 +8,7 @@ module ConfigForm exposing
     , StringField
     , color
     , colorDecoder
+    , encode
     , encodeColor
     , encodeFloat
     , encodeInt
@@ -243,29 +245,46 @@ colorForE col =
 -- JSON
 
 
-encodeInt : IntField -> JE.Value
-encodeInt field =
+type alias EncodeOptions =
+    { withMeta : Bool
+    }
+
+
+encode : EncodeOptions -> List ( String, EncodeOptions -> JE.Value ) -> JE.Value
+encode options list =
+    list
+        |> List.map
+            (Tuple.mapSecond
+                (\partiallyAppliedEncode ->
+                    partiallyAppliedEncode options
+                )
+            )
+        |> JE.object
+
+
+encodeInt : IntField -> EncodeOptions -> JE.Value
+encodeInt field options =
     JE.object
         [ ( "val", JE.int field.val )
         ]
 
 
-encodeFloat : FloatField -> JE.Value
-encodeFloat field =
+encodeFloat : FloatField -> EncodeOptions -> JE.Value
+encodeFloat field options =
     JE.object
         [ ( "val", JE.float field.val )
         ]
 
 
-encodeString : StringField -> JE.Value
-encodeString field =
+encodeString : StringField -> EncodeOptions -> JE.Value
+encodeString field options =
     JE.object
         [ ( "val", JE.string field.val )
         ]
 
 
-encodeColor : ColorField -> JE.Value
-encodeColor field =
+encodeColor : ColorField -> EncodeOptions -> JE.Value
+encodeColor field options =
     field.val
         |> Color.toRgba
         |> (\{ red, green, blue, alpha } ->

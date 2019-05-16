@@ -29,6 +29,18 @@ decoder =
         |> JDP.required "someNum" CF.intDecoder
 
 
+encode : Config -> JE.Value
+encode config =
+    CF.encode { withMeta = False }
+        [ ( "fooFontSize", CF.encodeFloat config.fooFontSize )
+        , ( "fooString", CF.encodeString config.fooString )
+        , ( "barFontSize", CF.encodeFloat config.barFontSize )
+        , ( "barString", CF.encodeString config.barString )
+        , ( "barColor", CF.encodeColor config.barColor )
+        , ( "someNum", CF.encodeInt config.someNum )
+        ]
+
+
 new =
     { fooFontSize = CF.float 24
     , fooString = CF.string "hi im foo"
