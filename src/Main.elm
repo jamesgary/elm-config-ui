@@ -50,6 +50,50 @@ type alias LocalStorage =
 
 init : JE.Value -> ( Model, Cmd Msg )
 init jsonFlags =
+    {-
+          dev
+          - adding fields
+            - warn that LS is growing past file, better save if you don't wanna break the prod build!
+          - just pulled master, new fields found
+            - update LS with new fields, no worries
+          prod
+          - check file, must be immaculate
+
+          file could also have version
+          0.0
+          0.x if value changed
+          x.0 if field got added/removed
+
+        I feed my config the file and localstorage
+
+        if file is empty or malformed:
+          start at 0.0
+          try to use localstorage to populate form
+
+        when i begin with empty
+
+        variables:
+        - dev or prod version? hard fail if prod
+        - does LS have more fields than file?
+        - does LS have less fields than file?
+        - 3 truths: LS, File, and encoder/decoder
+
+        -- maybe whenever i decode, i encode and decode again
+        -- maybe whenever i encode, i decode and encode again
+
+        -- what are my fears?
+        - not encoding all fields correctly
+        - not decoding all fields correctly
+          - WARNING: config.json is out-of-date! Please _update_ it before commiting changes.
+        - not adding all relevant fields to form
+        - procrastinating saving to file
+          - WARNING: config.json is out-of-date! Please _update_ it before commiting changes.
+
+       -----
+       okay so when i start in fresh browser,
+       - file oughtta be there
+       - LS won't, so just pull from file
+    -}
     ( { config = Config.new
       }
     , Cmd.none
@@ -60,9 +104,31 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ConfigFormMsg configFormMsg ->
-            ( { model | config = CF.update configFormMsg model.config }
-            , Cmd.none
+            let
+                newConfig =
+                    CF.update configFormMsg model.config
+
+                newModel =
+                    { model | config = newConfig }
+            in
+            ( newModel
+            , saveToLocalStorageCmd newModel
             )
+
+
+saveToLocalStorageCmd : Model -> Cmd Msg
+saveToLocalStorageCmd model =
+    performEffect <|
+        JE.object
+            [ ( "id", JE.string "SAVE" )
+            , ( "value"
+              , JE.object
+                    [ ( "config"
+                      , Config.encodeForLocalStorage model.config
+                      )
+                    ]
+              )
+            ]
 
 
 view : Model -> Html Msg

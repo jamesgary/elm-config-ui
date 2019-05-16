@@ -1,4 +1,4 @@
-module Config exposing (Config, decoder, formFields, new)
+module Config exposing (Config, decoder, encodeForFile, encodeForLocalStorage, formFields, new)
 
 import Color exposing (Color)
 import ColorPicker
@@ -20,18 +20,51 @@ type alias Config =
 
 decoder : JD.Decoder Config
 decoder =
+    let
+        options =
+            { defaultInt = Just 1
+            , defaultFloat = Just 1
+            , defaultString = Just "WWWWWWWWW"
+            , defaultColor = Just (Color.rgba 1 0 1 1) -- hot pink!
+            }
+
+        at =
+            CF.at options
+    in
     JD.succeed Config
-        |> JDP.required "fooFontSize" CF.floatDecoder
-        |> JDP.required "fooString" CF.stringDecoder
-        |> JDP.required "barFontSize" CF.floatDecoder
-        |> JDP.required "barString" CF.stringDecoder
-        |> JDP.required "barColor" CF.colorDecoder
-        |> JDP.required "someNum" CF.intDecoder
+        |> at "fooFontSize" CF.floatDecoder
+        |> at "fooString" CF.stringDecoder
+        |> at "barFontSize" CF.floatDecoder
+        |> at "barString" CF.stringDecoder
+        |> at "barColor" CF.colorDecoder
+        |> at "someNum" CF.intDecoder
 
 
-encode : Config -> JE.Value
-encode config =
-    CF.encode { withMeta = False }
+
+{-
+   JD.succeed Config
+       |> JDP.required "fooFontSize" CF.floatDecoder
+       |> JDP.required "fooString" CF.stringDecoder
+       |> JDP.required "barFontSize" CF.floatDecoder
+       |> JDP.required "barString" CF.stringDecoder
+       |> JDP.required "barColor" CF.colorDecoder
+       |> JDP.required "someNum" CF.intDecoder
+-}
+
+
+encodeForLocalStorage : Config -> JE.Value
+encodeForLocalStorage config =
+    encode { withMeta = True } config
+
+
+encodeForFile : Config -> JE.Value
+encodeForFile config =
+    encode { withMeta = False } config
+
+
+encode : CF.EncodeOptions -> Config -> JE.Value
+encode options config =
+    CF.encode options
         [ ( "fooFontSize", CF.encodeFloat config.fooFontSize )
         , ( "fooString", CF.encodeString config.fooString )
         , ( "barFontSize", CF.encodeFloat config.barFontSize )

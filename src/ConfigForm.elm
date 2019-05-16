@@ -6,6 +6,7 @@ module ConfigForm exposing
     , IntField
     , Msg
     , StringField
+    , at
     , color
     , colorDecoder
     , encode
@@ -33,6 +34,32 @@ import Element.Input as EInput
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
+
+
+type alias ConfigForm config =
+    { file : JE.Value
+    , config : config
+    }
+
+
+type alias Flags config =
+    { file : JE.Value
+    , localStorage : JE.Value
+    , decoder : JD.Decoder config
+    }
+
+
+type Error
+    = BadFile
+
+
+new :
+    JE.Value
+    -> JE.Value
+    -> JD.Decoder config
+    -> Result Error (ConfigForm config)
+new file localStorage decoder =
+    Err BadFile
 
 
 type alias IntField =
@@ -97,10 +124,6 @@ type Msg config
     = ChangeConfig (config -> config)
 
 
-type alias ConfigForm config =
-    List ( String, FieldData config )
-
-
 update : Msg config -> config -> config
 update msg config =
     case msg of
@@ -108,7 +131,11 @@ update msg config =
             updater config
 
 
-view : config -> ConfigForm config -> Element (Msg config)
+
+-- VIEW
+
+
+view : config -> List ( String, FieldData config ) -> Element (Msg config)
 view config formList =
     E.table []
         { data = formList
@@ -301,8 +328,26 @@ encodeColor field options =
            )
 
 
-intDecoder : JD.Decoder IntField
-intDecoder =
+type alias DecoderOptions =
+    { defaultInt : Maybe Int
+    , defaultFloat : Maybe Float
+    , defaultString : Maybe String
+    , defaultColor : Maybe Color
+    }
+
+
+at :
+    DecoderOptions
+    -> String
+    -> (DecoderOptions -> JD.Decoder a)
+    -> JD.Decoder (a -> b)
+    -> JD.Decoder b
+at options key decoder decoder_ =
+    JDP.required key (decoder options) decoder_
+
+
+intDecoder : DecoderOptions -> JD.Decoder IntField
+intDecoder options =
     JD.int
         |> JD.map
             (\num ->
@@ -310,8 +355,8 @@ intDecoder =
             )
 
 
-floatDecoder : JD.Decoder FloatField
-floatDecoder =
+floatDecoder : DecoderOptions -> JD.Decoder FloatField
+floatDecoder options =
     JD.float
         |> JD.map
             (\num ->
@@ -319,8 +364,8 @@ floatDecoder =
             )
 
 
-stringDecoder : JD.Decoder StringField
-stringDecoder =
+stringDecoder : DecoderOptions -> JD.Decoder StringField
+stringDecoder options =
     JD.string
         |> JD.map
             (\str ->
@@ -328,8 +373,8 @@ stringDecoder =
             )
 
 
-colorDecoder : JD.Decoder ColorField
-colorDecoder =
+colorDecoder : DecoderOptions -> JD.Decoder ColorField
+colorDecoder options =
     JD.map4 Color.rgba
         (JD.field "r" JD.float)
         (JD.field "g" JD.float)
