@@ -1,4 +1,4 @@
-module ConfigForm exposing (ColorField, FieldData(..), FloatField, IntField, Msg, StringField, update, view)
+module ConfigForm exposing (ColorField, FieldData(..), FloatField, IntField, Msg, StringField, color, float, int, string, update, view)
 
 import Color exposing (Color)
 import ColorPicker
@@ -23,8 +23,40 @@ type alias StringField =
 
 type alias ColorField =
     { val : Color
-    , state : ColorPicker.State
-    , isOpen : Bool
+    , meta : ColorFieldMeta
+    }
+
+
+type ColorFieldMeta
+    = ColorFieldMeta
+        { state : ColorPicker.State
+        , isOpen : Bool
+        }
+
+
+int : Int -> IntField
+int num =
+    { val = num }
+
+
+float : Float -> FloatField
+float num =
+    { val = num }
+
+
+string : String -> StringField
+string str =
+    { val = str }
+
+
+color : Color -> ColorField
+color col =
+    { val = col
+    , meta =
+        ColorFieldMeta
+            { state = ColorPicker.empty
+            , isOpen = False
+            }
     }
 
 
@@ -108,10 +140,19 @@ viewChanger config ( label, val ) =
                 }
 
         Color getter setter ->
-            if (getter config).isOpen then
-                ColorPicker.view
+            let
+                colorVal =
                     (getter config).val
-                    (getter config).state
+
+                meta =
+                    case (getter config).meta of
+                        ColorFieldMeta m ->
+                            m
+            in
+            if meta.isOpen then
+                ColorPicker.view
+                    colorVal
+                    meta.state
                     |> E.html
                     |> E.map
                         (\pickerMsg ->
@@ -119,26 +160,32 @@ viewChanger config ( label, val ) =
                                 ( newPickerState, newColor ) =
                                     ColorPicker.update
                                         pickerMsg
-                                        (getter config).val
-                                        (getter config).state
+                                        colorVal
+                                        meta.state
                             in
                             ChangeConfig <|
                                 setter
-                                    { val = newColor |> Maybe.withDefault (getter config).val
-                                    , state = newPickerState
-                                    , isOpen = (getter config).isOpen
+                                    { val = newColor |> Maybe.withDefault colorVal
+                                    , meta =
+                                        ColorFieldMeta
+                                            { state = newPickerState
+                                            , isOpen = meta.isOpen
+                                            }
                                     }
                         )
 
             else
                 EInput.text
-                    [ EBackground.color (colorForE (getter config).val)
+                    [ EBackground.color (colorForE colorVal)
                     , EEvents.onMouseDown
                         (ChangeConfig <|
                             setter
-                                { val = (getter config).val
-                                , state = (getter config).state
-                                , isOpen = True
+                                { val = colorVal
+                                , meta =
+                                    ColorFieldMeta
+                                        { state = meta.state
+                                        , isOpen = True
+                                        }
                                 }
                         )
                     ]
@@ -160,8 +207,8 @@ textInputHelper { label, valStr, setterMsg } =
 
 
 colorForE : Color -> E.Color
-colorForE color =
-    color
+colorForE col =
+    col
         |> Color.toRgba
         |> (\{ red, green, blue, alpha } ->
                 E.rgba red green blue alpha

@@ -3,7 +3,8 @@ port module Main exposing (main)
 import Browser
 import Color exposing (Color)
 import ColorPicker
-import ConfigForm
+import Config exposing (Config)
+import ConfigForm as CF
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Events as EEvents
@@ -32,18 +33,8 @@ type alias Model =
     }
 
 
-type alias Config =
-    { fooFontSize : ConfigForm.FloatField
-    , fooString : ConfigForm.StringField
-    , barFontSize : ConfigForm.FloatField
-    , barString : ConfigForm.StringField
-    , barColor : ConfigForm.ColorField
-    , someNum : ConfigForm.IntField
-    }
-
-
 type Msg
-    = ConfigFormMsg (ConfigForm.Msg Config)
+    = ConfigFormMsg (CF.Msg Config)
 
 
 type alias Flags =
@@ -59,14 +50,7 @@ type alias LocalStorage =
 
 init : JE.Value -> ( Model, Cmd Msg )
 init jsonFlags =
-    ( { config =
-            { fooFontSize = ConfigForm.FloatField 24
-            , fooString = ConfigForm.StringField "hi im foo"
-            , barFontSize = ConfigForm.FloatField 36
-            , barString = ConfigForm.StringField "hello im bar"
-            , barColor = ConfigForm.ColorField (Color.rgba 0 0.4 0.9 0.5) ColorPicker.empty False
-            , someNum = ConfigForm.IntField 5
-            }
+    ( { config = Config.new
       }
     , Cmd.none
     )
@@ -76,7 +60,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ConfigFormMsg configFormMsg ->
-            ( { model | config = ConfigForm.update configFormMsg model.config }
+            ( { model | config = CF.update configFormMsg model.config }
             , Cmd.none
             )
 
@@ -97,21 +81,10 @@ view { config } =
             , E.row [] [ E.text " " ]
             , E.row [] [ E.text "---" ]
             , E.row [] [ E.text " " ]
-            , ConfigForm.view config formList
+            , CF.view config Config.formFields
                 |> E.map ConfigFormMsg
             ]
         )
-
-
-formList : List ( String, ConfigForm.FieldData Config )
-formList =
-    [ ( "Foo font size", ConfigForm.Float .fooFontSize (\a c -> { c | fooFontSize = a }) )
-    , ( "Foo string", ConfigForm.String .fooString (\a c -> { c | fooString = a }) )
-    , ( "Bar font size", ConfigForm.Float .barFontSize (\a c -> { c | barFontSize = a }) )
-    , ( "Bar string", ConfigForm.String .barString (\a c -> { c | barString = a }) )
-    , ( "Bar color", ConfigForm.Color .barColor (\a c -> { c | barColor = a }) )
-    , ( "Some num", ConfigForm.Int .someNum (\a c -> { c | someNum = a }) )
-    ]
 
 
 subscriptions : Model -> Sub Msg
