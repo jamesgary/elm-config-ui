@@ -6,7 +6,6 @@ module ConfigForm exposing
     , IntField
     , Msg
     , StringField
-    , at
     , color
     , colorDecoder
     , encode
@@ -47,19 +46,6 @@ type alias Flags config =
     , localStorage : JE.Value
     , decoder : JD.Decoder config
     }
-
-
-type Error
-    = BadFile
-
-
-new :
-    JE.Value
-    -> JE.Value
-    -> JD.Decoder config
-    -> Result Error (ConfigForm config)
-new file localStorage decoder =
-    Err BadFile
 
 
 type alias IntField =
@@ -291,23 +277,17 @@ encode options list =
 
 encodeInt : IntField -> EncodeOptions -> JE.Value
 encodeInt field options =
-    JE.object
-        [ ( "val", JE.int field.val )
-        ]
+    JE.int field.val
 
 
 encodeFloat : FloatField -> EncodeOptions -> JE.Value
 encodeFloat field options =
-    JE.object
-        [ ( "val", JE.float field.val )
-        ]
+    JE.float field.val
 
 
 encodeString : StringField -> EncodeOptions -> JE.Value
 encodeString field options =
-    JE.object
-        [ ( "val", JE.string field.val )
-        ]
+    JE.string field.val
 
 
 encodeColor : ColorField -> EncodeOptions -> JE.Value
@@ -316,14 +296,10 @@ encodeColor field options =
         |> Color.toRgba
         |> (\{ red, green, blue, alpha } ->
                 JE.object
-                    [ ( "val"
-                      , JE.object
-                            [ ( "r", JE.float red )
-                            , ( "g", JE.float green )
-                            , ( "b", JE.float blue )
-                            , ( "a", JE.float alpha )
-                            ]
-                      )
+                    [ ( "r", JE.float red )
+                    , ( "g", JE.float green )
+                    , ( "b", JE.float blue )
+                    , ( "a", JE.float alpha )
                     ]
            )
 
@@ -336,73 +312,47 @@ type alias DecoderOptions =
     }
 
 
-at :
-    DecoderOptions
-    -> String
-    -> (DecoderOptions -> ( JD.Decoder a, a ))
-    -> JD.Decoder (a -> b)
-    -> JD.Decoder b
-at options key decoder decoder_ =
-    let
-        ( decoderoo, defaultValue ) =
-            decoder options
-    in
-    JDP.optional key
-        (JD.oneOf
-            [ decoderoo
-            , JD.succeed defaultValue
-            ]
+intDecoder : DecoderOptions -> JE.Value -> String -> IntField
+intDecoder options json key =
+    JD.decodeValue
+        (JD.field key JD.int
+            |> JD.map
+                (\num ->
+                    { val = num }
+                )
         )
-        defaultValue
-        decoder_
+        json
+        |> Result.withDefault { val = options.defaultInt }
 
 
-intDecoder : DecoderOptions -> ( JD.Decoder IntField, IntField )
-intDecoder options =
-    ( JD.oneOf
-        [ JD.int
+floatDecoder : DecoderOptions -> JE.Value -> String -> FloatField
+floatDecoder options json key =
+    JD.decodeValue
+        (JD.field key JD.float
             |> JD.map
                 (\num ->
                     { val = num }
                 )
-        , JD.succeed IntField
-            |> JDP.required "val" JD.int
-        , JD.succeed { val = options.defaultInt }
-        ]
-    , { val = options.defaultInt }
-    )
+        )
+        json
+        |> Result.withDefault { val = options.defaultFloat }
 
 
-floatDecoder : DecoderOptions -> ( JD.Decoder FloatField, FloatField )
-floatDecoder options =
-    ( JD.oneOf
-        [ JD.float
-            |> JD.map
-                (\num ->
-                    { val = num }
-                )
-        , JD.succeed FloatField
-            |> JDP.required "val" JD.float
-        , JD.succeed { val = options.defaultFloat }
-        ]
-    , { val = options.defaultFloat }
-    )
+
+--|> Result.withDefault { val = options.defaultFloat }
 
 
-stringDecoder : DecoderOptions -> ( JD.Decoder StringField, StringField )
-stringDecoder options =
-    ( JD.oneOf
-        [ JD.string
+stringDecoder : DecoderOptions -> JE.Value -> String -> StringField
+stringDecoder options json key =
+    JD.decodeValue
+        (JD.field key JD.string
             |> JD.map
                 (\str ->
                     { val = str }
                 )
-        , JD.succeed StringField
-            |> JDP.required "val" JD.string
-        , JD.succeed { val = options.defaultString }
-        ]
-    , { val = options.defaultString }
-    )
+        )
+        json
+        |> Result.withDefault { val = options.defaultString }
 
 
 colorValDecoder : JD.Decoder Color
@@ -414,14 +364,11 @@ colorValDecoder =
         (JD.field "a" JD.float)
 
 
-colorDecoder : DecoderOptions -> ( JD.Decoder ColorField, ColorField )
-colorDecoder options =
-    ( JD.oneOf
-        [ colorValDecoder
+colorDecoder : DecoderOptions -> JE.Value -> String -> ColorField
+colorDecoder options json key =
+    JD.decodeValue
+        (JD.field key colorValDecoder
             |> JD.map color
-        , JD.field "val" colorValDecoder
-            |> JD.map color
-        , JD.succeed (color options.defaultColor)
-        ]
-    , color options.defaultColor
-    )
+        )
+        json
+        |> Result.withDefault (color options.defaultColor)

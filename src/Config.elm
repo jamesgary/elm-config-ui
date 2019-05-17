@@ -1,4 +1,4 @@
-module Config exposing (Config, decoder, encodeForFile, encodeForLocalStorage, formFields, new)
+module Config exposing (Config, encodeForFile, encodeForLocalStorage, formFields, new)
 
 import Color exposing (Color)
 import ColorPicker
@@ -18,8 +18,8 @@ type alias Config =
     }
 
 
-decoder : JD.Decoder Config
-decoder =
+new : JE.Value -> Config
+new jsonConfig =
     let
         options =
             { defaultInt = 1
@@ -28,25 +28,20 @@ decoder =
             , defaultColor = Color.rgba 1 0 1 1 -- hot pink!
             }
 
-        at =
-            CF.at options
+        --with : String -> (CF.DecoderOptions -> JE.Value -> String -> a) -> (a -> b) -> b
+        with key fieldDecoder curriedProgress =
+            curriedProgress (fieldDecoder options jsonConfig key)
     in
-    JD.succeed Config
-        |> at "fooFontSize" CF.floatDecoder
-        |> at "fooString" CF.stringDecoder
-        |> at "barFontSize" CF.floatDecoder
-        |> at "barString" CF.stringDecoder
-        |> at "barColor" CF.colorDecoder
-        |> at "someNum" CF.intDecoder
+    Config
+        |> with "fooFontSize" CF.floatDecoder
+        |> with "fooString" CF.stringDecoder
+        |> with "barFontSize" CF.floatDecoder
+        |> with "barString" CF.stringDecoder
+        |> with "barColor" CF.colorDecoder
+        |> with "someNum" CF.intDecoder
 
 
 
-{-
-
-   CF.new Config
-     |> with "fooFontSize" CF.
-
--}
 {-
    JD.succeed Config
        |> JDP.required "fooFontSize" CF.floatDecoder
@@ -78,16 +73,6 @@ encode options config =
         , ( "barColor", CF.encodeColor config.barColor )
         , ( "someNum", CF.encodeInt config.someNum )
         ]
-
-
-new =
-    { fooFontSize = CF.float 24
-    , fooString = CF.string "hi im foo"
-    , barFontSize = CF.float 36
-    , barString = CF.string "hello im bar"
-    , barColor = CF.color (Color.rgba 0 0.4 0.9 0.5)
-    , someNum = CF.IntField 5
-    }
 
 
 formFields : List ( String, CF.FieldData Config )

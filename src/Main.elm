@@ -43,7 +43,7 @@ type Msg
 
 type alias Flags =
     { localStorage : LocalStorage
-    , configFile : Config
+    , configFile : JE.Value
     }
 
 
@@ -51,7 +51,7 @@ decodeFlags : JD.Decoder Flags
 decodeFlags =
     JD.succeed Flags
         |> JDP.required "localStorage" decodeLocalStorage
-        |> JDP.required "configFile" Config.decoder
+        |> JDP.required "configFile" JD.value
 
 
 
@@ -59,14 +59,14 @@ decodeFlags =
 
 
 type alias LocalStorage =
-    { config : Config
+    { config : JE.Value
     }
 
 
 decodeLocalStorage : JD.Decoder LocalStorage
 decodeLocalStorage =
     JD.succeed LocalStorage
-        |> JDP.required "config" Config.decoder
+        |> JDP.optional "config" JD.value (JE.object [])
 
 
 
@@ -121,7 +121,7 @@ init jsonFlags =
     -}
     case JD.decodeValue decodeFlags jsonFlags of
         Ok flags ->
-            ( { config = flags.localStorage.config
+            ( { config = Config.new flags.localStorage.config
               }
             , Cmd.none
             )
