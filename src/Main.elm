@@ -37,15 +37,40 @@ type Msg
     = ConfigFormMsg (CF.Msg Config)
 
 
+
+-- FLAGS
+
+
 type alias Flags =
     { localStorage : LocalStorage
     , configFile : Config
     }
 
 
+decodeFlags : JD.Decoder Flags
+decodeFlags =
+    JD.succeed Flags
+        |> JDP.required "localStorage" decodeLocalStorage
+        |> JDP.required "configFile" Config.decoder
+
+
+
+-- LOCALSTORAGE
+
+
 type alias LocalStorage =
     { config : Config
     }
+
+
+decodeLocalStorage : JD.Decoder LocalStorage
+decodeLocalStorage =
+    JD.succeed LocalStorage
+        |> JDP.required "config" Config.decoder
+
+
+
+-- INIT
 
 
 init : JE.Value -> ( Model, Cmd Msg )
@@ -94,10 +119,15 @@ init jsonFlags =
        - file oughtta be there
        - LS won't, so just pull from file
     -}
-    ( { config = Config.new
-      }
-    , Cmd.none
-    )
+    case JD.decodeValue decodeFlags jsonFlags of
+        Ok flags ->
+            ( { config = flags.localStorage.config
+              }
+            , Cmd.none
+            )
+
+        Err err ->
+            Debug.todo (JD.errorToString err)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

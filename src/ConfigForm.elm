@@ -329,55 +329,99 @@ encodeColor field options =
 
 
 type alias DecoderOptions =
-    { defaultInt : Maybe Int
-    , defaultFloat : Maybe Float
-    , defaultString : Maybe String
-    , defaultColor : Maybe Color
+    { defaultInt : Int
+    , defaultFloat : Float
+    , defaultString : String
+    , defaultColor : Color
     }
 
 
 at :
     DecoderOptions
     -> String
-    -> (DecoderOptions -> JD.Decoder a)
+    -> (DecoderOptions -> ( JD.Decoder a, a ))
     -> JD.Decoder (a -> b)
     -> JD.Decoder b
 at options key decoder decoder_ =
-    JDP.required key (decoder options) decoder_
+    let
+        ( decoderoo, defaultValue ) =
+            decoder options
+    in
+    JDP.optional key
+        (JD.oneOf
+            [ decoderoo
+            , JD.succeed defaultValue
+            ]
+        )
+        defaultValue
+        decoder_
 
 
-intDecoder : DecoderOptions -> JD.Decoder IntField
+intDecoder : DecoderOptions -> ( JD.Decoder IntField, IntField )
 intDecoder options =
-    JD.int
-        |> JD.map
-            (\num ->
-                { val = num }
-            )
+    ( JD.oneOf
+        [ JD.int
+            |> JD.map
+                (\num ->
+                    { val = num }
+                )
+        , JD.succeed IntField
+            |> JDP.required "val" JD.int
+        , JD.succeed { val = options.defaultInt }
+        ]
+    , { val = options.defaultInt }
+    )
 
 
-floatDecoder : DecoderOptions -> JD.Decoder FloatField
+floatDecoder : DecoderOptions -> ( JD.Decoder FloatField, FloatField )
 floatDecoder options =
-    JD.float
-        |> JD.map
-            (\num ->
-                { val = num }
-            )
+    ( JD.oneOf
+        [ JD.float
+            |> JD.map
+                (\num ->
+                    { val = num }
+                )
+        , JD.succeed FloatField
+            |> JDP.required "val" JD.float
+        , JD.succeed { val = options.defaultFloat }
+        ]
+    , { val = options.defaultFloat }
+    )
 
 
-stringDecoder : DecoderOptions -> JD.Decoder StringField
+stringDecoder : DecoderOptions -> ( JD.Decoder StringField, StringField )
 stringDecoder options =
-    JD.string
-        |> JD.map
-            (\str ->
-                { val = str }
-            )
+    ( JD.oneOf
+        [ JD.string
+            |> JD.map
+                (\str ->
+                    { val = str }
+                )
+        , JD.succeed StringField
+            |> JDP.required "val" JD.string
+        , JD.succeed { val = options.defaultString }
+        ]
+    , { val = options.defaultString }
+    )
 
 
-colorDecoder : DecoderOptions -> JD.Decoder ColorField
-colorDecoder options =
+colorValDecoder : JD.Decoder Color
+colorValDecoder =
     JD.map4 Color.rgba
         (JD.field "r" JD.float)
         (JD.field "g" JD.float)
         (JD.field "b" JD.float)
         (JD.field "a" JD.float)
-        |> JD.map color
+
+
+colorDecoder : DecoderOptions -> ( JD.Decoder ColorField, ColorField )
+colorDecoder options =
+    ( JD.oneOf
+        [ colorValDecoder
+            |> JD.map color
+        , JD.field "val" colorValDecoder
+            |> JD.map color
+        , JD.succeed (color options.defaultColor)
+        ]
+    , color options.defaultColor
+    )

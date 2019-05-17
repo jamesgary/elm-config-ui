@@ -22,10 +22,10 @@ decoder : JD.Decoder Config
 decoder =
     let
         options =
-            { defaultInt = Just 1
-            , defaultFloat = Just 1
-            , defaultString = Just "WWWWWWWWW"
-            , defaultColor = Just (Color.rgba 1 0 1 1) -- hot pink!
+            { defaultInt = 1
+            , defaultFloat = 1
+            , defaultString = "WWWWWWWWW"
+            , defaultColor = Color.rgba 1 0 1 1 -- hot pink!
             }
 
         at =
@@ -41,6 +41,12 @@ decoder =
 
 
 
+{-
+
+   CF.new Config
+     |> with "fooFontSize" CF.
+
+-}
 {-
    JD.succeed Config
        |> JDP.required "fooFontSize" CF.floatDecoder
