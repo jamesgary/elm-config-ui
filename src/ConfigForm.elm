@@ -7,18 +7,10 @@ module ConfigForm exposing
     , Msg
     , StringField
     , color
-    , colorDecoder
     , encode
-    , encodeColor
-    , encodeFloat
-    , encodeInt
-    , encodeString
     , float
-    , floatDecoder
     , int
-    , intDecoder
     , string
-    , stringDecoder
     , update
     , view
     )
@@ -71,32 +63,6 @@ type ColorFieldMeta
         { state : ColorPicker.State
         , isOpen : Bool
         }
-
-
-int : Int -> IntField
-int num =
-    { val = num }
-
-
-float : Float -> FloatField
-float num =
-    { val = num }
-
-
-string : String -> StringField
-string str =
-    { val = str }
-
-
-color : Color -> ColorField
-color col =
-    { val = col
-    , meta =
-        ColorFieldMeta
-            { state = ColorPicker.empty
-            , isOpen = False
-            }
-    }
 
 
 type FieldData config
@@ -263,45 +229,36 @@ type alias EncodeOptions =
     }
 
 
-encode : EncodeOptions -> List ( String, EncodeOptions -> JE.Value ) -> JE.Value
-encode options list =
+encode : EncodeOptions -> List ( String, String, FieldData config ) -> config -> JE.Value
+encode options list config =
     list
         |> List.map
-            (Tuple.mapSecond
-                (\partiallyAppliedEncode ->
-                    partiallyAppliedEncode options
+            (\( key, _, fieldData ) ->
+                ( key
+                , case fieldData of
+                    Int getter _ ->
+                        JE.int (getter config).val
+
+                    Float getter _ ->
+                        JE.float (getter config).val
+
+                    String getter _ ->
+                        JE.string (getter config).val
+
+                    Color getter _ ->
+                        (getter config).val
+                            |> Color.toRgba
+                            |> (\{ red, green, blue, alpha } ->
+                                    JE.object
+                                        [ ( "r", JE.float red )
+                                        , ( "g", JE.float green )
+                                        , ( "b", JE.float blue )
+                                        , ( "a", JE.float alpha )
+                                        ]
+                               )
                 )
             )
         |> JE.object
-
-
-encodeInt : IntField -> EncodeOptions -> JE.Value
-encodeInt field options =
-    JE.int field.val
-
-
-encodeFloat : FloatField -> EncodeOptions -> JE.Value
-encodeFloat field options =
-    JE.float field.val
-
-
-encodeString : StringField -> EncodeOptions -> JE.Value
-encodeString field options =
-    JE.string field.val
-
-
-encodeColor : ColorField -> EncodeOptions -> JE.Value
-encodeColor field options =
-    field.val
-        |> Color.toRgba
-        |> (\{ red, green, blue, alpha } ->
-                JE.object
-                    [ ( "r", JE.float red )
-                    , ( "g", JE.float green )
-                    , ( "b", JE.float blue )
-                    , ( "a", JE.float alpha )
-                    ]
-           )
 
 
 type alias DecoderOptions =
@@ -312,8 +269,8 @@ type alias DecoderOptions =
     }
 
 
-intDecoder : DecoderOptions -> JE.Value -> String -> IntField
-intDecoder options json key =
+int : DecoderOptions -> JE.Value -> String -> IntField
+int options json key =
     JD.decodeValue
         (JD.field key JD.int
             |> JD.map
@@ -325,8 +282,8 @@ intDecoder options json key =
         |> Result.withDefault { val = options.defaultInt }
 
 
-floatDecoder : DecoderOptions -> JE.Value -> String -> FloatField
-floatDecoder options json key =
+float : DecoderOptions -> JE.Value -> String -> FloatField
+float options json key =
     JD.decodeValue
         (JD.field key JD.float
             |> JD.map
@@ -338,12 +295,8 @@ floatDecoder options json key =
         |> Result.withDefault { val = options.defaultFloat }
 
 
-
---|> Result.withDefault { val = options.defaultFloat }
-
-
-stringDecoder : DecoderOptions -> JE.Value -> String -> StringField
-stringDecoder options json key =
+string : DecoderOptions -> JE.Value -> String -> StringField
+string options json key =
     JD.decodeValue
         (JD.field key JD.string
             |> JD.map
@@ -364,11 +317,21 @@ colorValDecoder =
         (JD.field "a" JD.float)
 
 
-colorDecoder : DecoderOptions -> JE.Value -> String -> ColorField
-colorDecoder options json key =
+color : DecoderOptions -> JE.Value -> String -> ColorField
+color options json key =
+    let
+        constructor col =
+            { val = col
+            , meta =
+                ColorFieldMeta
+                    { state = ColorPicker.empty
+                    , isOpen = False
+                    }
+            }
+    in
     JD.decodeValue
         (JD.field key colorValDecoder
-            |> JD.map color
+            |> JD.map constructor
         )
         json
-        |> Result.withDefault (color options.defaultColor)
+        |> Result.withDefault (constructor options.defaultColor)
