@@ -11,6 +11,7 @@ module ConfigForm exposing
     , encode
     , float
     , int
+    , portMsg
     , string
     , update
     , view
@@ -77,13 +78,42 @@ type FieldData config
 
 type Msg config
     = ChangeConfig (config -> config)
+    | PointerLock
+    | PointerUnlock
+    | FromPort JE.Value
 
 
-update : Msg config -> config -> config
+portMsg : JE.Value -> Msg config
+portMsg json =
+    FromPort json
+
+
+update : Msg config -> config -> ( config, Maybe JE.Value )
 update msg config =
     case msg of
         ChangeConfig updater ->
-            updater config
+            ( updater config, Nothing )
+
+        PointerLock ->
+            ( config, Just (JE.string "LOCK_POINTER") )
+
+        PointerUnlock ->
+            ( config, Just (JE.string "UNLOCK_POINTER") )
+
+        FromPort json ->
+            case JD.decodeValue JD.float json of
+                Ok num ->
+                    ( config, Nothing )
+                        |> Debug.log "WOOO"
+
+                Err err ->
+                    let
+                        _ =
+                            Debug.log
+                                "Could not decode incoming config port msg: "
+                                (JD.errorToString err)
+                    in
+                    ( config, Nothing )
 
 
 
@@ -116,7 +146,26 @@ view config formList options =
               , width = E.fill
               , view =
                     \( label, val ) ->
-                        E.text label
+                        case val of
+                            String _ _ ->
+                                E.text label
+
+                            Int _ _ ->
+                                E.el
+                                    [ EEvents.onMouseDown PointerLock
+                                    , EEvents.onMouseUp PointerUnlock
+                                    ]
+                                    (E.text label)
+
+                            Float _ _ ->
+                                E.el
+                                    [ EEvents.onMouseDown PointerLock
+                                    , EEvents.onMouseUp PointerUnlock
+                                    ]
+                                    (E.text label)
+
+                            Color _ _ ->
+                                E.text label
               }
             , { header = E.none
               , width = E.fill

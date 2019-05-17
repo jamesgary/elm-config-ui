@@ -19,6 +19,9 @@ import Json.Encode as JE
 port performEffect : JD.Value -> Cmd msg
 
 
+port receive : (JD.Value -> msg) -> Sub msg
+
+
 main =
     Browser.element
         { init = init
@@ -35,6 +38,7 @@ type alias Model =
 
 type Msg
     = ConfigFormMsg (CF.Msg Config)
+    | ReceiveFromPort JE.Value
 
 
 
@@ -135,14 +139,82 @@ update msg model =
     case msg of
         ConfigFormMsg configFormMsg ->
             let
-                newConfig =
+                ( newConfig, maybeJsonCmd ) =
                     CF.update configFormMsg model.config
 
                 newModel =
                     { model | config = newConfig }
             in
             ( newModel
-            , saveToLocalStorageCmd newModel
+            , Cmd.batch
+                [ saveToLocalStorageCmd newModel
+                , case maybeJsonCmd of
+                    Just jsonCmd ->
+                        performEffect
+                            (JE.object
+                                [ ( "id", JE.string "CONFIG" )
+                                , ( "value", jsonCmd )
+                                ]
+                            )
+
+                    Nothing ->
+                        Cmd.none
+                ]
+            )
+
+        ReceiveFromPort portJson ->
+            case JD.decodeValue receivePortDecoder portJson of
+                Ok receiveMsg ->
+                    case receiveMsg of
+                        ConfigFormPortMsg configMsg ->
+                            let
+                                ( newConfig, maybeJsonCmd ) =
+                                    CF.update (CF.portMsg configMsg) model.config
+
+                                newModel =
+                                    { model | config = newConfig }
+                            in
+                            ( newModel
+                            , Cmd.batch
+                                [ saveToLocalStorageCmd newModel
+                                , case maybeJsonCmd of
+                                    Just jsonCmd ->
+                                        performEffect
+                                            (JE.object
+                                                [ ( "id", JE.string "CONFIG" )
+                                                , ( "value", jsonCmd )
+                                                ]
+                                            )
+
+                                    Nothing ->
+                                        Cmd.none
+                                ]
+                            )
+
+                Err err ->
+                    let
+                        _ =
+                            Debug.log "Could not decode incoming port msg: " (JD.errorToString err)
+                    in
+                    ( model, Cmd.none )
+
+
+type ReceiveMsg
+    = ConfigFormPortMsg JE.Value
+
+
+receivePortDecoder : JD.Decoder ReceiveMsg
+receivePortDecoder =
+    JD.field "id" JD.string
+        |> JD.andThen
+            (\id ->
+                case id of
+                    "CONFIG" ->
+                        JD.field "value" JD.value
+                            |> JD.map ConfigFormPortMsg
+
+                    str ->
+                        JD.fail ("Bad id to receive: " ++ str)
             )
 
 
@@ -185,7 +257,9 @@ view { config } =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.batch
+        [ receive ReceiveFromPort
+        ]
 
 
 colorForE : Color -> E.Color

@@ -25,7 +25,7 @@ new jsonConfig =
         options =
             { defaultInt = 1
             , defaultFloat = 1
-            , defaultString = "SORRY I'M NEW HERE"
+            , defaultString = "SORRY IM NEW HERE"
             , defaultColor = Color.rgba 1 0 1 1 -- hot pink!
             }
 
