@@ -1,8 +1,9 @@
-module Config exposing (Config, encodeForFile, encodeForLocalStorage, formFields, new)
+module Config exposing (Config, encode, formFields, new, view)
 
 import Color exposing (Color)
 import ColorPicker
 import ConfigForm as CF
+import Element as E exposing (Element)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
@@ -14,7 +15,7 @@ type alias Config =
     , barFontSize : CF.FloatField
     , barString : CF.StringField
     , barColor : CF.ColorField
-    , someNum : CF.IntField
+    , configBgColor : CF.ColorField
     }
 
 
@@ -37,17 +38,7 @@ new jsonConfig =
         |> with "barFontSize" CF.float
         |> with "barString" CF.string
         |> with "barColor" CF.color
-        |> with "someNum" CF.int
-
-
-encodeForLocalStorage : Config -> JE.Value
-encodeForLocalStorage config =
-    encode { withMeta = True } config
-
-
-encodeForFile : Config -> JE.Value
-encodeForFile config =
-    encode { withMeta = False } config
+        |> with "configBgColor" CF.color
 
 
 type alias ConfigFormData config =
@@ -76,16 +67,25 @@ ff =
       , "Bar color"
       , CF.Color .barColor (\a c -> { c | barColor = a })
       )
-    , ( "someNum"
-      , "Some num"
-      , CF.Int .someNum (\a c -> { c | someNum = a })
+    , ( "configBgColor"
+      , "Config: BG color"
+      , CF.Color .configBgColor (\a c -> { c | configBgColor = a })
       )
     ]
 
 
-encode : CF.EncodeOptions -> Config -> JE.Value
-encode options config =
-    CF.encode options ff config
+encode : Config -> JE.Value
+encode config =
+    CF.encode ff config
+
+
+view : Config -> Element (CF.Msg Config)
+view config =
+    CF.view config
+        formFields
+        (CF.viewOptions
+            |> CF.withBgColor config.configBgColor.val
+        )
 
 
 formFields : List ( String, CF.FieldData Config )

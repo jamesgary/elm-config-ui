@@ -154,7 +154,7 @@ saveToLocalStorageCmd model =
             , ( "value"
               , JE.object
                     [ ( "config"
-                      , Config.encodeForLocalStorage model.config
+                      , Config.encode model.config
                       )
                     ]
               )
@@ -177,7 +177,7 @@ view { config } =
             , E.row [] [ E.text " " ]
             , E.row [] [ E.text "---" ]
             , E.row [] [ E.text " " ]
-            , CF.view config Config.formFields
+            , Config.view config
                 |> E.map ConfigFormMsg
             ]
         )

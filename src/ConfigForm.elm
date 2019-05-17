@@ -6,6 +6,7 @@ module ConfigForm exposing
     , IntField
     , Msg
     , StringField
+    , ViewOptions
     , color
     , encode
     , float
@@ -13,6 +14,8 @@ module ConfigForm exposing
     , string
     , update
     , view
+    , viewOptions
+    , withBgColor
     )
 
 import Color exposing (Color)
@@ -87,9 +90,26 @@ update msg config =
 -- VIEW
 
 
-view : config -> List ( String, FieldData config ) -> Element (Msg config)
-view config formList =
-    E.table []
+type alias ViewOptions =
+    { bgColor : Color
+    }
+
+
+viewOptions : ViewOptions
+viewOptions =
+    { bgColor = Color.rgba 0 0 0 0 }
+
+
+withBgColor : Color -> ViewOptions -> ViewOptions
+withBgColor col options =
+    { options | bgColor = col }
+
+
+view : config -> List ( String, FieldData config ) -> ViewOptions -> Element (Msg config)
+view config formList options =
+    E.table
+        [ EBackground.color (colorForE options.bgColor)
+        ]
         { data = formList
         , columns =
             [ { header = E.none
@@ -229,8 +249,8 @@ type alias EncodeOptions =
     }
 
 
-encode : EncodeOptions -> List ( String, String, FieldData config ) -> config -> JE.Value
-encode options list config =
+encode : List ( String, String, FieldData config ) -> config -> JE.Value
+encode list config =
     list
         |> List.map
             (\( key, _, fieldData ) ->
