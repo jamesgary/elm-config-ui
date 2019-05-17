@@ -1,4 +1,4 @@
-module Config exposing (Config, encode, formFields, new, view)
+module Config exposing (Config, encode, ff, formFields, new, view)
 
 import Color exposing (Color)
 import ColorPicker

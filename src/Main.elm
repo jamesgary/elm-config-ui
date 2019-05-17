@@ -140,7 +140,7 @@ update msg model =
         ConfigFormMsg configFormMsg ->
             let
                 ( newConfig, maybeJsonCmd ) =
-                    CF.update configFormMsg model.config
+                    CF.update Config.ff configFormMsg model.config
 
                 newModel =
                     { model | config = newConfig }
@@ -169,7 +169,7 @@ update msg model =
                         ConfigFormPortMsg configMsg ->
                             let
                                 ( newConfig, maybeJsonCmd ) =
-                                    CF.update (CF.portMsg configMsg) model.config
+                                    CF.update Config.ff (CF.portMsg configMsg) model.config
 
                                 newModel =
                                     { model | config = newConfig }

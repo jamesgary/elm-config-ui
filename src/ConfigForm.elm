@@ -45,11 +45,15 @@ type alias Flags config =
 
 
 type alias IntField =
-    { val : Int }
+    { val : Int
+    , isChanging : Bool
+    }
 
 
 type alias FloatField =
-    { val : Float }
+    { val : Float
+    , isChanging : Bool
+    }
 
 
 type alias StringField =
@@ -78,8 +82,7 @@ type FieldData config
 
 type Msg config
     = ChangeConfig (config -> config)
-    | PointerLock
-    | PointerUnlock
+    | PointerLock (config -> config)
     | FromPort JE.Value
 
 
@@ -88,23 +91,69 @@ portMsg json =
     FromPort json
 
 
-update : Msg config -> config -> ( config, Maybe JE.Value )
-update msg config =
+type alias ConfigFormData config =
+    ( String, String, FieldData config )
+
+
+update : List (ConfigFormData config) -> Msg config -> config -> ( config, Maybe JE.Value )
+update rows msg config =
     case msg of
         ChangeConfig updater ->
             ( updater config, Nothing )
 
-        PointerLock ->
-            ( config, Just (JE.string "LOCK_POINTER") )
-
-        PointerUnlock ->
-            ( config, Just (JE.string "UNLOCK_POINTER") )
+        PointerLock updater ->
+            ( updater config, Just (JE.string "LOCK_POINTER") )
 
         FromPort json ->
             case JD.decodeValue JD.float json of
                 Ok num ->
-                    ( config, Nothing )
-                        |> Debug.log "WOOO"
+                    ( rows
+                        |> List.foldl
+                            (\(( _, _, field ) as row) c ->
+                                case field of
+                                    Int getter setter ->
+                                        let
+                                            oldField =
+                                                getter config
+
+                                            newField =
+                                                if oldField.isChanging then
+                                                    { oldField
+                                                        | val =
+                                                            oldField.val + round num
+                                                    }
+
+                                                else
+                                                    oldField
+                                        in
+                                        setter newField c
+
+                                    Float getter setter ->
+                                        let
+                                            oldField =
+                                                getter config
+
+                                            newField =
+                                                if oldField.isChanging then
+                                                    { oldField
+                                                        | val =
+                                                            oldField.val + num
+                                                    }
+
+                                                else
+                                                    oldField
+                                        in
+                                        setter newField c
+
+                                    String getter setter ->
+                                        c
+
+                                    Color getter setter ->
+                                        c
+                            )
+                            config
+                    , Nothing
+                    )
 
                 Err err ->
                     let
@@ -150,17 +199,23 @@ view config formList options =
                             String _ _ ->
                                 E.text label
 
-                            Int _ _ ->
+                            Int getter setter ->
+                                let
+                                    field =
+                                        getter config
+                                in
                                 E.el
-                                    [ EEvents.onMouseDown PointerLock
-                                    , EEvents.onMouseUp PointerUnlock
+                                    [ EEvents.onMouseDown (PointerLock (setter { field | isChanging = True }))
                                     ]
                                     (E.text label)
 
-                            Float _ _ ->
+                            Float getter setter ->
+                                let
+                                    field =
+                                        getter config
+                                in
                                 E.el
-                                    [ EEvents.onMouseDown PointerLock
-                                    , EEvents.onMouseUp PointerUnlock
+                                    [ EEvents.onMouseDown (PointerLock (setter { field | isChanging = True }))
                                     ]
                                     (E.text label)
 
@@ -186,20 +241,28 @@ viewChanger config ( label, val ) =
                 }
 
         Int getter setter ->
+            let
+                field =
+                    getter config
+            in
             textInputHelper
                 { label = label
-                , valStr = String.fromInt (getter config).val
+                , valStr = String.fromInt field.val
                 , setterMsg =
                     \newStr ->
                         case String.toInt newStr of
                             Just newNum ->
-                                ChangeConfig (setter (IntField newNum))
+                                ChangeConfig (setter { field | val = newNum })
 
                             Nothing ->
                                 ChangeConfig identity
                 }
 
         Float getter setter ->
+            let
+                field =
+                    getter config
+            in
             textInputHelper
                 { label = label
                 , valStr = String.fromFloat (getter config).val
@@ -207,7 +270,7 @@ viewChanger config ( label, val ) =
                     \newStr ->
                         case String.toFloat newStr of
                             Just newNum ->
-                                ChangeConfig (setter (FloatField newNum))
+                                ChangeConfig (setter { field | val = newNum })
 
                             Nothing ->
                                 ChangeConfig identity
@@ -340,28 +403,34 @@ type alias DecoderOptions =
 
 int : DecoderOptions -> JE.Value -> String -> IntField
 int options json key =
+    let
+        constructor num =
+            { val = num
+            , isChanging = False
+            }
+    in
     JD.decodeValue
         (JD.field key JD.int
-            |> JD.map
-                (\num ->
-                    { val = num }
-                )
+            |> JD.map constructor
         )
         json
-        |> Result.withDefault { val = options.defaultInt }
+        |> Result.withDefault (constructor options.defaultInt)
 
 
 float : DecoderOptions -> JE.Value -> String -> FloatField
 float options json key =
+    let
+        constructor num =
+            { val = num
+            , isChanging = False
+            }
+    in
     JD.decodeValue
         (JD.field key JD.float
-            |> JD.map
-                (\num ->
-                    { val = num }
-                )
+            |> JD.map constructor
         )
         json
-        |> Result.withDefault { val = options.defaultFloat }
+        |> Result.withDefault (constructor options.defaultFloat)
 
 
 string : DecoderOptions -> JE.Value -> String -> StringField
