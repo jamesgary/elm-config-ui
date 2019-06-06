@@ -18,6 +18,8 @@ type alias Config =
     , configTableBgColor : CF.ColorField
     , configTableSpacing : CF.IntField
     , configTablePadding : CF.IntField
+    , configTableBorderWidth : CF.IntField
+    , configTableBorderColor : CF.ColorField
     , configLabelHighlightBgColor : CF.ColorField
     }
 
@@ -44,6 +46,8 @@ new jsonConfig =
         |> with "configTableBgColor" CF.color
         |> with "configTableSpacing" CF.int
         |> with "configTablePadding" CF.int
+        |> with "configTableBorderWidth" CF.int
+        |> with "configTableBorderColor" CF.color
         |> with "configLabelHighlightBgColor" CF.color
 
 
@@ -85,6 +89,14 @@ ff =
       , "Config: Table padding"
       , CF.Int .configTablePadding (\a c -> { c | configTablePadding = a })
       )
+    , ( "configTableBorderWidth"
+      , "Config: Table border width"
+      , CF.Int .configTableBorderWidth (\a c -> { c | configTableBorderWidth = a })
+      )
+    , ( "configTableBorderColor"
+      , "Config: Table border color"
+      , CF.Color .configTableBorderColor (\a c -> { c | configTableBorderColor = a })
+      )
     , ( "configLabelHighlightBgColor"
       , "Config: Highlighted label BG color"
       , CF.Color .configLabelHighlightBgColor (\a c -> { c | configLabelHighlightBgColor = a })
@@ -105,6 +117,8 @@ view config =
             |> CF.withTableBgColor config.configTableBgColor.val
             |> CF.withTableSpacing config.configTableSpacing.val
             |> CF.withTablePadding config.configTablePadding.val
+            |> CF.withTableBorderWidth config.configTableBorderWidth.val
+            |> CF.withTableBorderColor config.configTableBorderColor.val
             |> CF.withLabelHighlightBgColor config.configLabelHighlightBgColor.val
         )
 

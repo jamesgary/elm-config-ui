@@ -18,6 +18,8 @@ module ConfigForm exposing
     , viewOptions
     , withLabelHighlightBgColor
     , withTableBgColor
+    , withTableBorderColor
+    , withTableBorderWidth
     , withTablePadding
     , withTableSpacing
     )
@@ -26,6 +28,7 @@ import Color exposing (Color)
 import ColorPicker
 import Element as E exposing (Element)
 import Element.Background as EBackground
+import Element.Border as EBorder
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
@@ -245,6 +248,8 @@ type alias ViewOptions =
     { tableBgColor : Color
     , tableSpacing : Int
     , tablePadding : Int
+    , tableBorderWidth : Int
+    , tableBorderColor : Color
     , labelHighlightBgColor : Color
     }
 
@@ -254,6 +259,8 @@ viewOptions =
     { tableBgColor = Color.rgba 1 1 1 0
     , tableSpacing = 5
     , tablePadding = 5
+    , tableBorderWidth = 1
+    , tableBorderColor = Color.rgb 0 0 0
     , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
     }
 
@@ -273,6 +280,16 @@ withTablePadding val options =
     { options | tablePadding = val }
 
 
+withTableBorderWidth : Int -> ViewOptions -> ViewOptions
+withTableBorderWidth val options =
+    { options | tableBorderWidth = val }
+
+
+withTableBorderColor : Color -> ViewOptions -> ViewOptions
+withTableBorderColor val options =
+    { options | tableBorderColor = val }
+
+
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
 withLabelHighlightBgColor val options =
     { options | labelHighlightBgColor = val }
@@ -284,6 +301,8 @@ view config formList options =
         [ EBackground.color (colorForE options.tableBgColor)
         , E.spacing options.tableSpacing
         , E.padding options.tablePadding
+        , EBorder.width options.tableBorderWidth
+        , EBorder.color (colorForE options.tableBorderColor)
         ]
         { data = formList
         , columns =
@@ -347,7 +366,8 @@ viewChanger : config -> Int -> ( String, FieldData config ) -> Element (Msg conf
 viewChanger config index ( label, val ) =
     let
         defaultAttrs =
-            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute ]
+            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
+            ]
 
         incrementalAttrs field setter =
             [ Html.Events.on "keydown"
