@@ -280,7 +280,7 @@ withLabelHighlightBgColor val options =
 
 view : config -> List ( String, FieldData config ) -> ViewOptions -> Element (Msg config)
 view config formList options =
-    E.table
+    E.indexedTable
         [ EBackground.color (colorForE options.tableBgColor)
         , E.spacing options.tableSpacing
         , E.padding options.tablePadding
@@ -290,7 +290,7 @@ view config formList options =
             [ { header = E.none
               , width = E.fill
               , view =
-                    \( label, val ) ->
+                    \i ( label, val ) ->
                         let
                             resizeAttrs getter setter =
                                 let
@@ -343,9 +343,12 @@ view config formList options =
         }
 
 
-viewChanger : config -> ( String, FieldData config ) -> Element (Msg config)
-viewChanger config ( label, val ) =
+viewChanger : config -> Int -> ( String, FieldData config ) -> Element (Msg config)
+viewChanger config index ( label, val ) =
     let
+        defaultAttrs =
+            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute ]
+
         incrementalAttrs field setter =
             [ Html.Events.on "keydown"
                 (JD.map
@@ -379,7 +382,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = (getter config).val
-                , attrs = []
+                , attrs = defaultAttrs
                 , setterMsg = \newStr -> ChangedConfig (setter { field | val = newStr })
                 }
 
@@ -391,7 +394,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = String.fromInt field.val
-                , attrs = incrementalAttrs field setter
+                , attrs = defaultAttrs ++ incrementalAttrs field setter
                 , setterMsg =
                     \newStr ->
                         case String.toInt newStr of
@@ -410,7 +413,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = String.fromFloat (getter config).val
-                , attrs = incrementalAttrs field setter
+                , attrs = defaultAttrs ++ incrementalAttrs field setter
                 , setterMsg =
                     \newStr ->
                         case String.toFloat newStr of
@@ -459,20 +462,22 @@ viewChanger config ( label, val ) =
 
             else
                 EInput.text
-                    [ EBackground.color (colorForE field.val)
-                    , EEvents.onMouseDown
-                        (ChangedConfig <|
-                            setter
-                                { field
-                                    | val = field.val
-                                    , meta =
-                                        ColorFieldMeta
-                                            { state = meta.state
-                                            , isOpen = True
-                                            }
-                                }
-                        )
-                    ]
+                    (defaultAttrs
+                        ++ [ EBackground.color (colorForE field.val)
+                           , EEvents.onMouseDown
+                                (ChangedConfig <|
+                                    setter
+                                        { field
+                                            | val = field.val
+                                            , meta =
+                                                ColorFieldMeta
+                                                    { state = meta.state
+                                                    , isOpen = True
+                                                    }
+                                        }
+                                )
+                           ]
+                    )
                     { label = EInput.labelHidden label
                     , text = ""
                     , onChange = always <| ChangedConfig identity
