@@ -16,6 +16,7 @@ module ConfigForm exposing
     , update
     , view
     , viewOptions
+    , withLabelHighlightBgColor
     , withTableBgColor
     , withTablePadding
     , withTableSpacing
@@ -60,7 +61,8 @@ type alias FloatField =
 
 
 type alias StringField =
-    { val : String }
+    { val : String
+    }
 
 
 type alias ColorField =
@@ -242,6 +244,7 @@ type alias ViewOptions =
     { tableBgColor : Color
     , tableSpacing : Int
     , tablePadding : Int
+    , labelHighlightBgColor : Color
     }
 
 
@@ -250,6 +253,7 @@ viewOptions =
     { tableBgColor = Color.rgba 1 1 1 0
     , tableSpacing = 5
     , tablePadding = 5
+    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
     }
 
 
@@ -266,6 +270,11 @@ withTableSpacing val options =
 withTablePadding : Int -> ViewOptions -> ViewOptions
 withTablePadding val options =
     { options | tablePadding = val }
+
+
+withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
+withLabelHighlightBgColor val options =
+    { options | labelHighlightBgColor = val }
 
 
 view : config -> List ( String, FieldData config ) -> ViewOptions -> Element (Msg config)
@@ -289,22 +298,30 @@ view config formList options =
                                 in
                                 [ EEvents.onMouseDown (ClickedPointerLockLabel (setter { field | isChanging = True }))
                                 , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
-                                , E.mouseOver [ EBackground.color (E.rgba 1 1 1 1) ]
+                                ]
+
+                            defaultAttrs getter setter =
+                                [ E.mouseOver
+                                    [ EBackground.color
+                                        (colorForE options.labelHighlightBgColor)
+                                    ]
                                 ]
 
                             attrs =
                                 case val of
-                                    String _ _ ->
-                                        []
+                                    String getter setter ->
+                                        defaultAttrs getter setter
 
                                     Int getter setter ->
-                                        resizeAttrs getter setter
+                                        defaultAttrs getter setter
+                                            ++ resizeAttrs getter setter
 
                                     Float getter setter ->
-                                        resizeAttrs getter setter
+                                        defaultAttrs getter setter
+                                            ++ resizeAttrs getter setter
 
-                                    Color _ _ ->
-                                        []
+                                    Color getter setter ->
+                                        defaultAttrs getter setter
                         in
                         E.el
                             (attrs
@@ -329,10 +346,14 @@ viewChanger : config -> ( String, FieldData config ) -> Element (Msg config)
 viewChanger config ( label, val ) =
     case val of
         String getter setter ->
+            let
+                field =
+                    getter config
+            in
             textInputHelper
                 { label = label
                 , valStr = (getter config).val
-                , setterMsg = \newStr -> ChangedConfig (setter (StringField newStr))
+                , setterMsg = \newStr -> ChangedConfig (setter { field | val = newStr })
                 }
 
         Int getter setter ->
@@ -373,8 +394,8 @@ viewChanger config ( label, val ) =
 
         Color getter setter ->
             let
-                colorVal =
-                    (getter config).val
+                field =
+                    getter config
 
                 meta =
                     case (getter config).meta of
@@ -383,7 +404,7 @@ viewChanger config ( label, val ) =
             in
             if meta.isOpen then
                 ColorPicker.view
-                    colorVal
+                    field.val
                     meta.state
                     |> E.html
                     |> E.map
@@ -392,32 +413,34 @@ viewChanger config ( label, val ) =
                                 ( newPickerState, newColor ) =
                                     ColorPicker.update
                                         pickerMsg
-                                        colorVal
+                                        field.val
                                         meta.state
                             in
                             ChangedConfig <|
                                 setter
-                                    { val = newColor |> Maybe.withDefault colorVal
-                                    , meta =
-                                        ColorFieldMeta
-                                            { state = newPickerState
-                                            , isOpen = meta.isOpen
-                                            }
+                                    { field
+                                        | val = newColor |> Maybe.withDefault field.val
+                                        , meta =
+                                            ColorFieldMeta
+                                                { state = newPickerState
+                                                , isOpen = meta.isOpen
+                                                }
                                     }
                         )
 
             else
                 EInput.text
-                    [ EBackground.color (colorForE colorVal)
+                    [ EBackground.color (colorForE field.val)
                     , EEvents.onMouseDown
                         (ChangedConfig <|
                             setter
-                                { val = colorVal
-                                , meta =
-                                    ColorFieldMeta
-                                        { state = meta.state
-                                        , isOpen = True
-                                        }
+                                { field
+                                    | val = field.val
+                                    , meta =
+                                        ColorFieldMeta
+                                            { state = meta.state
+                                            , isOpen = True
+                                            }
                                 }
                         )
                     ]
@@ -530,15 +553,20 @@ float options json key =
 
 string : DecoderOptions -> JE.Value -> String -> StringField
 string options json key =
+    let
+        constructor str =
+            { val = str
+            }
+    in
     JD.decodeValue
         (JD.field key JD.string
             |> JD.map
                 (\str ->
-                    { val = str }
+                    constructor str
                 )
         )
         json
-        |> Result.withDefault { val = options.defaultString }
+        |> Result.withDefault (constructor options.defaultString)
 
 
 colorValDecoder : JD.Decoder Color

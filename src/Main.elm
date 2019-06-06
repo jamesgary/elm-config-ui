@@ -235,7 +235,21 @@ saveToLocalStorageCmd model =
 
 view : Model -> Html Msg
 view { config } =
-    E.layout [ E.padding 20 ]
+    E.layout
+        [ E.padding 20
+        , E.inFront
+            (E.el
+                [ E.alignRight
+                , E.moveLeft 20
+                , E.moveDown 20
+                , E.height E.fill
+                , E.scrollbars
+                ]
+                (Config.view config
+                    |> E.map ConfigFormMsg
+                )
+            )
+        ]
         (E.column []
             [ E.row
                 [ EFont.size (round config.fooFontSize.val)
@@ -249,8 +263,6 @@ view { config } =
             , E.row [] [ E.text " " ]
             , E.row [] [ E.text "---" ]
             , E.row [] [ E.text " " ]
-            , Config.view config
-                |> E.map ConfigFormMsg
             ]
         )
 
