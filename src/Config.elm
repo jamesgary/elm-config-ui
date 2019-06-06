@@ -15,7 +15,9 @@ type alias Config =
     , barFontSize : CF.FloatField
     , barString : CF.StringField
     , barColor : CF.ColorField
-    , configBgColor : CF.ColorField
+    , configTableBgColor : CF.ColorField
+    , configTableSpacing : CF.IntField
+    , configTablePadding : CF.IntField
     }
 
 
@@ -38,7 +40,9 @@ new jsonConfig =
         |> with "barFontSize" CF.float
         |> with "barString" CF.string
         |> with "barColor" CF.color
-        |> with "configBgColor" CF.color
+        |> with "configTableBgColor" CF.color
+        |> with "configTableSpacing" CF.int
+        |> with "configTablePadding" CF.int
 
 
 type alias ConfigFormData config =
@@ -67,9 +71,17 @@ ff =
       , "Bar color"
       , CF.Color .barColor (\a c -> { c | barColor = a })
       )
-    , ( "configBgColor"
-      , "Config: BG color"
-      , CF.Color .configBgColor (\a c -> { c | configBgColor = a })
+    , ( "configTableBgColor"
+      , "Config: Table BG color"
+      , CF.Color .configTableBgColor (\a c -> { c | configTableBgColor = a })
+      )
+    , ( "configTableSpacing"
+      , "Config: Table spacing"
+      , CF.Int .configTableSpacing (\a c -> { c | configTableSpacing = a })
+      )
+    , ( "configTablePadding"
+      , "Config: Table padding"
+      , CF.Int .configTablePadding (\a c -> { c | configTablePadding = a })
       )
     ]
 
@@ -84,7 +96,9 @@ view config =
     CF.view config
         formFields
         (CF.viewOptions
-            |> CF.withBgColor config.configBgColor.val
+            |> CF.withTableBgColor config.configTableBgColor.val
+            |> CF.withTableSpacing config.configTableSpacing.val
+            |> CF.withTablePadding config.configTablePadding.val
         )
 
 

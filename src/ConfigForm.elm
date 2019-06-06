@@ -16,7 +16,9 @@ module ConfigForm exposing
     , update
     , view
     , viewOptions
-    , withBgColor
+    , withTableBgColor
+    , withTablePadding
+    , withTableSpacing
     )
 
 import Color exposing (Color)
@@ -170,24 +172,41 @@ update rows msg config =
 
 
 type alias ViewOptions =
-    { bgColor : Color
+    { tableBgColor : Color
+    , tableSpacing : Int
+    , tablePadding : Int
     }
 
 
 viewOptions : ViewOptions
 viewOptions =
-    { bgColor = Color.rgba 0 0 0 0 }
+    { tableBgColor = Color.rgba 1 1 1 0
+    , tableSpacing = 5
+    , tablePadding = 5
+    }
 
 
-withBgColor : Color -> ViewOptions -> ViewOptions
-withBgColor col options =
-    { options | bgColor = col }
+withTableBgColor : Color -> ViewOptions -> ViewOptions
+withTableBgColor val options =
+    { options | tableBgColor = val }
+
+
+withTableSpacing : Int -> ViewOptions -> ViewOptions
+withTableSpacing val options =
+    { options | tableSpacing = val }
+
+
+withTablePadding : Int -> ViewOptions -> ViewOptions
+withTablePadding val options =
+    { options | tablePadding = val }
 
 
 view : config -> List ( String, FieldData config ) -> ViewOptions -> Element (Msg config)
 view config formList options =
     E.table
-        [ EBackground.color (colorForE options.bgColor)
+        [ EBackground.color (colorForE options.tableBgColor)
+        , E.spacing options.tableSpacing
+        , E.padding options.tablePadding
         ]
         { data = formList
         , columns =
