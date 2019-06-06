@@ -153,7 +153,7 @@ update msg model =
                         performEffect
                             (JE.object
                                 [ ( "id", JE.string "CONFIG" )
-                                , ( "value", jsonCmd )
+                                , ( "val", jsonCmd )
                                 ]
                             )
 
@@ -169,7 +169,7 @@ update msg model =
                         ConfigFormPortMsg configMsg ->
                             let
                                 ( newConfig, maybeJsonCmd ) =
-                                    CF.update Config.ff (CF.portMsg configMsg) model.config
+                                    CF.update Config.ff (CF.portMsgFromJson configMsg) model.config
 
                                 newModel =
                                     { model | config = newConfig }
@@ -182,7 +182,7 @@ update msg model =
                                         performEffect
                                             (JE.object
                                                 [ ( "id", JE.string "CONFIG" )
-                                                , ( "value", jsonCmd )
+                                                , ( "val", jsonCmd )
                                                 ]
                                             )
 
@@ -210,7 +210,7 @@ receivePortDecoder =
             (\id ->
                 case id of
                     "CONFIG" ->
-                        JD.field "value" JD.value
+                        JD.field "val" JD.value
                             |> JD.map ConfigFormPortMsg
 
                     str ->
@@ -223,7 +223,7 @@ saveToLocalStorageCmd model =
     performEffect <|
         JE.object
             [ ( "id", JE.string "SAVE" )
-            , ( "value"
+            , ( "val"
               , JE.object
                     [ ( "config"
                       , Config.encode model.config

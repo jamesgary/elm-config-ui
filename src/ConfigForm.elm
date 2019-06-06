@@ -11,7 +11,7 @@ module ConfigForm exposing
     , encode
     , float
     , int
-    , portMsg
+    , portMsgFromJson
     , string
     , update
     , view
@@ -28,6 +28,7 @@ import Element.Background as EBackground
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
+import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
@@ -83,13 +84,13 @@ type FieldData config
 
 
 type Msg config
-    = ChangeConfig (config -> config)
-    | PointerLock (config -> config)
+    = ChangedConfig (config -> config)
+    | ClickedPointerLockLabel (config -> config)
     | FromPort JE.Value
 
 
-portMsg : JE.Value -> Msg config
-portMsg json =
+portMsgFromJson : JE.Value -> Msg config
+portMsgFromJson json =
     FromPort json
 
 
@@ -97,65 +98,131 @@ type alias ConfigFormData config =
     ( String, String, FieldData config )
 
 
+type PortMsg
+    = MouseMove Int
+    | MouseUp
+
+
+portDecoder : JD.Decoder PortMsg
+portDecoder =
+    JD.field "id" JD.string
+        |> JD.andThen
+            (\id ->
+                case id of
+                    "MOUSE_MOVE" ->
+                        JD.field "x" JD.int
+                            |> JD.map MouseMove
+
+                    "MOUSE_UP" ->
+                        JD.succeed MouseUp
+
+                    _ ->
+                        JD.fail ("Could not decode ConfigForm port msg id: " ++ id)
+            )
+
+
 update : List (ConfigFormData config) -> Msg config -> config -> ( config, Maybe JE.Value )
 update rows msg config =
     case msg of
-        ChangeConfig updater ->
+        ChangedConfig updater ->
             ( updater config, Nothing )
 
-        PointerLock updater ->
+        ClickedPointerLockLabel updater ->
             ( updater config, Just (JE.string "LOCK_POINTER") )
 
         FromPort json ->
-            case JD.decodeValue JD.float json of
-                Ok num ->
-                    ( rows
-                        |> List.foldl
-                            (\(( _, _, field ) as row) c ->
-                                case field of
-                                    Int getter setter ->
-                                        let
-                                            oldField =
-                                                getter config
+            case JD.decodeValue portDecoder json of
+                Ok portMsg ->
+                    case portMsg of
+                        MouseMove num ->
+                            ( rows
+                                |> List.foldl
+                                    (\(( _, _, field ) as row) c ->
+                                        case field of
+                                            Int getter setter ->
+                                                let
+                                                    oldField =
+                                                        getter config
 
-                                            newField =
-                                                if oldField.isChanging then
-                                                    { oldField
-                                                        | val =
-                                                            oldField.val + round num
-                                                    }
+                                                    newField =
+                                                        if oldField.isChanging then
+                                                            { oldField
+                                                                | val =
+                                                                    oldField.val + num
+                                                            }
 
-                                                else
-                                                    oldField
-                                        in
-                                        setter newField c
+                                                        else
+                                                            oldField
+                                                in
+                                                setter newField c
 
-                                    Float getter setter ->
-                                        let
-                                            oldField =
-                                                getter config
+                                            Float getter setter ->
+                                                let
+                                                    oldField =
+                                                        getter config
 
-                                            newField =
-                                                if oldField.isChanging then
-                                                    { oldField
-                                                        | val =
-                                                            oldField.val + num
-                                                    }
+                                                    newField =
+                                                        if oldField.isChanging then
+                                                            { oldField
+                                                                | val =
+                                                                    oldField.val + toFloat num
+                                                            }
 
-                                                else
-                                                    oldField
-                                        in
-                                        setter newField c
+                                                        else
+                                                            oldField
+                                                in
+                                                setter newField c
 
-                                    String getter setter ->
-                                        c
+                                            String getter setter ->
+                                                c
 
-                                    Color getter setter ->
-                                        c
+                                            Color getter setter ->
+                                                c
+                                    )
+                                    config
+                            , Nothing
                             )
-                            config
-                    , Nothing
-                    )
+
+                        MouseUp ->
+                            ( rows
+                                |> List.foldl
+                                    (\(( _, _, field ) as row) c ->
+                                        case field of
+                                            Int getter setter ->
+                                                let
+                                                    oldField =
+                                                        getter config
+
+                                                    newField =
+                                                        { oldField
+                                                            | isChanging =
+                                                                False
+                                                        }
+                                                in
+                                                setter newField c
+
+                                            Float getter setter ->
+                                                let
+                                                    oldField =
+                                                        getter config
+
+                                                    newField =
+                                                        { oldField
+                                                            | isChanging =
+                                                                False
+                                                        }
+                                                in
+                                                setter newField c
+
+                                            String getter setter ->
+                                                c
+
+                                            Color getter setter ->
+                                                c
+                                    )
+                                    config
+                            , Nothing
+                            )
 
                 Err err ->
                     let
@@ -214,32 +281,41 @@ view config formList options =
               , width = E.fill
               , view =
                     \( label, val ) ->
-                        case val of
-                            String _ _ ->
-                                E.text label
-
-                            Int getter setter ->
+                        let
+                            resizeAttrs getter setter =
                                 let
                                     field =
                                         getter config
                                 in
-                                E.el
-                                    [ EEvents.onMouseDown (PointerLock (setter { field | isChanging = True }))
-                                    ]
-                                    (E.text label)
+                                [ EEvents.onMouseDown (ClickedPointerLockLabel (setter { field | isChanging = True }))
+                                , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
+                                , E.mouseOver [ EBackground.color (E.rgba 1 1 1 1) ]
+                                ]
 
-                            Float getter setter ->
-                                let
-                                    field =
-                                        getter config
-                                in
-                                E.el
-                                    [ EEvents.onMouseDown (PointerLock (setter { field | isChanging = True }))
-                                    ]
-                                    (E.text label)
+                            attrs =
+                                case val of
+                                    String _ _ ->
+                                        []
 
-                            Color _ _ ->
-                                E.text label
+                                    Int getter setter ->
+                                        resizeAttrs getter setter
+
+                                    Float getter setter ->
+                                        resizeAttrs getter setter
+
+                                    Color _ _ ->
+                                        []
+                        in
+                        E.el
+                            (attrs
+                                ++ [ E.width E.fill
+                                   , E.height E.fill
+                                   ]
+                            )
+                            (E.el
+                                [ E.centerY ]
+                                (E.text label)
+                            )
               }
             , { header = E.none
               , width = E.fill
@@ -256,7 +332,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = (getter config).val
-                , setterMsg = \newStr -> ChangeConfig (setter (StringField newStr))
+                , setterMsg = \newStr -> ChangedConfig (setter (StringField newStr))
                 }
 
         Int getter setter ->
@@ -271,10 +347,10 @@ viewChanger config ( label, val ) =
                     \newStr ->
                         case String.toInt newStr of
                             Just newNum ->
-                                ChangeConfig (setter { field | val = newNum })
+                                ChangedConfig (setter { field | val = newNum })
 
                             Nothing ->
-                                ChangeConfig identity
+                                ChangedConfig identity
                 }
 
         Float getter setter ->
@@ -289,10 +365,10 @@ viewChanger config ( label, val ) =
                     \newStr ->
                         case String.toFloat newStr of
                             Just newNum ->
-                                ChangeConfig (setter { field | val = newNum })
+                                ChangedConfig (setter { field | val = newNum })
 
                             Nothing ->
-                                ChangeConfig identity
+                                ChangedConfig identity
                 }
 
         Color getter setter ->
@@ -319,7 +395,7 @@ viewChanger config ( label, val ) =
                                         colorVal
                                         meta.state
                             in
-                            ChangeConfig <|
+                            ChangedConfig <|
                                 setter
                                     { val = newColor |> Maybe.withDefault colorVal
                                     , meta =
@@ -334,7 +410,7 @@ viewChanger config ( label, val ) =
                 EInput.text
                     [ EBackground.color (colorForE colorVal)
                     , EEvents.onMouseDown
-                        (ChangeConfig <|
+                        (ChangedConfig <|
                             setter
                                 { val = colorVal
                                 , meta =
@@ -347,7 +423,7 @@ viewChanger config ( label, val ) =
                     ]
                     { label = EInput.labelHidden label
                     , text = ""
-                    , onChange = always <| ChangeConfig identity
+                    , onChange = always <| ChangedConfig identity
                     , placeholder = Nothing
                     }
 
