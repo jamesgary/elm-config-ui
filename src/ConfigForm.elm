@@ -30,6 +30,7 @@ import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
 import Html.Attributes
+import Html.Events
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
@@ -344,6 +345,31 @@ view config formList options =
 
 viewChanger : config -> ( String, FieldData config ) -> Element (Msg config)
 viewChanger config ( label, val ) =
+    let
+        incrementalAttrs field setter =
+            [ Html.Events.on "keydown"
+                (JD.map
+                    (\i ->
+                        let
+                            amt =
+                                case i of
+                                    38 ->
+                                        1
+
+                                    40 ->
+                                        -1
+
+                                    _ ->
+                                        0
+                        in
+                        ChangedConfig
+                            (setter { field | val = field.val + amt })
+                    )
+                    Html.Events.keyCode
+                )
+                |> E.htmlAttribute
+            ]
+    in
     case val of
         String getter setter ->
             let
@@ -353,6 +379,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = (getter config).val
+                , attrs = []
                 , setterMsg = \newStr -> ChangedConfig (setter { field | val = newStr })
                 }
 
@@ -364,6 +391,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = String.fromInt field.val
+                , attrs = incrementalAttrs field setter
                 , setterMsg =
                     \newStr ->
                         case String.toInt newStr of
@@ -382,6 +410,7 @@ viewChanger config ( label, val ) =
             textInputHelper
                 { label = label
                 , valStr = String.fromFloat (getter config).val
+                , attrs = incrementalAttrs field setter
                 , setterMsg =
                     \newStr ->
                         case String.toFloat newStr of
@@ -451,9 +480,15 @@ viewChanger config ( label, val ) =
                     }
 
 
-textInputHelper : { label : String, valStr : String, setterMsg : String -> Msg config } -> Element (Msg config)
-textInputHelper { label, valStr, setterMsg } =
-    EInput.text []
+textInputHelper :
+    { label : String
+    , valStr : String
+    , attrs : List (E.Attribute (Msg config))
+    , setterMsg : String -> Msg config
+    }
+    -> Element (Msg config)
+textInputHelper { label, valStr, attrs, setterMsg } =
+    EInput.text attrs
         { label = EInput.labelHidden label
         , text = valStr
         , onChange = setterMsg
