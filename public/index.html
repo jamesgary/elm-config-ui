@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Config Example</title>
+  </head>
+  <body>
+    <div id="elm"></div>
+
+    <!-- compiled elm code -->
+    <script src="./js/compiled/main.js"></script>
+
+    <script>
+      const LOCALSTORAGE_KEY = "config_example";
+
+      const node = document.getElementById('elm');
+
+      const getLocalStorage = function(key) {
+        try {
+          return JSON.parse(localStorage.getItem(key));
+        } catch(e) {
+          return {};
+        }
+      }
+
+      Promise.all([
+        './data/config.json',
+      ].map(url =>
+          fetch(url)
+            .then(resp =>
+              resp.json()
+            )
+        )
+      ).then(jsons => {
+        init(jsons[0]);
+      });
+
+      function init(configFile) {
+        // start main Elm app
+        console.log(getLocalStorage(LOCALSTORAGE_KEY));
+        let app = Elm.Main.init({
+          node: node,
+          flags: {
+            // browser stuff
+            localStorage: getLocalStorage(LOCALSTORAGE_KEY),
+            configFile: configFile,
+          }
+        });
+
+        app.ports.performEffect.subscribe(function(effect) {
+          switch (effect.id) {
+            case "SAVE":
+              localStorage.setItem(
+                LOCALSTORAGE_KEY,
+                JSON.stringify(effect.val),
+              );
+              break;
+            case "CONFIG":
+              switch (effect.val) {
+                case "LOCK_POINTER":
+                  node.requestPointerLock();
+                  break;
+                default:
+                  console.error("Unknown ConfigEffect", effect);
+              }
+              break;
+            default:
+              console.error("Unknown Effect", effect);
+          }
+        });
+
+        // config stuff for pointer lock
+
+        function updatePosition(e) {
+          app.ports.receive.send({
+            id: "CONFIG",
+            val: {
+              id: "MOUSE_MOVE",
+              x: e.movementX,
+            }
+          });
+        }
+
+        function mouseUp(e) {
+          document.exitPointerLock();
+          app.ports.receive.send({
+            id: "CONFIG",
+            val: {
+              id: "MOUSE_UP",
+            }
+          });
+        }
+
+        document.addEventListener('pointerlockchange', function() {
+          if (document.pointerLockElement === node) {
+            document.addEventListener("mousemove", updatePosition, false);
+            document.addEventListener("mouseup", mouseUp, false);
+          } else {
+            document.removeEventListener("mousemove", updatePosition, false);
+            document.removeEventListener("mouseup", mouseUp, false);
+          }
+        }, false);
+
+        // end config stuff for pointer lock
+      }
+    </script>
+  </body>
+</html>
