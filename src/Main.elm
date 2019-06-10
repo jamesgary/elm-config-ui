@@ -66,7 +66,7 @@ decodeFlags =
 decodeLocalStorage : JD.Decoder LocalStorage
 decodeLocalStorage =
     JD.succeed LocalStorage
-        |> JDP.optional "configForm" JE.value (JE.object [])
+        |> JDP.optional "configForm" JD.value (JE.object [])
 
 
 
@@ -80,8 +80,16 @@ init jsonFlags =
             let
                 ( config, configForm ) =
                     ConfigForm.init
-                        { configJson = flags.config
-                        , configFormJson = flags.configForm
+                        { configJson = flags.configFile
+                        , configFormJson = flags.localStorage.configForm
+                        , logics = Config.logics
+                        , emptyConfig =
+                            Config.empty
+                                { int = 1
+                                , float = 1
+                                , string = "SORRY IM NEW HERE"
+                                , color = Color.rgba 1 0 1 1 -- hot pink!
+                                }
                         }
             in
             ( { config = config
@@ -102,8 +110,9 @@ update msg model =
                 ( newConfig, newConfigForm, maybeJsonCmd ) =
                     --CF.update Config.ff configFormMsg model.config
                     ConfigForm.update
-                        configFormMsg
+                        model.config
                         model.configForm
+                        configFormMsg
 
                 newModel =
                     { model
@@ -136,7 +145,10 @@ update msg model =
                             let
                                 ( newConfig, newConfigForm, maybeJsonCmd ) =
                                     --CF.update Config.ff (CF.portMsgFromJson json) model.config
-                                    ConfigForm.updateFromJson json model.configForm
+                                    ConfigForm.updateFromJson
+                                        model.config
+                                        model.configForm
+                                        json
 
                                 newModel =
                                     { model
@@ -196,7 +208,9 @@ saveToLocalStorageCmd model =
             , ( "val"
               , JE.object
                     [ ( "configForm"
-                      , Config.encodeForm model.configForm
+                      , ConfigForm.encodeForm
+                            Config.logics
+                            model.configForm
                       )
                     ]
               )
@@ -215,7 +229,8 @@ view { config } =
                 , E.height E.fill
                 , E.scrollbars
                 ]
-                (Config.view config
+                (ConfigForm.view config
+                    |> E.html
                     |> E.map ConfigFormMsg
                 )
             )
@@ -230,9 +245,6 @@ view { config } =
                 , EBackground.color (colorForE config.barColor)
                 ]
                 [ E.text <| "Bar: " ++ config.barString ]
-            , E.row [] [ E.text " " ]
-            , E.row [] [ E.text "---" ]
-            , E.row [] [ E.text " " ]
             ]
         )
 

@@ -46,7 +46,7 @@
           }
         });
 
-        app.ports.performEffect.subscribe(function(effect) {
+        app.ports.sendToPort.subscribe(function(effect) {
           switch (effect.id) {
             case "SAVE":
               localStorage.setItem(
@@ -71,7 +71,7 @@
         // config stuff for pointer lock
 
         function updatePosition(e) {
-          app.ports.receive.send({
+          app.ports.receiveFromPort.send({
             id: "CONFIG",
             val: {
               id: "MOUSE_MOVE",
@@ -82,7 +82,7 @@
 
         function mouseUp(e) {
           document.exitPointerLock();
-          app.ports.receive.send({
+          app.ports.receiveFromPort.send({
             id: "CONFIG",
             val: {
               id: "MOUSE_UP",

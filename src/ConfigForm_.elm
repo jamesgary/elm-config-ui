@@ -1,56 +1,28 @@
 module ConfigForm exposing
-    ( ConfigForm, init, InitOptions, Defaults, Logic
-    , Field
-    , int, float, string, color
+    ( ColorField
+    , EncodeOptions
+    , FieldData(..)
+    , FloatField
+    , IntField
     , Msg
-    , update, updateFromJson
-    , encode, encodeForm
+    , StringField
+    , ViewOptions
+    , color
+    , encode
+    , float
+    , int
+    , portMsgFromJson
+    , string
+    , update
     , view
+    , viewOptions
+    , withLabelHighlightBgColor
+    , withTableBgColor
+    , withTableBorderColor
+    , withTableBorderWidth
+    , withTablePadding
+    , withTableSpacing
     )
-
-{-|
-
-
-# Main stuff
-
-@docs ConfigForm, init, InitOptions, Defaults, Logic
-
-
-# Field
-
-@docs Field
-
-
-# Field Types
-
-@docs IntField, FloatField, StringField, ColorField
-
-
-# Field functions
-
-@docs int, float, string, color
-
-
-# Msg
-
-@docs Msg
-
-
-# Update
-
-@docs update, updateFromJson
-
-
-# Encoding
-
-@docs encode, encodeForm
-
-
-# View
-
-@docs view
-
--}
 
 import Color exposing (Color)
 import ColorPicker
@@ -60,50 +32,44 @@ import Element.Border as EBorder
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
-import Html exposing (Html)
 import Html.Attributes
 import Html.Events
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
-import OrderedDict exposing (OrderedDict)
-
-
-
-{- ConfigForm is persisted! -}
 
 
 type alias ConfigForm config =
-    { file : config -- unused for now
-    , configForm : OrderedDict String Field
+    { file : JE.Value
+    , config : config
     }
 
 
-type Field
-    = StringField StringFieldData
-    | IntField IntFieldData
-    | FloatField FloatFieldData
-    | ColorField ColorFieldData
+type alias Flags config =
+    { file : JE.Value
+    , localStorage : JE.Value
+    , decoder : JD.Decoder config
+    }
 
 
-type alias IntFieldData =
+type alias IntField =
     { val : Int
     , isChanging : Bool
     }
 
 
-type alias FloatFieldData =
+type alias FloatField =
     { val : Float
     , isChanging : Bool
     }
 
 
-type alias StringFieldData =
+type alias StringField =
     { val : String
     }
 
 
-type alias ColorFieldData =
+type alias ColorField =
     { val : Color
     , meta : ColorFieldMeta
     }
@@ -115,151 +81,6 @@ type ColorFieldMeta
         , isOpen : Bool
         }
 
-
-type alias Flags =
-    { configJson : JE.Value -- currently unused
-    , configFormJson : JE.Value
-    , defaults : Defaults
-    }
-
-
-type alias Defaults =
-    { int : Int
-    , float : Float
-    , string : String
-    , color : Color
-    }
-
-
-type alias InitOptions config =
-    { configJson : JE.Value
-    , configFormJson : JE.Value
-    , logics : List (Logic config)
-    , emptyConfig : config
-    }
-
-
-init : InitOptions config -> ( config, ConfigForm config )
-init options =
-    let
-        config =
-            configDecoder
-                options.logics
-                options.emptyConfig
-                options.configJson
-
-        configForm =
-            configFormDecoder
-                options.logics
-                config
-                options.configFormJson
-    in
-    ( config, configForm )
-
-
-
-{- Logic stuff. Never persist Logic in your model! -}
-
-
-type alias Logic config =
-    { fieldName : String
-    , label : String
-    , kind : LogicKind config
-    }
-
-
-type LogicKind config
-    = StringLogic (config -> String) (String -> config -> config)
-    | IntLogic (config -> Int) (Int -> config -> config)
-    | FloatLogic (config -> Float) (Float -> config -> config)
-    | ColorLogic (config -> Color) (Color -> config -> config)
-
-
-int : String -> String -> (config -> Int) -> (Int -> config -> config) -> Logic config
-int fieldName label getter setter =
-    { fieldName = fieldName
-    , label = label
-    , kind = IntLogic getter setter
-    }
-
-
-float : String -> String -> (config -> Float) -> (Float -> config -> config) -> Logic config
-float fieldName label getter setter =
-    { fieldName = fieldName
-    , label = label
-    , kind = FloatLogic getter setter
-    }
-
-
-string : String -> String -> (config -> String) -> (String -> config -> config) -> Logic config
-string fieldName label getter setter =
-    { fieldName = fieldName
-    , label = label
-    , kind = StringLogic getter setter
-    }
-
-
-color : String -> String -> (config -> Color) -> (Color -> config -> config) -> Logic config
-color fieldName label getter setter =
-    { fieldName = fieldName
-    , label = label
-    , kind = ColorLogic getter setter
-    }
-
-
-view : config -> Html (Msg config)
-view config =
-    Html.text "CONFIG GO HERE"
-
-
-type Msg config
-    = ChangedConfig (config -> config)
-    | ClickedPointerLockLabel (config -> config)
-    | FromPort JE.Value
-
-
-encode : List (Logic config) -> config -> JE.Value
-encode logics config =
-    --  FIXME
-    JE.null
-
-
-encodeForm : List (Logic config) -> ConfigForm config -> JE.Value
-encodeForm logics config =
-    --  FIXME
-    JE.null
-
-
-update : config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
-update config configForm msg =
-    -- FIXME
-    ( config, configForm, Nothing )
-
-
-updateFromJson : config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
-updateFromJson config configForm json =
-    -- FIXME
-    ( config, configForm, Nothing )
-
-
-configDecoder : List (Logic config) -> config -> JE.Value -> config
-configDecoder logics emptyConfig configJson =
-    emptyConfig
-
-
-configFormDecoder : List (Logic config) -> config -> JE.Value -> ConfigForm config
-configFormDecoder logics config configFormJson =
-    { file = config
-
-    -- TODO
-    , configForm = OrderedDict.empty
-    }
-
-
-
--- JSON encode/decoder stuff
---------------
-{--
 
 type FieldData config
     = String (config -> StringField) (StringField -> config -> config)
@@ -835,4 +656,3 @@ color options json key =
         )
         json
         |> Result.withDefault (constructor options.defaultColor)
-        --}
