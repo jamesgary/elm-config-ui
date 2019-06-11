@@ -4,8 +4,8 @@ module ConfigForm exposing
     , int, float, string, color
     , Msg
     , update, updateFromJson
-    , encode, encodeForm
-    , view
+    , encode
+    , view, viewOptions
     )
 
 {-|
@@ -43,12 +43,12 @@ module ConfigForm exposing
 
 # Encoding
 
-@docs encode, encodeForm
+@docs encode
 
 
 # View
 
-@docs view
+@docs view, viewOptions
 
 -}
 
@@ -76,6 +76,7 @@ import OrderedDict exposing (OrderedDict)
 type alias ConfigForm config =
     { file : config -- unused for now
     , configForm : OrderedDict String Field
+    , changingField : Maybe String
     }
 
 
@@ -149,10 +150,7 @@ init options =
                 options.configJson
 
         configForm =
-            configFormDecoder
-                options.logics
-                config
-                options.configFormJson
+            configToConfigForm options.logics config
     in
     ( config, configForm )
 
@@ -169,9 +167,9 @@ type alias Logic config =
 
 
 type LogicKind config
-    = StringLogic (config -> String) (String -> config -> config)
-    | IntLogic (config -> Int) (Int -> config -> config)
+    = IntLogic (config -> Int) (Int -> config -> config)
     | FloatLogic (config -> Float) (Float -> config -> config)
+    | StringLogic (config -> String) (String -> config -> config)
     | ColorLogic (config -> Color) (Color -> config -> config)
 
 
@@ -207,33 +205,89 @@ color fieldName label getter setter =
     }
 
 
-view : config -> Html (Msg config)
-view config =
-    Html.text "CONFIG GO HERE"
-
-
 type Msg config
-    = ChangedConfig (config -> config)
-    | ClickedPointerLockLabel (config -> config)
-    | FromPort JE.Value
+    = ChangedConfigForm String Field
+    | ClickedPointerLockLabel String
 
 
 encode : List (Logic config) -> config -> JE.Value
 encode logics config =
-    --  FIXME
-    JE.null
+    logics
+        |> List.map
+            (\logic ->
+                ( logic.fieldName
+                , case logic.kind of
+                    IntLogic getter _ ->
+                        JE.int (getter config)
+
+                    FloatLogic getter _ ->
+                        JE.float (getter config)
+
+                    StringLogic getter _ ->
+                        JE.string (getter config)
+
+                    ColorLogic getter _ ->
+                        getter config
+                            |> Color.toRgba
+                            |> (\{ red, green, blue, alpha } ->
+                                    JE.object
+                                        [ ( "r", JE.float red )
+                                        , ( "g", JE.float green )
+                                        , ( "b", JE.float blue )
+                                        , ( "a", JE.float alpha )
+                                        ]
+                               )
+                )
+            )
+        |> JE.object
 
 
-encodeForm : List (Logic config) -> ConfigForm config -> JE.Value
-encodeForm logics config =
-    --  FIXME
-    JE.null
+update : List (Logic config) -> config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
+update logics config configForm msg =
+    case msg of
+        ChangedConfigForm fieldName field ->
+            let
+                newConfigForm =
+                    configForm.configForm
+                        |> OrderedDict.insert fieldName field
+            in
+            ( configFromConfigForm logics newConfigForm config
+            , { configForm
+                | configForm = newConfigForm
+              }
+            , Nothing
+            )
+
+        ClickedPointerLockLabel fieldName ->
+            ( config, configForm, Just (JE.string "LOCK_POINTER") )
 
 
-update : config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
-update config configForm msg =
-    -- FIXME
-    ( config, configForm, Nothing )
+configFromConfigForm : List (Logic config) -> OrderedDict String Field -> config -> config
+configFromConfigForm logics configForm config =
+    logics
+        |> List.foldl
+            (\logic newConfig ->
+                let
+                    maybeField =
+                        OrderedDict.get logic.fieldName configForm
+                in
+                case ( maybeField, logic.kind ) of
+                    ( Just (IntField data), IntLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    ( Just (FloatField data), FloatLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    ( Just (StringField data), StringLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    ( Just (ColorField data), ColorLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    _ ->
+                        newConfig
+            )
+            config
 
 
 updateFromJson : config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
@@ -242,22 +296,503 @@ updateFromJson config configForm json =
     ( config, configForm, Nothing )
 
 
-configDecoder : List (Logic config) -> config -> JE.Value -> config
-configDecoder logics emptyConfig configJson =
-    emptyConfig
-
-
-configFormDecoder : List (Logic config) -> config -> JE.Value -> ConfigForm config
-configFormDecoder logics config configFormJson =
+configToConfigForm : List (Logic config) -> config -> ConfigForm config
+configToConfigForm logics config =
     { file = config
+    , changingField = Nothing
+    , configForm =
+        logics
+            |> List.map
+                (\logic ->
+                    ( logic.fieldName
+                    , case logic.kind of
+                        IntLogic getter setter ->
+                            IntField
+                                { val = getter config
+                                , isChanging = False
+                                }
 
-    -- TODO
-    , configForm = OrderedDict.empty
+                        FloatLogic getter setter ->
+                            FloatField
+                                { val = getter config
+                                , isChanging = False
+                                }
+
+                        StringLogic getter setter ->
+                            StringField
+                                { val = getter config
+                                }
+
+                        ColorLogic getter setter ->
+                            ColorField
+                                { val = getter config
+                                , meta =
+                                    ColorFieldMeta
+                                        { state = ColorPicker.empty
+                                        , isOpen = False
+                                        }
+                                }
+                    )
+                )
+            |> OrderedDict.fromList
     }
+
+
+floatField : JE.Value -> String -> Result JD.Error FloatFieldData
+floatField json key =
+    let
+        constructor num =
+            { val = num
+            , isChanging = False
+            }
+    in
+    JD.decodeValue
+        (JD.field key JD.float
+            |> JD.map constructor
+        )
+        json
+
+
+stringField : JE.Value -> String -> Result JD.Error StringFieldData
+stringField json key =
+    let
+        constructor str =
+            { val = str
+            }
+    in
+    JD.decodeValue
+        (JD.field key JD.string
+            |> JD.map
+                (\str ->
+                    constructor str
+                )
+        )
+        json
+
+
+colorField : JE.Value -> String -> Result JD.Error ColorFieldData
+colorField json key =
+    let
+        constructor col =
+            { val = col
+            , meta =
+                ColorFieldMeta
+                    { state = ColorPicker.empty
+                    , isOpen = False
+                    }
+            }
+    in
+    JD.decodeValue
+        (JD.field key colorValDecoder
+            |> JD.map constructor
+        )
+        json
 
 
 
 -- JSON encode/decoder stuff
+
+
+configDecoder : List (Logic config) -> config -> JE.Value -> config
+configDecoder logics emptyConfig configJson =
+    logics
+        |> List.foldl
+            (\logic config ->
+                case logic.kind of
+                    IntLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName JD.int) configJson of
+                            Ok intVal ->
+                                setter intVal config
+
+                            Err err ->
+                                let
+                                    _ =
+                                        Debug.log "err" (JD.errorToString err)
+                                in
+                                config
+
+                    _ ->
+                        config
+            )
+            emptyConfig
+
+
+intDecoder : JE.Value -> String -> Result JD.Error IntFieldData
+intDecoder json key =
+    let
+        constructor num =
+            { val = num
+            , isChanging = False
+            }
+    in
+    JD.decodeValue
+        (JD.field key JD.int
+            |> JD.map constructor
+        )
+        json
+
+
+floatDecoder : JE.Value -> String -> Result JD.Error FloatFieldData
+floatDecoder json key =
+    let
+        constructor num =
+            { val = num
+            , isChanging = False
+            }
+    in
+    JD.decodeValue
+        (JD.field key JD.float
+            |> JD.map constructor
+        )
+        json
+
+
+stringDecoder : JE.Value -> String -> Result JD.Error StringFieldData
+stringDecoder json key =
+    let
+        constructor str =
+            { val = str
+            }
+    in
+    JD.decodeValue
+        (JD.field key JD.string
+            |> JD.map
+                (\str ->
+                    constructor str
+                )
+        )
+        json
+
+
+colorDecoder : JE.Value -> String -> Result JD.Error ColorFieldData
+colorDecoder json key =
+    let
+        constructor col =
+            { val = col
+            , meta =
+                ColorFieldMeta
+                    { state = ColorPicker.empty
+                    , isOpen = False
+                    }
+            }
+    in
+    JD.decodeValue
+        (JD.field key colorValDecoder
+            |> JD.map constructor
+        )
+        json
+
+
+colorValDecoder : JD.Decoder Color
+colorValDecoder =
+    JD.map4 Color.rgba
+        (JD.field "r" JD.float)
+        (JD.field "g" JD.float)
+        (JD.field "b" JD.float)
+        (JD.field "a" JD.float)
+
+
+
+-- VIEW
+
+
+view : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
+view options logics configForm =
+    E.indexedTable
+        [ EBackground.color (colorForE options.tableBgColor)
+        , E.spacing options.tableSpacing
+        , E.padding options.tablePadding
+        , EBorder.width options.tableBorderWidth
+        , EBorder.color (colorForE options.tableBorderColor)
+        ]
+        { data = logics
+        , columns =
+            [ { header = E.none
+              , width = E.fill
+              , view =
+                    \i logic ->
+                        let
+                            resizeAttrs getter setter =
+                                [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
+                                , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
+                                ]
+
+                            defaultAttrs getter setter =
+                                [ E.mouseOver
+                                    [ EBackground.color
+                                        (colorForE options.labelHighlightBgColor)
+                                    ]
+                                ]
+
+                            attrs =
+                                case logic.kind of
+                                    StringLogic getter setter ->
+                                        defaultAttrs getter setter
+
+                                    IntLogic getter setter ->
+                                        defaultAttrs getter setter
+                                            ++ resizeAttrs getter setter
+
+                                    FloatLogic getter setter ->
+                                        defaultAttrs getter setter
+                                            ++ resizeAttrs getter setter
+
+                                    ColorLogic getter setter ->
+                                        defaultAttrs getter setter
+                        in
+                        E.el
+                            (attrs
+                                ++ [ E.width E.fill
+                                   , E.height E.fill
+                                   ]
+                            )
+                            (E.el
+                                [ E.centerY ]
+                                (E.text logic.label)
+                            )
+              }
+            , { header = E.none
+              , width = E.fill
+              , view = viewChanger configForm
+              }
+            ]
+        }
+        |> E.layoutWith
+            { options = [ E.noStaticStyleSheet ] }
+            []
+
+
+viewChanger : ConfigForm config -> Int -> Logic config -> Element (Msg config)
+viewChanger configForm index logic =
+    let
+        defaultAttrs =
+            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
+            ]
+
+        incrementalAttrs wrapper data =
+            [ Html.Events.on "keydown"
+                (JD.map
+                    (\i ->
+                        let
+                            amt =
+                                case i of
+                                    38 ->
+                                        1
+
+                                    40 ->
+                                        -1
+
+                                    _ ->
+                                        0
+                        in
+                        ChangedConfigForm logic.fieldName (wrapper { data | val = data.val + amt })
+                    )
+                    Html.Events.keyCode
+                )
+                |> E.htmlAttribute
+            ]
+
+        maybeField =
+            OrderedDict.get logic.fieldName configForm.configForm
+    in
+    case maybeField of
+        Just field ->
+            case field of
+                StringField data ->
+                    textInputHelper
+                        { label = logic.label
+                        , valStr = data.val
+                        , attrs = defaultAttrs
+                        , setterMsg =
+                            \newStr ->
+                                ChangedConfigForm
+                                    logic.fieldName
+                                    (StringField { data | val = newStr })
+                        }
+
+                IntField data ->
+                    textInputHelper
+                        { label = logic.label
+                        , valStr = String.fromInt data.val
+                        , attrs = defaultAttrs ++ incrementalAttrs IntField data
+                        , setterMsg =
+                            \newStr ->
+                                case String.toInt newStr of
+                                    Just newNum ->
+                                        ChangedConfigForm
+                                            logic.fieldName
+                                            (IntField { data | val = newNum })
+
+                                    Nothing ->
+                                        ChangedConfigForm
+                                            logic.fieldName
+                                            field
+                        }
+
+                FloatField data ->
+                    textInputHelper
+                        { label = logic.label
+                        , valStr = String.fromFloat data.val
+                        , attrs = defaultAttrs ++ incrementalAttrs FloatField data
+                        , setterMsg =
+                            \newStr ->
+                                case String.toFloat newStr of
+                                    Just newNum ->
+                                        ChangedConfigForm
+                                            logic.fieldName
+                                            (FloatField { data | val = newNum })
+
+                                    Nothing ->
+                                        ChangedConfigForm
+                                            logic.fieldName
+                                            field
+                        }
+
+                ColorField data ->
+                    let
+                        meta =
+                            case data.meta of
+                                ColorFieldMeta m ->
+                                    m
+                    in
+                    if meta.isOpen then
+                        ColorPicker.view
+                            data.val
+                            meta.state
+                            |> E.html
+                            |> E.map
+                                (\pickerMsg ->
+                                    let
+                                        ( newPickerState, newColor ) =
+                                            ColorPicker.update
+                                                pickerMsg
+                                                data.val
+                                                meta.state
+                                    in
+                                    ChangedConfigForm logic.fieldName
+                                        (ColorField
+                                            { data
+                                                | val = newColor |> Maybe.withDefault data.val
+                                                , meta =
+                                                    ColorFieldMeta
+                                                        { state = newPickerState
+                                                        , isOpen = meta.isOpen
+                                                        }
+                                            }
+                                        )
+                                )
+
+                    else
+                        -- EInput.text
+                        --     (defaultAttrs
+                        --         ++ [ EBackground.color (colorForE data.val)
+                        --            , EEvents.onMouseDown
+                        --                 (ChangedConfigForm
+                        --                     logic.fieldName
+                        --                     (ColorField
+                        --                         { data
+                        --                             | meta =
+                        --                                 ColorFieldMeta
+                        --                                     { state = meta.state
+                        --                                     , isOpen = True
+                        --                                     }
+                        --                         }
+                        --                     )
+                        --                 )
+                        --            ]
+                        --     )
+                        --     { label = EInput.labelHidden logic.fieldName
+                        --     , text = ""
+                        --     , onChange = always <| ChangedConfig identity
+                        --     , placeholder = Nothing
+                        --     }
+                        E.text "COLOR"
+
+        Nothing ->
+            E.none
+
+
+textInputHelper :
+    { label : String
+    , valStr : String
+    , attrs : List (E.Attribute (Msg config))
+    , setterMsg : String -> Msg config
+    }
+    -> Element (Msg config)
+textInputHelper { label, valStr, attrs, setterMsg } =
+    EInput.text attrs
+        { label = EInput.labelHidden label
+        , text = valStr
+        , onChange = setterMsg
+        , placeholder = Nothing
+        }
+
+
+colorForE : Color -> E.Color
+colorForE col =
+    col
+        |> Color.toRgba
+        |> (\{ red, green, blue, alpha } ->
+                E.rgba red green blue alpha
+           )
+
+
+
+-- VIEW OPTIONS
+
+
+type alias ViewOptions =
+    { tableBgColor : Color
+    , tableSpacing : Int
+    , tablePadding : Int
+    , tableBorderWidth : Int
+    , tableBorderColor : Color
+    , labelHighlightBgColor : Color
+    }
+
+
+viewOptions : ViewOptions
+viewOptions =
+    { tableBgColor = Color.rgba 1 1 1 0
+    , tableSpacing = 5
+    , tablePadding = 5
+    , tableBorderWidth = 1
+    , tableBorderColor = Color.rgb 0 0 0
+    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
+    }
+
+
+withTableBgColor : Color -> ViewOptions -> ViewOptions
+withTableBgColor val options =
+    { options | tableBgColor = val }
+
+
+withTableSpacing : Int -> ViewOptions -> ViewOptions
+withTableSpacing val options =
+    { options | tableSpacing = val }
+
+
+withTablePadding : Int -> ViewOptions -> ViewOptions
+withTablePadding val options =
+    { options | tablePadding = val }
+
+
+withTableBorderWidth : Int -> ViewOptions -> ViewOptions
+withTableBorderWidth val options =
+    { options | tableBorderWidth = val }
+
+
+withTableBorderColor : Color -> ViewOptions -> ViewOptions
+withTableBorderColor val options =
+    { options | tableBorderColor = val }
+
+
+withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
+withLabelHighlightBgColor val options =
+    { options | labelHighlightBgColor = val }
+
+
+
 --------------
 {--
 
@@ -423,291 +958,6 @@ update rows msg config =
 -- VIEW
 
 
-type alias ViewOptions =
-    { tableBgColor : Color
-    , tableSpacing : Int
-    , tablePadding : Int
-    , tableBorderWidth : Int
-    , tableBorderColor : Color
-    , labelHighlightBgColor : Color
-    }
-
-
-viewOptions : ViewOptions
-viewOptions =
-    { tableBgColor = Color.rgba 1 1 1 0
-    , tableSpacing = 5
-    , tablePadding = 5
-    , tableBorderWidth = 1
-    , tableBorderColor = Color.rgb 0 0 0
-    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
-    }
-
-
-withTableBgColor : Color -> ViewOptions -> ViewOptions
-withTableBgColor val options =
-    { options | tableBgColor = val }
-
-
-withTableSpacing : Int -> ViewOptions -> ViewOptions
-withTableSpacing val options =
-    { options | tableSpacing = val }
-
-
-withTablePadding : Int -> ViewOptions -> ViewOptions
-withTablePadding val options =
-    { options | tablePadding = val }
-
-
-withTableBorderWidth : Int -> ViewOptions -> ViewOptions
-withTableBorderWidth val options =
-    { options | tableBorderWidth = val }
-
-
-withTableBorderColor : Color -> ViewOptions -> ViewOptions
-withTableBorderColor val options =
-    { options | tableBorderColor = val }
-
-
-withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
-withLabelHighlightBgColor val options =
-    { options | labelHighlightBgColor = val }
-
-
-view : config -> List ( String, FieldData config ) -> ViewOptions -> Element (Msg config)
-view config formList options =
-    E.indexedTable
-        [ EBackground.color (colorForE options.tableBgColor)
-        , E.spacing options.tableSpacing
-        , E.padding options.tablePadding
-        , EBorder.width options.tableBorderWidth
-        , EBorder.color (colorForE options.tableBorderColor)
-        ]
-        { data = formList
-        , columns =
-            [ { header = E.none
-              , width = E.fill
-              , view =
-                    \i ( label, val ) ->
-                        let
-                            resizeAttrs getter setter =
-                                let
-                                    field =
-                                        getter config
-                                in
-                                [ EEvents.onMouseDown (ClickedPointerLockLabel (setter { field | isChanging = True }))
-                                , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
-                                ]
-
-                            defaultAttrs getter setter =
-                                [ E.mouseOver
-                                    [ EBackground.color
-                                        (colorForE options.labelHighlightBgColor)
-                                    ]
-                                ]
-
-                            attrs =
-                                case val of
-                                    String getter setter ->
-                                        defaultAttrs getter setter
-
-                                    Int getter setter ->
-                                        defaultAttrs getter setter
-                                            ++ resizeAttrs getter setter
-
-                                    Float getter setter ->
-                                        defaultAttrs getter setter
-                                            ++ resizeAttrs getter setter
-
-                                    Color getter setter ->
-                                        defaultAttrs getter setter
-                        in
-                        E.el
-                            (attrs
-                                ++ [ E.width E.fill
-                                   , E.height E.fill
-                                   ]
-                            )
-                            (E.el
-                                [ E.centerY ]
-                                (E.text label)
-                            )
-              }
-            , { header = E.none
-              , width = E.fill
-              , view = viewChanger config
-              }
-            ]
-        }
-
-
-viewChanger : config -> Int -> ( String, FieldData config ) -> Element (Msg config)
-viewChanger config index ( label, val ) =
-    let
-        defaultAttrs =
-            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
-            ]
-
-        incrementalAttrs field setter =
-            [ Html.Events.on "keydown"
-                (JD.map
-                    (\i ->
-                        let
-                            amt =
-                                case i of
-                                    38 ->
-                                        1
-
-                                    40 ->
-                                        -1
-
-                                    _ ->
-                                        0
-                        in
-                        ChangedConfig
-                            (setter { field | val = field.val + amt })
-                    )
-                    Html.Events.keyCode
-                )
-                |> E.htmlAttribute
-            ]
-    in
-    case val of
-        String getter setter ->
-            let
-                field =
-                    getter config
-            in
-            textInputHelper
-                { label = label
-                , valStr = (getter config).val
-                , attrs = defaultAttrs
-                , setterMsg = \newStr -> ChangedConfig (setter { field | val = newStr })
-                }
-
-        Int getter setter ->
-            let
-                field =
-                    getter config
-            in
-            textInputHelper
-                { label = label
-                , valStr = String.fromInt field.val
-                , attrs = defaultAttrs ++ incrementalAttrs field setter
-                , setterMsg =
-                    \newStr ->
-                        case String.toInt newStr of
-                            Just newNum ->
-                                ChangedConfig (setter { field | val = newNum })
-
-                            Nothing ->
-                                ChangedConfig identity
-                }
-
-        Float getter setter ->
-            let
-                field =
-                    getter config
-            in
-            textInputHelper
-                { label = label
-                , valStr = String.fromFloat (getter config).val
-                , attrs = defaultAttrs ++ incrementalAttrs field setter
-                , setterMsg =
-                    \newStr ->
-                        case String.toFloat newStr of
-                            Just newNum ->
-                                ChangedConfig (setter { field | val = newNum })
-
-                            Nothing ->
-                                ChangedConfig identity
-                }
-
-        Color getter setter ->
-            let
-                field =
-                    getter config
-
-                meta =
-                    case (getter config).meta of
-                        ColorFieldMeta m ->
-                            m
-            in
-            if meta.isOpen then
-                ColorPicker.view
-                    field.val
-                    meta.state
-                    |> E.html
-                    |> E.map
-                        (\pickerMsg ->
-                            let
-                                ( newPickerState, newColor ) =
-                                    ColorPicker.update
-                                        pickerMsg
-                                        field.val
-                                        meta.state
-                            in
-                            ChangedConfig <|
-                                setter
-                                    { field
-                                        | val = newColor |> Maybe.withDefault field.val
-                                        , meta =
-                                            ColorFieldMeta
-                                                { state = newPickerState
-                                                , isOpen = meta.isOpen
-                                                }
-                                    }
-                        )
-
-            else
-                EInput.text
-                    (defaultAttrs
-                        ++ [ EBackground.color (colorForE field.val)
-                           , EEvents.onMouseDown
-                                (ChangedConfig <|
-                                    setter
-                                        { field
-                                            | val = field.val
-                                            , meta =
-                                                ColorFieldMeta
-                                                    { state = meta.state
-                                                    , isOpen = True
-                                                    }
-                                        }
-                                )
-                           ]
-                    )
-                    { label = EInput.labelHidden label
-                    , text = ""
-                    , onChange = always <| ChangedConfig identity
-                    , placeholder = Nothing
-                    }
-
-
-textInputHelper :
-    { label : String
-    , valStr : String
-    , attrs : List (E.Attribute (Msg config))
-    , setterMsg : String -> Msg config
-    }
-    -> Element (Msg config)
-textInputHelper { label, valStr, attrs, setterMsg } =
-    EInput.text attrs
-        { label = EInput.labelHidden label
-        , text = valStr
-        , onChange = setterMsg
-        , placeholder = Nothing
-        }
-
-
-colorForE : Color -> E.Color
-colorForE col =
-    col
-        |> Color.toRgba
-        |> (\{ red, green, blue, alpha } ->
-                E.rgba red green blue alpha
-           )
-
 
 
 -- JSON
@@ -758,81 +1008,4 @@ type alias DecoderOptions =
     }
 
 
-int : DecoderOptions -> JE.Value -> String -> IntField
-int options json key =
-    let
-        constructor num =
-            { val = num
-            , isChanging = False
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.int
-            |> JD.map constructor
-        )
-        json
-        |> Result.withDefault (constructor options.defaultInt)
-
-
-float : DecoderOptions -> JE.Value -> String -> FloatField
-float options json key =
-    let
-        constructor num =
-            { val = num
-            , isChanging = False
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.float
-            |> JD.map constructor
-        )
-        json
-        |> Result.withDefault (constructor options.defaultFloat)
-
-
-string : DecoderOptions -> JE.Value -> String -> StringField
-string options json key =
-    let
-        constructor str =
-            { val = str
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.string
-            |> JD.map
-                (\str ->
-                    constructor str
-                )
-        )
-        json
-        |> Result.withDefault (constructor options.defaultString)
-
-
-colorValDecoder : JD.Decoder Color
-colorValDecoder =
-    JD.map4 Color.rgba
-        (JD.field "r" JD.float)
-        (JD.field "g" JD.float)
-        (JD.field "b" JD.float)
-        (JD.field "a" JD.float)
-
-
-color : DecoderOptions -> JE.Value -> String -> ColorField
-color options json key =
-    let
-        constructor col =
-            { val = col
-            , meta =
-                ColorFieldMeta
-                    { state = ColorPicker.empty
-                    , isOpen = False
-                    }
-            }
-    in
-    JD.decodeValue
-        (JD.field key colorValDecoder
-            |> JD.map constructor
-        )
-        json
-        |> Result.withDefault (constructor options.defaultColor)
         --}

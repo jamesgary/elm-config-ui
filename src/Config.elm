@@ -5,9 +5,9 @@ import ConfigForm
 
 
 type alias Config =
-    { fooFontSize : Float
+    { fooFontSize : Int
     , fooString : String
-    , barFontSize : Float
+    , barFontSize : Int
     , barString : String
     , barColor : Color
     }
@@ -15,9 +15,9 @@ type alias Config =
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { fooFontSize = defaults.float
+    { fooFontSize = defaults.int
     , fooString = defaults.string
-    , barFontSize = defaults.float
+    , barFontSize = defaults.int
     , barString = defaults.string
     , barColor = defaults.color
     }
@@ -33,7 +33,7 @@ empty defaults =
 
 logics : List (ConfigForm.Logic Config)
 logics =
-    [ ConfigForm.float
+    [ ConfigForm.int
         "fooFontSize"
         "Foo font size"
         .fooFontSize

@@ -110,6 +110,7 @@ update msg model =
                 ( newConfig, newConfigForm, maybeJsonCmd ) =
                     --CF.update Config.ff configFormMsg model.config
                     ConfigForm.update
+                        Config.logics
                         model.config
                         model.configForm
                         configFormMsg
@@ -208,9 +209,9 @@ saveToLocalStorageCmd model =
             , ( "val"
               , JE.object
                     [ ( "configForm"
-                      , ConfigForm.encodeForm
+                      , ConfigForm.encode
                             Config.logics
-                            model.configForm
+                            model.config
                       )
                     ]
               )
@@ -218,7 +219,7 @@ saveToLocalStorageCmd model =
 
 
 view : Model -> Html Msg
-view { config } =
+view model =
     E.layout
         [ E.padding 20
         , E.inFront
@@ -229,7 +230,10 @@ view { config } =
                 , E.height E.fill
                 , E.scrollbars
                 ]
-                (ConfigForm.view config
+                (ConfigForm.view
+                    ConfigForm.viewOptions
+                    Config.logics
+                    model.configForm
                     |> E.html
                     |> E.map ConfigFormMsg
                 )
@@ -237,14 +241,14 @@ view { config } =
         ]
         (E.column []
             [ E.row
-                [ EFont.size (round config.fooFontSize)
+                [ EFont.size model.config.fooFontSize
                 ]
-                [ E.text <| "Foo: " ++ config.fooString ]
+                [ E.text <| "Foo: " ++ model.config.fooString ]
             , E.row
-                [ EFont.size (round config.barFontSize)
-                , EBackground.color (colorForE config.barColor)
+                [ EFont.size model.config.barFontSize
+                , EBackground.color (colorForE model.config.barColor)
                 ]
-                [ E.text <| "Bar: " ++ config.barString ]
+                [ E.text <| "Bar: " ++ model.config.barString ]
             ]
         )
 
