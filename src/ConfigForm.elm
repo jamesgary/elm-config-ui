@@ -54,6 +54,7 @@ module ConfigForm exposing
 
 import Color exposing (Color)
 import ColorPicker
+import Dict exposing (Dict)
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Border as EBorder
@@ -75,8 +76,9 @@ import OrderedDict exposing (OrderedDict)
 
 type alias ConfigForm config =
     { file : config -- unused for now
-    , configForm : OrderedDict String Field
+    , fields : OrderedDict String Field
     , changingField : Maybe String
+    , scrollTop : Int
     }
 
 
@@ -144,15 +146,20 @@ init : InitOptions config -> ( config, ConfigForm config )
 init options =
     let
         config =
-            configDecoder
+            decodeConfig
                 options.logics
                 options.emptyConfig
                 options.configJson
 
         configForm =
-            configToConfigForm options.logics config
+            decodeConfigForm
+                options.logics
+                config
+                options.configFormJson
     in
-    ( config, configForm )
+    ( configFromConfigForm options.logics configForm.fields config
+    , configForm
+    )
 
 
 
@@ -248,12 +255,12 @@ update logics config configForm msg =
         ChangedConfigForm fieldName field ->
             let
                 newConfigForm =
-                    configForm.configForm
+                    configForm.fields
                         |> OrderedDict.insert fieldName field
             in
             ( configFromConfigForm logics newConfigForm config
             , { configForm
-                | configForm = newConfigForm
+                | fields = newConfigForm
               }
             , Nothing
             )
@@ -296,36 +303,83 @@ updateFromJson config configForm json =
     ( config, configForm, Nothing )
 
 
-configToConfigForm : List (Logic config) -> config -> ConfigForm config
-configToConfigForm logics config =
+decodeConfigForm : List (Logic config) -> config -> JE.Value -> ConfigForm config
+decodeConfigForm logics config json =
     { file = config
-    , changingField = Nothing
-    , configForm =
+    , fields =
         logics
             |> List.map
                 (\logic ->
                     ( logic.fieldName
                     , case logic.kind of
                         IntLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.field logic.fieldName JD.int
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
                             IntField
-                                { val = getter config
+                                { val = val
                                 , isChanging = False
                                 }
 
                         FloatLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.field logic.fieldName JD.float
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
                             FloatField
-                                { val = getter config
+                                { val = val
                                 , isChanging = False
                                 }
 
                         StringLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.field logic.fieldName JD.string
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
                             StringField
-                                { val = getter config
+                                { val = val
                                 }
 
                         ColorLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.field logic.fieldName colorValDecoder
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
                             ColorField
-                                { val = getter config
+                                { val = val
                                 , meta =
                                     ColorFieldMeta
                                         { state = ColorPicker.empty
@@ -335,6 +389,14 @@ configToConfigForm logics config =
                     )
                 )
             |> OrderedDict.fromList
+    , changingField = Nothing
+    , scrollTop =
+        case JD.decodeValue (JD.field "scrollTop" JD.int) json of
+            Ok scrollTop ->
+                scrollTop
+
+            Err _ ->
+                0
     }
 
 
@@ -393,8 +455,8 @@ colorField json key =
 -- JSON encode/decoder stuff
 
 
-configDecoder : List (Logic config) -> config -> JE.Value -> config
-configDecoder logics emptyConfig configJson =
+decodeConfig : List (Logic config) -> config -> JE.Value -> config
+decodeConfig logics emptyConfig configJson =
     logics
         |> List.foldl
             (\logic config ->
@@ -405,10 +467,6 @@ configDecoder logics emptyConfig configJson =
                                 setter intVal config
 
                             Err err ->
-                                let
-                                    _ =
-                                        Debug.log "err" (JD.errorToString err)
-                                in
                                 config
 
                     _ ->
@@ -593,7 +651,7 @@ viewChanger configForm index logic =
             ]
 
         maybeField =
-            OrderedDict.get logic.fieldName configForm.configForm
+            OrderedDict.get logic.fieldName configForm.fields
     in
     case maybeField of
         Just field ->
@@ -683,30 +741,27 @@ viewChanger configForm index logic =
                                 )
 
                     else
-                        -- EInput.text
-                        --     (defaultAttrs
-                        --         ++ [ EBackground.color (colorForE data.val)
-                        --            , EEvents.onMouseDown
-                        --                 (ChangedConfigForm
-                        --                     logic.fieldName
-                        --                     (ColorField
-                        --                         { data
-                        --                             | meta =
-                        --                                 ColorFieldMeta
-                        --                                     { state = meta.state
-                        --                                     , isOpen = True
-                        --                                     }
-                        --                         }
-                        --                     )
-                        --                 )
-                        --            ]
-                        --     )
-                        --     { label = EInput.labelHidden logic.fieldName
-                        --     , text = ""
-                        --     , onChange = always <| ChangedConfig identity
-                        --     , placeholder = Nothing
-                        --     }
-                        E.text "COLOR"
+                        E.el
+                            (defaultAttrs
+                                ++ [ EBackground.color (colorForE data.val)
+                                   , E.width E.fill
+                                   , E.height E.fill
+                                   , EEvents.onMouseDown
+                                        (ChangedConfigForm
+                                            logic.fieldName
+                                            (ColorField
+                                                { data
+                                                    | meta =
+                                                        ColorFieldMeta
+                                                            { state = meta.state
+                                                            , isOpen = True
+                                                            }
+                                                }
+                                            )
+                                        )
+                                   ]
+                            )
+                            E.none
 
         Nothing ->
             E.none

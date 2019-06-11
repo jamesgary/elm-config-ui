@@ -108,7 +108,6 @@ update msg model =
         ConfigFormMsg configFormMsg ->
             let
                 ( newConfig, newConfigForm, maybeJsonCmd ) =
-                    --CF.update Config.ff configFormMsg model.config
                     ConfigForm.update
                         Config.logics
                         model.config
@@ -241,14 +240,14 @@ view model =
         ]
         (E.column []
             [ E.row
-                [ EFont.size model.config.fooFontSize
+                [ EFont.size model.config.headerFontSize
                 ]
-                [ E.text <| "Foo: " ++ model.config.fooString ]
+                [ E.text <| "Header: " ++ model.config.headerString ]
             , E.row
-                [ EFont.size model.config.barFontSize
-                , EBackground.color (colorForE model.config.barColor)
+                [ EFont.size model.config.subheaderFontSize
+                , EBackground.color (colorForE model.config.subheaderColor)
                 ]
-                [ E.text <| "Bar: " ++ model.config.barString ]
+                [ E.text <| "Subheader: " ++ model.config.subheaderString ]
             ]
         )
 
