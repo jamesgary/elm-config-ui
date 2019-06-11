@@ -144,8 +144,8 @@ update msg model =
                         ConfigFormPortMsg json ->
                             let
                                 ( newConfig, newConfigForm, maybeJsonCmd ) =
-                                    --CF.update Config.ff (CF.portMsgFromJson json) model.config
                                     ConfigForm.updateFromJson
+                                        Config.logics
                                         model.config
                                         model.configForm
                                         json

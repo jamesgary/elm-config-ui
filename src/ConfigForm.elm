@@ -5,7 +5,7 @@ module ConfigForm exposing
     , Msg
     , update, updateFromJson
     , encode
-    , view, viewOptions
+    , view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor
     )
 
 {-|
@@ -48,7 +48,7 @@ module ConfigForm exposing
 
 # View
 
-@docs view, viewOptions
+@docs view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor
 
 -}
 
@@ -70,10 +70,6 @@ import Json.Encode as JE
 import OrderedDict exposing (OrderedDict)
 
 
-
-{- ConfigForm is persisted! -}
-
-
 type alias ConfigForm config =
     { file : config -- unused for now
     , fields : OrderedDict String Field
@@ -91,13 +87,11 @@ type Field
 
 type alias IntFieldData =
     { val : Int
-    , isChanging : Bool
     }
 
 
 type alias FloatFieldData =
     { val : Float
-    , isChanging : Bool
     }
 
 
@@ -266,7 +260,10 @@ update logics config configForm msg =
             )
 
         ClickedPointerLockLabel fieldName ->
-            ( config, configForm, Just (JE.string "LOCK_POINTER") )
+            ( config
+            , { configForm | changingField = Just fieldName }
+            , Just (JE.string "LOCK_POINTER")
+            )
 
 
 configFromConfigForm : List (Logic config) -> OrderedDict String Field -> config -> config
@@ -297,10 +294,81 @@ configFromConfigForm logics configForm config =
             config
 
 
-updateFromJson : config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
-updateFromJson config configForm json =
-    -- FIXME
-    ( config, configForm, Nothing )
+updateFromJson : List (Logic config) -> config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
+updateFromJson logics config configForm json =
+    case JD.decodeValue portDecoder json of
+        Ok portMsg ->
+            case portMsg of
+                MouseMove num ->
+                    let
+                        newConfigForm =
+                            case configForm.changingField of
+                                Just fieldName ->
+                                    { configForm
+                                        | fields =
+                                            configForm.fields
+                                                |> OrderedDict.update fieldName
+                                                    (\maybeField ->
+                                                        case maybeField of
+                                                            Just (IntField data) ->
+                                                                Just (IntField { data | val = data.val + num })
+
+                                                            Just (FloatField data) ->
+                                                                Just (FloatField { data | val = data.val + toFloat num })
+
+                                                            _ ->
+                                                                Nothing
+                                                    )
+                                    }
+
+                                Nothing ->
+                                    configForm
+                    in
+                    ( configFromConfigForm
+                        logics
+                        newConfigForm.fields
+                        config
+                    , newConfigForm
+                    , Nothing
+                    )
+
+                MouseUp ->
+                    ( config
+                    , { configForm | changingField = Nothing }
+                    , Nothing
+                    )
+
+        Err err ->
+            let
+                _ =
+                    Debug.log
+                        "Could not decode incoming config port msg: "
+                        (JD.errorToString err)
+            in
+            ( config, configForm, Nothing )
+
+
+type PortMsg
+    = MouseMove Int
+    | MouseUp
+
+
+portDecoder : JD.Decoder PortMsg
+portDecoder =
+    JD.field "id" JD.string
+        |> JD.andThen
+            (\id ->
+                case id of
+                    "MOUSE_MOVE" ->
+                        JD.field "x" JD.int
+                            |> JD.map MouseMove
+
+                    "MOUSE_UP" ->
+                        JD.succeed MouseUp
+
+                    _ ->
+                        JD.fail ("Could not decode ConfigForm port msg id: " ++ id)
+            )
 
 
 decodeConfigForm : List (Logic config) -> config -> JE.Value -> ConfigForm config
@@ -327,7 +395,6 @@ decodeConfigForm logics config json =
                             in
                             IntField
                                 { val = val
-                                , isChanging = False
                                 }
 
                         FloatLogic getter setter ->
@@ -345,7 +412,6 @@ decodeConfigForm logics config json =
                             in
                             FloatField
                                 { val = val
-                                , isChanging = False
                                 }
 
                         StringLogic getter setter ->
@@ -405,7 +471,6 @@ floatField json key =
     let
         constructor num =
             { val = num
-            , isChanging = False
             }
     in
     JD.decodeValue
@@ -480,7 +545,6 @@ intDecoder json key =
     let
         constructor num =
             { val = num
-            , isChanging = False
             }
     in
     JD.decodeValue
@@ -495,7 +559,6 @@ floatDecoder json key =
     let
         constructor num =
             { val = num
-            , isChanging = False
             }
     in
     JD.decodeValue
@@ -845,222 +908,3 @@ withTableBorderColor val options =
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
 withLabelHighlightBgColor val options =
     { options | labelHighlightBgColor = val }
-
-
-
---------------
-{--
-
-type FieldData config
-    = String (config -> StringField) (StringField -> config -> config)
-    | Int (config -> IntField) (IntField -> config -> config)
-    | Float (config -> FloatField) (FloatField -> config -> config)
-    | Color (config -> ColorField) (ColorField -> config -> config)
-
-
-type Msg config
-    = ChangedConfig (config -> config)
-    | ClickedPointerLockLabel (config -> config)
-    | FromPort JE.Value
-
-
-portMsgFromJson : JE.Value -> Msg config
-portMsgFromJson json =
-    FromPort json
-
-
-type alias ConfigFormData config =
-    ( String, String, FieldData config )
-
-
-type PortMsg
-    = MouseMove Int
-    | MouseUp
-
-
-portDecoder : JD.Decoder PortMsg
-portDecoder =
-    JD.field "id" JD.string
-        |> JD.andThen
-            (\id ->
-                case id of
-                    "MOUSE_MOVE" ->
-                        JD.field "x" JD.int
-                            |> JD.map MouseMove
-
-                    "MOUSE_UP" ->
-                        JD.succeed MouseUp
-
-                    _ ->
-                        JD.fail ("Could not decode ConfigForm port msg id: " ++ id)
-            )
-
-
-update : List (ConfigFormData config) -> Msg config -> config -> ( config, Maybe JE.Value )
-update rows msg config =
-    case msg of
-        ChangedConfig updater ->
-            ( updater config, Nothing )
-
-        ClickedPointerLockLabel updater ->
-            ( updater config, Just (JE.string "LOCK_POINTER") )
-
-        FromPort json ->
-            case JD.decodeValue portDecoder json of
-                Ok portMsg ->
-                    case portMsg of
-                        MouseMove num ->
-                            ( rows
-                                |> List.foldl
-                                    (\(( _, _, field ) as row) c ->
-                                        case field of
-                                            Int getter setter ->
-                                                let
-                                                    oldField =
-                                                        getter config
-
-                                                    newField =
-                                                        if oldField.isChanging then
-                                                            { oldField
-                                                                | val =
-                                                                    oldField.val + num
-                                                            }
-
-                                                        else
-                                                            oldField
-                                                in
-                                                setter newField c
-
-                                            Float getter setter ->
-                                                let
-                                                    oldField =
-                                                        getter config
-
-                                                    newField =
-                                                        if oldField.isChanging then
-                                                            { oldField
-                                                                | val =
-                                                                    oldField.val + toFloat num
-                                                            }
-
-                                                        else
-                                                            oldField
-                                                in
-                                                setter newField c
-
-                                            String getter setter ->
-                                                c
-
-                                            Color getter setter ->
-                                                c
-                                    )
-                                    config
-                            , Nothing
-                            )
-
-                        MouseUp ->
-                            ( rows
-                                |> List.foldl
-                                    (\(( _, _, field ) as row) c ->
-                                        case field of
-                                            Int getter setter ->
-                                                let
-                                                    oldField =
-                                                        getter config
-
-                                                    newField =
-                                                        { oldField
-                                                            | isChanging =
-                                                                False
-                                                        }
-                                                in
-                                                setter newField c
-
-                                            Float getter setter ->
-                                                let
-                                                    oldField =
-                                                        getter config
-
-                                                    newField =
-                                                        { oldField
-                                                            | isChanging =
-                                                                False
-                                                        }
-                                                in
-                                                setter newField c
-
-                                            String getter setter ->
-                                                c
-
-                                            Color getter setter ->
-                                                c
-                                    )
-                                    config
-                            , Nothing
-                            )
-
-                Err err ->
-                    let
-                        _ =
-                            Debug.log
-                                "Could not decode incoming config port msg: "
-                                (JD.errorToString err)
-                    in
-                    ( config, Nothing )
-
-
-
--- VIEW
-
-
-
-
--- JSON
-
-
-type alias EncodeOptions =
-    { withMeta : Bool
-    }
-
-
-encode : List ( String, String, FieldData config ) -> config -> JE.Value
-encode list config =
-    list
-        |> List.map
-            (\( key, _, fieldData ) ->
-                ( key
-                , case fieldData of
-                    Int getter _ ->
-                        JE.int (getter config).val
-
-                    Float getter _ ->
-                        JE.float (getter config).val
-
-                    String getter _ ->
-                        JE.string (getter config).val
-
-                    Color getter _ ->
-                        (getter config).val
-                            |> Color.toRgba
-                            |> (\{ red, green, blue, alpha } ->
-                                    JE.object
-                                        [ ( "r", JE.float red )
-                                        , ( "g", JE.float green )
-                                        , ( "b", JE.float blue )
-                                        , ( "a", JE.float alpha )
-                                        ]
-                               )
-                )
-            )
-        |> JE.object
-
-
-type alias DecoderOptions =
-    { defaultInt : Int
-    , defaultFloat : Float
-    , defaultString : String
-    , defaultColor : Color
-    }
-
-
-        --}
