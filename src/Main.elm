@@ -218,7 +218,7 @@ saveToLocalStorageCmd model =
 
 
 view : Model -> Html Msg
-view model =
+view ({ config } as model) =
     E.layout
         [ E.padding 20
         , E.inFront
@@ -230,7 +230,14 @@ view model =
                 , E.scrollbars
                 ]
                 (ConfigForm.view
-                    ConfigForm.viewOptions
+                    (ConfigForm.viewOptions
+                        |> ConfigForm.withTableBgColor config.configTableBgColor
+                        |> ConfigForm.withTableSpacing config.configTableSpacing
+                        |> ConfigForm.withTablePadding config.configTablePadding
+                        |> ConfigForm.withTableBorderWidth config.configTableBorderWidth
+                        |> ConfigForm.withTableBorderColor config.configTableBorderColor
+                        |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                    )
                     Config.logics
                     model.configForm
                     |> E.html

@@ -1,54 +1,33 @@
 module ConfigGenerator exposing (main)
 
+import ConfigFormGenerator exposing (..)
+import Dict exposing (Dict)
 import Html exposing (Html)
+
+
+sample : List ( String, ( String, Kind ) )
+sample =
+    [ ( "Header font size", ( "headerFontSize", IntKind ) )
+    , ( "Header string", ( "headerString", StringKind ) )
+    , ( "Subheader font size", ( "subheaderFontSize", IntKind ) )
+    , ( "Subheader string", ( "subheaderString", StringKind ) )
+    , ( "Subheader color", ( "subheaderColor", ColorKind ) )
+    , ( "Config table BG color", ( "configTableBgColor", ColorKind ) )
+    , ( "Config table spacing", ( "configTableSpacing", IntKind ) )
+    , ( "Config table padding", ( "configTablePadding", IntKind ) )
+    , ( "Config table border width", ( "configTableBorderWidth", IntKind ) )
+    , ( "Config table border color", ( "configTableBorderColor", ColorKind ) )
+    , ( "Config table label highlight BG color", ( "configLabelHighlightBgColor", ColorKind ) )
+    ]
 
 
 main : Html msg
 main =
     let
+        generatedElmCode =
+            toFile sample
+
         _ =
-            Debug.log "oh ho ho." "ha ha"
+            Debug.log generatedElmCode ""
     in
     Html.text ""
-
-
-
-{-
-   fooFontSize : CF.FloatField
-   fooString : CF.StringField
-   barFontSize : CF.FloatField
-   barString : CF.StringField
-   barColor : CF.ColorField
-   configTableBgColor : CF.ColorField
-   configTableSpacing : CF.IntField
-   configTablePadding : CF.IntField
-   configTableBorderWidth : CF.IntField
-   configTableBorderColor : CF.ColorField
-   configLabelHighlightBgColor : CF.ColorField
-
-
-
-
-
-
-
-   traditional way:
-   individual msgs, fields, encode, decoder, form fields
-   not safe because:
-   - may use a duplicate label, or mismatched json field
-
-   smarter and still safe:
-   one msg (Config -> Config)
-   things that scale: record attributes, getters, setters, constructor, label, json field
-   not safe because:
-   - can still mistype json fields (duplicate)
-   - still a lot of files to change
-
-   hacky debug hack
-   absolutely zero maintenance, except maybe purging old bad values
-   not safe because:
-   - your code has to run and use the new config variables, and will not remove old ones
-
-   code generator
-   very simple line
--}
