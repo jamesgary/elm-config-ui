@@ -1,7 +1,4 @@
-all: ; ${MAKE} -j4 elm gen
-
-elm:
-	elm-live src/Main.elm --dir=public/ -- --output=public/js/compiled/main.js
-
-gen:
-	elm make src/ConfigGenerator.elm --output tmp/tmp.js && node tmp/tmp.js > src/Config.elm
+all: 
+	elm-live src/Main.elm --dir=public/ -- --output=public/js/compiled/main.js & \
+	chokidar "config/Data.elm" -c "elm make config/Data.elm --output tmp/gen-config.js > /dev/null && node tmp/gen-config.js > src/Config.elm 2>/dev/null" & \
+	wait;
