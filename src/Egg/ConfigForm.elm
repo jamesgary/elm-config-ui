@@ -662,8 +662,16 @@ view options logics configForm =
 viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Element (Msg config)
 viewChanger options configForm index logic =
     let
+        tabIndex =
+            case logic.kind of
+                ColorLogic _ _ ->
+                    -1
+
+                _ ->
+                    index
+
         defaultAttrs =
-            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
+            [ Html.Attributes.tabindex (1 + tabIndex) |> E.htmlAttribute
             , E.height (E.px options.inputHeight)
             ]
 
