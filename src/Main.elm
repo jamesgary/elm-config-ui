@@ -253,7 +253,7 @@ view ({ config } as model) =
                 ]
                 [ E.text <| "Header: " ++ model.config.headerString ]
             , E.row
-                [ EFont.size model.config.subheaderFontSize
+                [ EFont.size (round model.config.subheaderFontSize)
                 , EBackground.color (colorForE model.config.subheaderColor)
                 , E.padding model.config.subheaderPadding
                 ]

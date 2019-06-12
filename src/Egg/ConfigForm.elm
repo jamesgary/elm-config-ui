@@ -88,11 +88,13 @@ type Field
 
 type alias IntFieldData =
     { val : Int
+    , str : String
     }
 
 
 type alias FloatFieldData =
     { val : Float
+    , str : String
     }
 
 
@@ -312,10 +314,22 @@ updateFromJson logics config configForm json =
                                                     (\maybeField ->
                                                         case maybeField of
                                                             Just (IntField data) ->
-                                                                Just (IntField { data | val = data.val + num })
+                                                                Just
+                                                                    (IntField
+                                                                        { data
+                                                                            | val = data.val + num
+                                                                            , str = String.fromInt (data.val + num)
+                                                                        }
+                                                                    )
 
                                                             Just (FloatField data) ->
-                                                                Just (FloatField { data | val = data.val + toFloat num })
+                                                                Just
+                                                                    (FloatField
+                                                                        { data
+                                                                            | val = data.val + toFloat num
+                                                                            , str = String.fromFloat (data.val + toFloat num)
+                                                                        }
+                                                                    )
 
                                                             _ ->
                                                                 Nothing
@@ -396,6 +410,7 @@ decodeConfigForm logics config json =
                             in
                             IntField
                                 { val = val
+                                , str = String.fromInt val
                                 }
 
                         FloatLogic getter setter ->
@@ -413,6 +428,7 @@ decodeConfigForm logics config json =
                             in
                             FloatField
                                 { val = val
+                                , str = String.fromFloat val
                                 }
 
                         StringLogic getter setter ->
@@ -468,56 +484,6 @@ decodeConfigForm logics config json =
     }
 
 
-floatField : JE.Value -> String -> Result JD.Error FloatFieldData
-floatField json key =
-    let
-        constructor num =
-            { val = num
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.float
-            |> JD.map constructor
-        )
-        json
-
-
-stringField : JE.Value -> String -> Result JD.Error StringFieldData
-stringField json key =
-    let
-        constructor str =
-            { val = str
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.string
-            |> JD.map
-                (\str ->
-                    constructor str
-                )
-        )
-        json
-
-
-colorField : JE.Value -> String -> Result JD.Error ColorFieldData
-colorField json key =
-    let
-        constructor col =
-            { val = col
-            , meta =
-                ColorFieldMeta
-                    { state = ColorPicker.empty
-                    , isOpen = False
-                    }
-            }
-    in
-    JD.decodeValue
-        (JD.field key colorValDecoder
-            |> JD.map constructor
-        )
-        json
-
-
 
 -- JSON encode/decoder stuff
 
@@ -540,70 +506,6 @@ decodeConfig logics emptyConfig configJson =
                         config
             )
             emptyConfig
-
-
-intDecoder : JE.Value -> String -> Result JD.Error IntFieldData
-intDecoder json key =
-    let
-        constructor num =
-            { val = num
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.int
-            |> JD.map constructor
-        )
-        json
-
-
-floatDecoder : JE.Value -> String -> Result JD.Error FloatFieldData
-floatDecoder json key =
-    let
-        constructor num =
-            { val = num
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.float
-            |> JD.map constructor
-        )
-        json
-
-
-stringDecoder : JE.Value -> String -> Result JD.Error StringFieldData
-stringDecoder json key =
-    let
-        constructor str =
-            { val = str
-            }
-    in
-    JD.decodeValue
-        (JD.field key JD.string
-            |> JD.map
-                (\str ->
-                    constructor str
-                )
-        )
-        json
-
-
-colorDecoder : JE.Value -> String -> Result JD.Error ColorFieldData
-colorDecoder json key =
-    let
-        constructor col =
-            { val = col
-            , meta =
-                ColorFieldMeta
-                    { state = ColorPicker.empty
-                    , isOpen = False
-                    }
-            }
-    in
-    JD.decodeValue
-        (JD.field key colorValDecoder
-            |> JD.map constructor
-        )
-        json
 
 
 colorValDecoder : JD.Decoder Color
@@ -765,23 +667,35 @@ viewChanger options configForm index logic =
             , E.height (E.px options.inputHeight)
             ]
 
-        incrementalAttrs wrapper data =
+        incrementalAttrs strToNum wrapper data =
             [ Html.Events.on "keydown"
                 (JD.map
                     (\i ->
                         let
-                            amt =
+                            maybeNewNum =
                                 case i of
                                     38 ->
-                                        1
+                                        Just <| data.val + 1
 
                                     40 ->
-                                        -1
+                                        Just <| data.val - 1
 
                                     _ ->
-                                        0
+                                        Nothing
                         in
-                        ChangedConfigForm logic.fieldName (wrapper { data | val = data.val + amt })
+                        ChangedConfigForm logic.fieldName
+                            (wrapper
+                                (case maybeNewNum of
+                                    Just newNum ->
+                                        { data
+                                            | val = newNum
+                                            , str = strToNum newNum
+                                        }
+
+                                    Nothing ->
+                                        data
+                                )
+                            )
                     )
                     Html.Events.keyCode
                 )
@@ -809,39 +723,63 @@ viewChanger options configForm index logic =
                 IntField data ->
                     textInputHelper
                         { label = logic.label
-                        , valStr = String.fromInt data.val
-                        , attrs = defaultAttrs ++ incrementalAttrs IntField data
+                        , valStr = data.str
+                        , attrs =
+                            defaultAttrs
+                                ++ incrementalAttrs String.fromInt IntField data
+                                ++ (if String.toInt data.str == Nothing then
+                                        [ EBackground.color (E.rgba 1 0 0 0.3) ]
+
+                                    else
+                                        []
+                                   )
                         , setterMsg =
                             \newStr ->
-                                case String.toInt newStr of
-                                    Just newNum ->
-                                        ChangedConfigForm
-                                            logic.fieldName
-                                            (IntField { data | val = newNum })
+                                ChangedConfigForm
+                                    logic.fieldName
+                                <|
+                                    IntField
+                                        { data
+                                            | str = newStr
+                                            , val =
+                                                case String.toInt newStr of
+                                                    Just num ->
+                                                        num
 
-                                    Nothing ->
-                                        ChangedConfigForm
-                                            logic.fieldName
-                                            field
+                                                    Nothing ->
+                                                        data.val
+                                        }
                         }
 
                 FloatField data ->
                     textInputHelper
                         { label = logic.label
-                        , valStr = String.fromFloat data.val
-                        , attrs = defaultAttrs ++ incrementalAttrs FloatField data
+                        , valStr = data.str
+                        , attrs =
+                            defaultAttrs
+                                ++ incrementalAttrs String.fromFloat FloatField data
+                                ++ (if String.toFloat data.str == Nothing then
+                                        [ EBackground.color (E.rgba 1 0 0 0.3) ]
+
+                                    else
+                                        []
+                                   )
                         , setterMsg =
                             \newStr ->
-                                case String.toFloat newStr of
-                                    Just newNum ->
-                                        ChangedConfigForm
-                                            logic.fieldName
-                                            (FloatField { data | val = newNum })
+                                ChangedConfigForm
+                                    logic.fieldName
+                                <|
+                                    FloatField
+                                        { data
+                                            | str = newStr
+                                            , val =
+                                                case String.toFloat newStr of
+                                                    Just num ->
+                                                        num
 
-                                    Nothing ->
-                                        ChangedConfigForm
-                                            logic.fieldName
-                                            field
+                                                    Nothing ->
+                                                        data.val
+                                        }
                         }
 
                 ColorField data ->

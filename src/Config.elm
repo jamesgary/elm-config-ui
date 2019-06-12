@@ -10,7 +10,7 @@ import Egg.ConfigForm as ConfigForm
 type alias Config =
     { headerFontSize : Int
     , headerString : String
-    , subheaderFontSize : Int
+    , subheaderFontSize : Float
     , subheaderString : String
     , subheaderColor : Color
     , subheaderPadding : Int
@@ -29,7 +29,7 @@ empty : ConfigForm.Defaults -> Config
 empty defaults =
     { headerFontSize = defaults.int
     , headerString = defaults.string
-    , subheaderFontSize = defaults.int
+    , subheaderFontSize = defaults.float
     , subheaderString = defaults.string
     , subheaderColor = defaults.color
     , subheaderPadding = defaults.int
@@ -56,9 +56,9 @@ logics =
         "Header string"
         .headerString
         (\a c -> { c | headerString = a })
-    , ConfigForm.int
+    , ConfigForm.float
         "subheaderFontSize"
-        "Subheader font size"
+        "Subheader font size (float)"
         .subheaderFontSize
         (\a c -> { c | subheaderFontSize = a })
     , ConfigForm.string
