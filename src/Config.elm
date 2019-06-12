@@ -13,12 +13,15 @@ type alias Config =
     , subheaderFontSize : Int
     , subheaderString : String
     , subheaderColor : Color
+    , subheaderPadding : Int
     , configTableBgColor : Color
     , configTableSpacing : Int
     , configTablePadding : Int
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
     , configLabelHighlightBgColor : Color
+    , configFontSize : Int
+    , configInputHeight : Int
     }
 
 
@@ -29,12 +32,15 @@ empty defaults =
     , subheaderFontSize = defaults.int
     , subheaderString = defaults.string
     , subheaderColor = defaults.color
+    , subheaderPadding = defaults.int
     , configTableBgColor = defaults.color
     , configTableSpacing = defaults.int
     , configTablePadding = defaults.int
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
     , configLabelHighlightBgColor = defaults.color
+    , configFontSize = defaults.int
+    , configInputHeight = defaults.int
     }
 
 
@@ -65,6 +71,11 @@ logics =
         "Subheader color"
         .subheaderColor
         (\a c -> { c | subheaderColor = a })
+    , ConfigForm.int
+        "subheaderPadding"
+        "Subheader padding"
+        .subheaderPadding
+        (\a c -> { c | subheaderPadding = a })
     , ConfigForm.color
         "configTableBgColor"
         "Config table BG color"
@@ -95,6 +106,16 @@ logics =
         "Config table label highlight BG color"
         .configLabelHighlightBgColor
         (\a c -> { c | configLabelHighlightBgColor = a })
+    , ConfigForm.int
+        "configFontSize"
+        "Config font size"
+        .configFontSize
+        (\a c -> { c | configFontSize = a })
+    , ConfigForm.int
+        "configInputHeight"
+        "Config input height"
+        .configInputHeight
+        (\a c -> { c | configInputHeight = a })
     ]
 
 

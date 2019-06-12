@@ -237,6 +237,8 @@ view ({ config } as model) =
                         |> ConfigForm.withTableBorderWidth config.configTableBorderWidth
                         |> ConfigForm.withTableBorderColor config.configTableBorderColor
                         |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                        |> ConfigForm.withInputHeight config.configInputHeight
+                        |> ConfigForm.withFontSize config.configFontSize
                     )
                     Config.logics
                     model.configForm
@@ -253,6 +255,7 @@ view ({ config } as model) =
             , E.row
                 [ EFont.size model.config.subheaderFontSize
                 , EBackground.color (colorForE model.config.subheaderColor)
+                , E.padding model.config.subheaderPadding
                 ]
                 [ E.text <| "Subheader: " ++ model.config.subheaderString ]
             ]

@@ -5,7 +5,7 @@ module Egg.ConfigForm exposing
     , Msg
     , update, updateFromJson
     , encode
-    , view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor
+    , view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor, withInputHeight, withFontSize
     )
 
 {-|
@@ -48,7 +48,7 @@ module Egg.ConfigForm exposing
 
 # View
 
-@docs view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor
+@docs view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor, withInputHeight, withFontSize
 
 -}
 
@@ -625,6 +625,7 @@ view options logics configForm =
         , E.padding options.tablePadding
         , EBorder.width options.tableBorderWidth
         , EBorder.color (colorForE options.tableBorderColor)
+        , EFont.size options.fontSize
         ]
         { data = logics
         , columns =
@@ -674,7 +675,7 @@ view options logics configForm =
               }
             , { header = E.none
               , width = E.fill
-              , view = viewChanger configForm
+              , view = viewChanger options configForm
               }
             ]
         }
@@ -683,11 +684,12 @@ view options logics configForm =
             []
 
 
-viewChanger : ConfigForm config -> Int -> Logic config -> Element (Msg config)
-viewChanger configForm index logic =
+viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Element (Msg config)
+viewChanger options configForm index logic =
     let
         defaultAttrs =
             [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
+            , E.height (E.px options.inputHeight)
             ]
 
         incrementalAttrs wrapper data =
@@ -808,7 +810,9 @@ viewChanger configForm index logic =
                             (defaultAttrs
                                 ++ [ EBackground.color (colorForE data.val)
                                    , E.width E.fill
-                                   , E.height E.fill
+                                   , EBorder.color (E.rgba 0 0 0 0.3)
+                                   , EBorder.width 1
+                                   , EBorder.rounded 3
                                    , EEvents.onMouseDown
                                         (ChangedConfigForm
                                             logic.fieldName
@@ -866,6 +870,8 @@ type alias ViewOptions =
     , tableBorderWidth : Int
     , tableBorderColor : Color
     , labelHighlightBgColor : Color
+    , fontSize : Int
+    , inputHeight : Int
     }
 
 
@@ -877,6 +883,8 @@ viewOptions =
     , tableBorderWidth = 1
     , tableBorderColor = Color.rgb 0 0 0
     , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
+    , fontSize = 28
+    , inputHeight = 40
     }
 
 
@@ -908,3 +916,13 @@ withTableBorderColor val options =
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
 withLabelHighlightBgColor val options =
     { options | labelHighlightBgColor = val }
+
+
+withFontSize : Int -> ViewOptions -> ViewOptions
+withFontSize val options =
+    { options | fontSize = val }
+
+
+withInputHeight : Int -> ViewOptions -> ViewOptions
+withInputHeight val options =
+    { options | inputHeight = val }
