@@ -604,6 +604,7 @@ view options logics configForm =
                                                     , EBorder.rounded 4
                                                     , E.width (E.px (1.5 * toFloat options.fontSize |> round))
                                                     , E.height (E.px (1.5 * toFloat options.fontSize |> round))
+                                                    , Html.Attributes.tabindex (1 + i) |> E.htmlAttribute
                                                     ]
                                                     { onPress = Just msg
                                                     , label =
@@ -662,17 +663,12 @@ view options logics configForm =
 viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Element (Msg config)
 viewChanger options configForm index logic =
     let
-        tabIndex =
-            case logic.kind of
-                ColorLogic _ _ ->
-                    -1
-
-                _ ->
-                    index
-
         defaultAttrs =
-            [ Html.Attributes.tabindex (1 + tabIndex) |> E.htmlAttribute
-            , E.height (E.px options.inputHeight)
+            [ E.height (E.px options.inputHeight)
+            ]
+
+        tabAttrs =
+            [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
             ]
 
         incrementalAttrs strToNum wrapper data =
@@ -720,7 +716,7 @@ viewChanger options configForm index logic =
                     textInputHelper
                         { label = logic.label
                         , valStr = data.val
-                        , attrs = defaultAttrs
+                        , attrs = defaultAttrs ++ tabAttrs
                         , setterMsg =
                             \newStr ->
                                 ChangedConfigForm
@@ -734,6 +730,7 @@ viewChanger options configForm index logic =
                         , valStr = data.str
                         , attrs =
                             defaultAttrs
+                                ++ tabAttrs
                                 ++ incrementalAttrs String.fromInt IntField data
                                 ++ (if String.toInt data.str == Nothing then
                                         [ EBackground.color (E.rgba 1 0 0 0.3) ]
@@ -765,6 +762,7 @@ viewChanger options configForm index logic =
                         , valStr = data.str
                         , attrs =
                             defaultAttrs
+                                ++ tabAttrs
                                 ++ incrementalAttrs String.fromFloat FloatField data
                                 ++ (if String.toFloat data.str == Nothing then
                                         [ EBackground.color (E.rgba 1 0 0 0.3) ]
