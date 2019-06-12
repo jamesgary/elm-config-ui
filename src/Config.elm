@@ -1,10 +1,13 @@
+-- GENERATED CODE, DO NOT EDIT BY HAND!
+
+
 module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
-import ConfigForm
+import Egg.ConfigForm as ConfigForm
 
 
-type alias Config = 
+type alias Config =
     { headerFontSize : Int
     , headerString : String
     , subheaderFontSize : Int

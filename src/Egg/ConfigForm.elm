@@ -1,4 +1,4 @@
-module ConfigForm exposing
+module Egg.ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults, Logic
     , Field
     , int, float, string, color

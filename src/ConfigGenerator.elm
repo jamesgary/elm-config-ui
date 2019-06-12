@@ -1,7 +1,7 @@
 module ConfigGenerator exposing (main)
 
-import ConfigFormGenerator exposing (..)
 import Dict exposing (Dict)
+import Egg.ConfigFormGenerator exposing (..)
 import Html exposing (Html)
 
 

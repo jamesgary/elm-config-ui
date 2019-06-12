@@ -1,4 +1,4 @@
-module ConfigFormGenerator exposing (Kind(..), toFile)
+module Egg.ConfigFormGenerator exposing (Kind(..), toFile)
 
 import Dict exposing (Dict)
 
@@ -24,10 +24,13 @@ toFile data =
 header : String
 header =
     """
+-- GENERATED CODE, DO NOT EDIT BY HAND!
+
+
 module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
-import ConfigForm
+import Egg.ConfigForm as ConfigForm
 """
         |> String.trim
 
@@ -36,7 +39,7 @@ typeAlias : List ( String, ( String, Kind ) ) -> String
 typeAlias data =
     let
         pre =
-            "type alias Config = "
+            "type alias Config ="
 
         middle =
             data
