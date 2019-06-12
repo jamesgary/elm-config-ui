@@ -40,6 +40,7 @@ type alias Model =
 
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
+    | ClickedCopyConfig
     | ReceivedFromPort JE.Value
 
 
@@ -137,6 +138,19 @@ update msg model =
                     Nothing ->
                         Cmd.none
                 ]
+            )
+
+        ClickedCopyConfig ->
+            ( model
+            , sendToPort <|
+                JE.object
+                    [ ( "id", JE.string "COPY_CONFIG" )
+                    , ( "val"
+                      , ConfigForm.encode
+                            Config.logics
+                            model.config
+                      )
+                    ]
             )
 
         ReceivedFromPort portJson ->
@@ -248,7 +262,7 @@ view ({ config } as model) =
                             , EBorder.width 1
                             , E.paddingXY 20 10
                             ]
-                            { onPress = Nothing
+                            { onPress = Just ClickedCopyConfig
                             , label = E.text "Copy Config"
                             }
                         , ConfigForm.viewElement

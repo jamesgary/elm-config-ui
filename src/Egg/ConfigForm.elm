@@ -147,6 +147,7 @@ init options =
                 options.logics
                 options.emptyConfig
                 options.configJson
+                |> Debug.log "YAY CONFIG"
 
         configForm =
             decodeConfigForm
@@ -502,8 +503,29 @@ decodeConfig logics emptyConfig configJson =
                             Err err ->
                                 config
 
-                    _ ->
-                        config
+                    FloatLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName JD.float) configJson of
+                            Ok floatVal ->
+                                setter floatVal config
+
+                            Err err ->
+                                config
+
+                    StringLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName JD.string) configJson of
+                            Ok str ->
+                                setter str config
+
+                            Err err ->
+                                config
+
+                    ColorLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName colorValDecoder) configJson of
+                            Ok col ->
+                                setter col config
+
+                            Err err ->
+                                config
             )
             emptyConfig
 

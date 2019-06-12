@@ -107,6 +107,10 @@
             case "CONFIG":
               ConfigForm.receivePortMsg(effect.val, node);
               break;
+            case "COPY_CONFIG":
+              let configJson = JSON.stringify(effect.val);
+              window.prompt("Copy and paste to your config.json.", configJson);
+              break;
             default:
               console.error("Unknown Effect", effect);
           }
