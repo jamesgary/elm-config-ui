@@ -13,6 +13,7 @@ sample =
     , ( "Subheader string", ( "subheaderString", StringKind ) )
     , ( "Subheader color", ( "subheaderColor", ColorKind ) )
     , ( "Subheader padding", ( "subheaderPadding", IntKind ) )
+    , ( "Num of subheaders", ( "subheaderNum", IntKind ) )
     , ( "Config table BG color", ( "configTableBgColor", ColorKind ) )
     , ( "Config table spacing", ( "configTableSpacing", IntKind ) )
     , ( "Config table padding", ( "configTablePadding", IntKind ) )

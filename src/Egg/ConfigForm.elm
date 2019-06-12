@@ -5,7 +5,7 @@ module Egg.ConfigForm exposing
     , Msg
     , update, updateFromJson
     , encode
-    , view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor, withInputHeight, withFontSize
+    , viewHtml, viewElement, viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
     )
 
 {-|
@@ -48,7 +48,7 @@ module Egg.ConfigForm exposing
 
 # View
 
-@docs view, viewOptions, withTableBgColor, withTableSpacing, withTablePadding, withTableBorderWidth, withTableBorderColor, withLabelHighlightBgColor, withInputHeight, withFontSize
+@docs viewHtml, viewElement, viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
 
 -}
 
@@ -521,14 +521,10 @@ colorValDecoder =
 -- VIEW
 
 
-view : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
-view options logics configForm =
+viewElement : ViewOptions -> List (Logic config) -> ConfigForm config -> Element (Msg config)
+viewElement options logics configForm =
     E.indexedTable
-        [ EBackground.color (colorForE options.tableBgColor)
-        , E.spacing options.tableSpacing
-        , E.padding options.tablePadding
-        , EBorder.width options.tableBorderWidth
-        , EBorder.color (colorForE options.tableBorderColor)
+        [ E.spacing options.tableSpacing
         , EFont.size options.fontSize
         ]
         { data = logics
@@ -655,9 +651,12 @@ view options logics configForm =
               }
             ]
         }
-        |> E.layoutWith
-            { options = [ E.noStaticStyleSheet ] }
-            []
+
+
+viewHtml : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
+viewHtml options logics configForm =
+    viewElement options logics configForm
+        |> E.layout []
 
 
 viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Element (Msg config)
@@ -905,29 +904,9 @@ viewOptions =
     }
 
 
-withTableBgColor : Color -> ViewOptions -> ViewOptions
-withTableBgColor val options =
-    { options | tableBgColor = val }
-
-
 withTableSpacing : Int -> ViewOptions -> ViewOptions
 withTableSpacing val options =
     { options | tableSpacing = val }
-
-
-withTablePadding : Int -> ViewOptions -> ViewOptions
-withTablePadding val options =
-    { options | tablePadding = val }
-
-
-withTableBorderWidth : Int -> ViewOptions -> ViewOptions
-withTableBorderWidth val options =
-    { options | tableBorderWidth = val }
-
-
-withTableBorderColor : Color -> ViewOptions -> ViewOptions
-withTableBorderColor val options =
-    { options | tableBorderColor = val }
 
 
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions

@@ -14,6 +14,7 @@ type alias Config =
     , subheaderString : String
     , subheaderColor : Color
     , subheaderPadding : Int
+    , subheaderNum : Int
     , configTableBgColor : Color
     , configTableSpacing : Int
     , configTablePadding : Int
@@ -33,6 +34,7 @@ empty defaults =
     , subheaderString = defaults.string
     , subheaderColor = defaults.color
     , subheaderPadding = defaults.int
+    , subheaderNum = defaults.int
     , configTableBgColor = defaults.color
     , configTableSpacing = defaults.int
     , configTablePadding = defaults.int
@@ -76,6 +78,11 @@ logics =
         "Subheader padding"
         .subheaderPadding
         (\a c -> { c | subheaderPadding = a })
+    , ConfigForm.int
+        "subheaderNum"
+        "Num of subheaders"
+        .subheaderNum
+        (\a c -> { c | subheaderNum = a })
     , ConfigForm.color
         "configTableBgColor"
         "Config table BG color"

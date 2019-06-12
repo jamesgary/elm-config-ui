@@ -31,7 +31,6 @@ make
     - technically, we could save the undo stack in the cache...
 - * for vals that differ from file
 - maybe a way to open/close?
-- close colors when unfocused
 - zebra bgs (or maybe borders)
 - bools
 - (x,y)

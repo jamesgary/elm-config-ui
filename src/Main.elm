@@ -6,10 +6,12 @@ import Config exposing (Config)
 import Egg.ConfigForm as ConfigForm exposing (ConfigForm)
 import Element as E exposing (Element)
 import Element.Background as EBackground
+import Element.Border as EBorder
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
 import Html exposing (Html)
+import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
@@ -221,43 +223,56 @@ view : Model -> Html Msg
 view ({ config } as model) =
     E.layout
         [ E.padding 20
-        , E.inFront
-            (E.el
+        , E.inFront <|
+            E.el
                 [ E.alignRight
-                , E.moveLeft 20
-                , E.moveDown 20
+                , E.padding 20
                 , E.height E.fill
-                , E.scrollbars
+                , E.width E.fill
+                , E.scrollbarY
                 ]
-                (ConfigForm.view
-                    (ConfigForm.viewOptions
-                        |> ConfigForm.withTableBgColor config.configTableBgColor
-                        |> ConfigForm.withTableSpacing config.configTableSpacing
-                        |> ConfigForm.withTablePadding config.configTablePadding
-                        |> ConfigForm.withTableBorderWidth config.configTableBorderWidth
-                        |> ConfigForm.withTableBorderColor config.configTableBorderColor
-                        |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
-                        |> ConfigForm.withInputHeight config.configInputHeight
-                        |> ConfigForm.withFontSize config.configFontSize
+                (E.el
+                    [ EBackground.color (colorForE config.configTableBgColor)
+                    , EBorder.color (colorForE config.configTableBorderColor)
+                    , EBorder.width config.configTableBorderWidth
+                    , E.scrollbarY
+                    , E.alignRight
+                    ]
+                    (E.el
+                        [ E.padding config.configTablePadding
+                        , E.padding 20
+                        ]
+                        (ConfigForm.viewElement
+                            (ConfigForm.viewOptions
+                                |> ConfigForm.withTableSpacing config.configTableSpacing
+                                |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                                |> ConfigForm.withInputHeight config.configInputHeight
+                                |> ConfigForm.withFontSize config.configFontSize
+                            )
+                            Config.logics
+                            model.configForm
+                            |> E.map ConfigFormMsg
+                        )
                     )
-                    Config.logics
-                    model.configForm
-                    |> E.html
-                    |> E.map ConfigFormMsg
                 )
-            )
         ]
         (E.column []
             [ E.row
                 [ EFont.size model.config.headerFontSize
                 ]
                 [ E.text <| "Header: " ++ model.config.headerString ]
-            , E.row
-                [ EFont.size (round model.config.subheaderFontSize)
-                , EBackground.color (colorForE model.config.subheaderColor)
-                , E.padding model.config.subheaderPadding
-                ]
-                [ E.text <| "Subheader: " ++ model.config.subheaderString ]
+            , E.column []
+                (List.range 1 model.config.subheaderNum
+                    |> List.map
+                        (\_ ->
+                            E.el
+                                [ EFont.size (round model.config.subheaderFontSize)
+                                , EBackground.color (colorForE model.config.subheaderColor)
+                                , E.padding model.config.subheaderPadding
+                                ]
+                                (E.text <| "Subheader: " ++ model.config.subheaderString)
+                        )
+                )
             ]
         )
 
