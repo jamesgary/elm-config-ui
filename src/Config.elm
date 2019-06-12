@@ -16,10 +16,10 @@ type alias Config =
     , subheaderPadding : Int
     , subheaderNum : Int
     , configTableBgColor : Color
-    , configTableSpacing : Int
-    , configTablePadding : Int
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
+    , configTablePadding : Int
+    , configTableSpacing : Int
     , configLabelHighlightBgColor : Color
     , configFontSize : Int
     , configInputHeight : Int
@@ -36,10 +36,10 @@ empty defaults =
     , subheaderPadding = defaults.int
     , subheaderNum = defaults.int
     , configTableBgColor = defaults.color
-    , configTableSpacing = defaults.int
-    , configTablePadding = defaults.int
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
+    , configTablePadding = defaults.int
+    , configTableSpacing = defaults.int
     , configLabelHighlightBgColor = defaults.color
     , configFontSize = defaults.int
     , configInputHeight = defaults.int
@@ -89,16 +89,6 @@ logics =
         .configTableBgColor
         (\a c -> { c | configTableBgColor = a })
     , ConfigForm.int
-        "configTableSpacing"
-        "Config table spacing"
-        .configTableSpacing
-        (\a c -> { c | configTableSpacing = a })
-    , ConfigForm.int
-        "configTablePadding"
-        "Config table padding"
-        .configTablePadding
-        (\a c -> { c | configTablePadding = a })
-    , ConfigForm.int
         "configTableBorderWidth"
         "Config table border width"
         .configTableBorderWidth
@@ -108,9 +98,19 @@ logics =
         "Config table border color"
         .configTableBorderColor
         (\a c -> { c | configTableBorderColor = a })
+    , ConfigForm.int
+        "configTablePadding"
+        "Config table padding"
+        .configTablePadding
+        (\a c -> { c | configTablePadding = a })
+    , ConfigForm.int
+        "configTableSpacing"
+        "Config table spacing"
+        .configTableSpacing
+        (\a c -> { c | configTableSpacing = a })
     , ConfigForm.color
         "configLabelHighlightBgColor"
-        "Config table label highlight BG color"
+        "Config label highlight BG color"
         .configLabelHighlightBgColor
         (\a c -> { c | configLabelHighlightBgColor = a })
     , ConfigForm.int

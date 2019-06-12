@@ -10,6 +10,54 @@
     <script src="./js/compiled/main.js"></script>
 
     <script>
+      // stuff to put into some configForm.js file
+
+      window.ConfigForm = {
+        init: function(app) {
+          function updatePosition(e) {
+            app.ports.receiveFromPort.send({
+              id: "CONFIG",
+              val: {
+                id: "MOUSE_MOVE",
+                x: e.movementX,
+              }
+            });
+          }
+
+          function mouseUp(e) {
+            document.exitPointerLock();
+            app.ports.receiveFromPort.send({
+              id: "CONFIG",
+              val: {
+                id: "MOUSE_UP",
+              }
+            });
+          }
+
+          document.addEventListener('pointerlockchange', function() {
+            if (document.pointerLockElement === node) {
+              document.addEventListener("mousemove", updatePosition, false);
+              document.addEventListener("mouseup", mouseUp, false);
+            } else {
+              document.removeEventListener("mousemove", updatePosition, false);
+              document.removeEventListener("mouseup", mouseUp, false);
+            }
+          }, false);
+        },
+
+        receivePortMsg: function(effect, node) {
+          switch (effect) {
+            case "LOCK_POINTER":
+              node.requestPointerLock();
+              break;
+            default:
+              console.error("Unknown ConfigEffect", effect.val);
+          }
+        },
+      }
+    </script>
+
+    <script>
       const LOCALSTORAGE_KEY = "config_example";
 
       const node = document.getElementById('elm');
@@ -46,6 +94,8 @@
           }
         });
 
+        ConfigForm.init(app);
+
         app.ports.sendToPort.subscribe(function(effect) {
           switch (effect.id) {
             case "SAVE":
@@ -55,52 +105,12 @@
               );
               break;
             case "CONFIG":
-              switch (effect.val) {
-                case "LOCK_POINTER":
-                  node.requestPointerLock();
-                  break;
-                default:
-                  console.error("Unknown ConfigEffect", effect);
-              }
+              ConfigForm.receivePortMsg(effect.val, node);
               break;
             default:
               console.error("Unknown Effect", effect);
           }
         });
-
-        // config stuff for pointer lock
-
-        function updatePosition(e) {
-          app.ports.receiveFromPort.send({
-            id: "CONFIG",
-            val: {
-              id: "MOUSE_MOVE",
-              x: e.movementX,
-            }
-          });
-        }
-
-        function mouseUp(e) {
-          document.exitPointerLock();
-          app.ports.receiveFromPort.send({
-            id: "CONFIG",
-            val: {
-              id: "MOUSE_UP",
-            }
-          });
-        }
-
-        document.addEventListener('pointerlockchange', function() {
-          if (document.pointerLockElement === node) {
-            document.addEventListener("mousemove", updatePosition, false);
-            document.addEventListener("mouseup", mouseUp, false);
-          } else {
-            document.removeEventListener("mousemove", updatePosition, false);
-            document.removeEventListener("mouseup", mouseUp, false);
-          }
-        }, false);
-
-        // end config stuff for pointer lock
       }
     </script>
   </body>

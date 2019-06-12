@@ -238,11 +238,20 @@ view ({ config } as model) =
                     , E.scrollbarY
                     , E.alignRight
                     ]
-                    (E.el
+                    (E.column
                         [ E.padding config.configTablePadding
                         , E.padding 20
                         ]
-                        (ConfigForm.viewElement
+                        [ EInput.button
+                            [ EBackground.color (E.rgb 0.99 0.99 0.99)
+                            , EBorder.color (E.rgb 0.1 0.1 0.1)
+                            , EBorder.width 1
+                            , E.paddingXY 20 10
+                            ]
+                            { onPress = Nothing
+                            , label = E.text "Copy Config"
+                            }
+                        , ConfigForm.viewElement
                             (ConfigForm.viewOptions
                                 |> ConfigForm.withTableSpacing config.configTableSpacing
                                 |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
@@ -252,7 +261,7 @@ view ({ config } as model) =
                             Config.logics
                             model.configForm
                             |> E.map ConfigFormMsg
-                        )
+                        ]
                     )
                 )
         ]
