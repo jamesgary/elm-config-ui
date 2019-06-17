@@ -12,16 +12,23 @@
     <script>
       // stuff to put into some configForm.js file
 
+      let hasFirstMouseMoveEventPassedDueToWebkitBug = false;
+
       window.ConfigForm = {
         init: function(app) {
           function updatePosition(e) {
-            app.ports.receiveFromPort.send({
-              id: "CONFIG",
-              val: {
-                id: "MOUSE_MOVE",
-                x: e.movementX,
-              }
-            });
+            if (hasFirstMouseMoveEventPassedDueToWebkitBug) {
+              app.ports.receiveFromPort.send({
+                id: "CONFIG",
+                val: {
+                  id: "MOUSE_MOVE",
+                  x: e.movementX,
+                },
+              });
+            } else {
+              console.log("Ignoring dumb bad movementX:", e.movementX);
+              hasFirstMouseMoveEventPassedDueToWebkitBug = true;
+            }
           }
 
           function mouseUp(e) {
@@ -30,7 +37,7 @@
               id: "CONFIG",
               val: {
                 id: "MOUSE_UP",
-              }
+              },
             });
           }
 
@@ -38,6 +45,7 @@
             if (document.pointerLockElement === node) {
               document.addEventListener("mousemove", updatePosition, false);
               document.addEventListener("mouseup", mouseUp, false);
+              hasFirstMouseMoveEventPassedDueToWebkitBug = false;
             } else {
               document.removeEventListener("mousemove", updatePosition, false);
               document.removeEventListener("mouseup", mouseUp, false);

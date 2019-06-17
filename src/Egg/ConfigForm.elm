@@ -5,7 +5,8 @@ module Egg.ConfigForm exposing
     , Msg
     , update, updateFromJson
     , encode
-    , viewHtml, viewElement, viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
+    , viewHtml, viewElement
+    , viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
     )
 
 {-|
@@ -48,7 +49,12 @@ module Egg.ConfigForm exposing
 
 # View
 
-@docs viewHtml, viewElement, viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
+@docs viewHtml, viewElement
+
+
+# View options
+
+@docs viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
 
 -}
 

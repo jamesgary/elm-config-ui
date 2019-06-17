@@ -21,6 +21,8 @@ make
 
 ## TODO
 
+### For sursies
+
 - undo/redo
   - each individual field:
     - undo (go to state just before first action in sequence)
@@ -30,11 +32,18 @@ make
     - rewind to load or file?
     - technically, we could save the undo stack in the cache...
 - * for vals that differ from file
-- maybe a way to open/close?
+- ! for brand new values that haven't been set yet (maybe note that in the field)
+- save scrolltop
+
+### Could be cool
+
 - zebra bgs (or maybe borders)
 - bools
 - (x,y)
-- save scrolltop
+
+### Eh
+
+- maybe a way to open/close?
 
 ## WHAT IF ELM-UI??
 
