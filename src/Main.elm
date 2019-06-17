@@ -224,9 +224,8 @@ saveToLocalStorageCmd model =
             , ( "val"
               , JE.object
                     [ ( "configForm"
-                      , ConfigForm.encode
-                            Config.logics
-                            model.config
+                      , ConfigForm.encodeConfigForm
+                            model.configForm
                       )
                     ]
               )

@@ -45,6 +45,10 @@ make
 
 - maybe a way to open/close?
 
+### Possible options:
+- Keep colors open after refreshing
+- Keep header at top (vs scrolling w/ other fields)
+
 ## WHAT IF ELM-UI??
 
 attributes

@@ -4,7 +4,7 @@ module Egg.ConfigForm exposing
     , int, float, string, color
     , Msg
     , update, updateFromJson
-    , encode
+    , encode, encodeConfigForm
     , viewHtml, viewElement
     , viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
     )
@@ -44,7 +44,7 @@ module Egg.ConfigForm exposing
 
 # Encoding
 
-@docs encode
+@docs encode, encodeConfigForm
 
 
 # View
@@ -86,9 +86,9 @@ type alias ConfigForm config =
 
 
 type Field
-    = StringField StringFieldData
-    | IntField IntFieldData
+    = IntField IntFieldData
     | FloatField FloatFieldData
+    | StringField StringFieldData
     | ColorField ColorFieldData
 
 
@@ -239,18 +239,70 @@ encode logics config =
 
                     ColorLogic getter _ ->
                         getter config
-                            |> Color.toRgba
-                            |> (\{ red, green, blue, alpha } ->
-                                    JE.object
-                                        [ ( "r", JE.float red )
-                                        , ( "g", JE.float green )
-                                        , ( "b", JE.float blue )
-                                        , ( "a", JE.float alpha )
-                                        ]
-                               )
+                            |> encodeColor
                 )
             )
         |> JE.object
+
+
+encodeColor : Color -> JE.Value
+encodeColor col =
+    col
+        |> Color.toRgba
+        |> (\{ red, green, blue, alpha } ->
+                JE.object
+                    [ ( "r", JE.float red )
+                    , ( "g", JE.float green )
+                    , ( "b", JE.float blue )
+                    , ( "a", JE.float alpha )
+                    ]
+           )
+
+
+encodeConfigForm : ConfigForm config -> JE.Value
+encodeConfigForm configForm =
+    {-
+       do i even need a config at all?
+       does configform even need config?
+       only need it for view...
+    -}
+    JE.object
+        [ ( "fields", encodeFields configForm.fields )
+        , ( "scrollTop", JE.int configForm.scrollTop )
+        ]
+
+
+encodeFields : OrderedDict String Field -> JE.Value
+encodeFields fields =
+    fields
+        |> OrderedDict.map
+            (\fieldName field ->
+                encodeField field
+            )
+        |> OrderedDict.toList
+        |> List.map
+            (\( fieldName, json ) ->
+                ( fieldName
+                , json
+                )
+            )
+        |> JE.object
+
+
+encodeField : Field -> JE.Value
+encodeField field =
+    case field of
+        IntField data ->
+            JE.int data.val
+
+        FloatField data ->
+            JE.float data.val
+
+        StringField data ->
+            JE.string data.val
+
+        ColorField data ->
+            encodeColor data.val
 
 
 update : List (Logic config) -> config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
@@ -405,7 +457,7 @@ decodeConfigForm logics config json =
                         IntLogic getter setter ->
                             let
                                 decoder =
-                                    JD.field logic.fieldName JD.int
+                                    JD.at [ "fields", logic.fieldName ] JD.int
 
                                 val =
                                     case JD.decodeValue decoder json of
@@ -423,7 +475,7 @@ decodeConfigForm logics config json =
                         FloatLogic getter setter ->
                             let
                                 decoder =
-                                    JD.field logic.fieldName JD.float
+                                    JD.at [ "fields", logic.fieldName ] JD.float
 
                                 val =
                                     case JD.decodeValue decoder json of
@@ -441,7 +493,7 @@ decodeConfigForm logics config json =
                         StringLogic getter setter ->
                             let
                                 decoder =
-                                    JD.field logic.fieldName JD.string
+                                    JD.at [ "fields", logic.fieldName ] JD.string
 
                                 val =
                                     case JD.decodeValue decoder json of
@@ -458,7 +510,7 @@ decodeConfigForm logics config json =
                         ColorLogic getter setter ->
                             let
                                 decoder =
-                                    JD.field logic.fieldName colorValDecoder
+                                    JD.at [ "fields", logic.fieldName ] colorValDecoder
 
                                 val =
                                     case JD.decodeValue decoder json of
