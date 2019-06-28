@@ -4,13 +4,17 @@ import Dict exposing (Dict)
 
 
 type Kind
-    = IntKind
-    | FloatKind
-    | StringKind
-    | ColorKind
+    = IntKind String
+    | FloatKind String
+    | StringKind String
+    | ColorKind String
 
 
-toFile : List ( String, ( String, Kind ) ) -> String
+foo =
+    toFile [ ( "my label", IntKind "mylabelkey" ) ]
+
+
+toFile : List ( String, Kind ) -> String
 toFile data =
     [ header
     , typeAlias data
@@ -35,7 +39,7 @@ import Egg.ConfigForm as ConfigForm
         |> String.trim
 
 
-typeAlias : List ( String, ( String, Kind ) ) -> String
+typeAlias : List ( String, Kind ) -> String
 typeAlias data =
     let
         pre =
@@ -44,7 +48,7 @@ typeAlias data =
         middle =
             data
                 |> List.indexedMap
-                    (\i ( label, ( field, kind ) ) ->
+                    (\i ( label, kind ) ->
                         let
                             pre_ =
                                 if i == 0 then
@@ -52,8 +56,11 @@ typeAlias data =
 
                                 else
                                     "    , "
+
+                            fieldName =
+                                kindToFieldName kind
                         in
-                        pre_ ++ field ++ " : " ++ kindToType kind
+                        pre_ ++ fieldName ++ " : " ++ kindToType kind
                     )
                 |> String.join "\n"
 
@@ -67,7 +74,7 @@ typeAlias data =
         |> String.join "\n"
 
 
-empty : List ( String, ( String, Kind ) ) -> String
+empty : List ( String, Kind ) -> String
 empty data =
     let
         pre =
@@ -80,7 +87,7 @@ empty defaults =
         middle =
             data
                 |> List.indexedMap
-                    (\i ( label, ( field, kind ) ) ->
+                    (\i ( label, kind ) ->
                         let
                             pre_ =
                                 if i == 0 then
@@ -88,8 +95,11 @@ empty defaults =
 
                                 else
                                     "    , "
+
+                            fieldName =
+                                kindToFieldName kind
                         in
-                        pre_ ++ field ++ " = " ++ kindToDefault kind
+                        pre_ ++ fieldName ++ " = " ++ kindToDefault kind
                     )
                 |> String.join "\n"
 
@@ -103,7 +113,7 @@ empty defaults =
         |> String.join "\n"
 
 
-logics : List ( String, ( String, Kind ) ) -> String
+logics : List ( String, Kind ) -> String
 logics data =
     let
         pre =
@@ -116,7 +126,7 @@ logics =
         middle =
             data
                 |> List.indexedMap
-                    (\i ( label, ( field, kind ) ) ->
+                    (\i ( label, kind ) ->
                         let
                             pre_ =
                                 if i == 0 then
@@ -125,17 +135,20 @@ logics =
                                 else
                                     "    , " ++ kindToLogic kind
 
+                            fieldName =
+                                kindToFieldName kind
+
                             fieldLine =
-                                "        \"" ++ field ++ "\""
+                                "        \"" ++ fieldName ++ "\""
 
                             labelLine =
                                 "        \"" ++ label ++ "\""
 
                             getter =
-                                "        ." ++ field
+                                "        ." ++ fieldName
 
                             setter =
-                                "        (\\a c -> { c | " ++ field ++ " = a })"
+                                "        (\\a c -> { c | " ++ fieldName ++ " = a })"
                         in
                         [ pre_
                         , fieldLine
@@ -160,46 +173,62 @@ logics =
 kindToType : Kind -> String
 kindToType kind =
     case kind of
-        IntKind ->
+        IntKind _ ->
             "Int"
 
-        FloatKind ->
+        FloatKind _ ->
             "Float"
 
-        StringKind ->
+        StringKind _ ->
             "String"
 
-        ColorKind ->
+        ColorKind _ ->
             "Color"
 
 
 kindToDefault : Kind -> String
 kindToDefault kind =
     case kind of
-        IntKind ->
+        IntKind _ ->
             "defaults.int"
 
-        FloatKind ->
+        FloatKind _ ->
             "defaults.float"
 
-        StringKind ->
+        StringKind _ ->
             "defaults.string"
 
-        ColorKind ->
+        ColorKind _ ->
             "defaults.color"
 
 
 kindToLogic : Kind -> String
 kindToLogic kind =
     case kind of
-        IntKind ->
+        IntKind _ ->
             "ConfigForm.int"
 
-        FloatKind ->
+        FloatKind _ ->
             "ConfigForm.float"
 
-        StringKind ->
+        StringKind _ ->
             "ConfigForm.string"
 
-        ColorKind ->
+        ColorKind _ ->
             "ConfigForm.color"
+
+
+kindToFieldName : Kind -> String
+kindToFieldName kind =
+    case kind of
+        IntKind str ->
+            str
+
+        FloatKind str ->
+            str
+
+        StringKind str ->
+            str
+
+        ColorKind str ->
+            str

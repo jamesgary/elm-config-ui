@@ -288,7 +288,7 @@ view ({ config } as model) =
                     |> List.map
                         (\_ ->
                             E.el
-                                [ EFont.size (round model.config.subheaderFontSize)
+                                [ EFont.size model.config.subheaderFontSize
                                 , EBackground.color (colorForE model.config.subheaderColor)
                                 , E.padding model.config.subheaderPadding
                                 ]

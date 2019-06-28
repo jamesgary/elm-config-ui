@@ -616,6 +616,7 @@ viewElement options logics configForm =
                         let
                             defaultAttrs =
                                 [ E.height E.fill
+                                , E.paddingXY 10 2
                                 ]
 
                             resizeAttrs =
