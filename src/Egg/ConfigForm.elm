@@ -615,16 +615,16 @@ viewElement options logics configForm =
                     \i logic ->
                         let
                             defaultAttrs =
-                                [ E.mouseOver
-                                    [ EBackground.color
-                                        (colorForE options.labelHighlightBgColor)
-                                    ]
-                                , E.height E.fill
+                                [ E.height E.fill
                                 ]
 
                             resizeAttrs =
                                 [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
                                 , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
+                                , E.mouseOver
+                                    [ EBackground.color
+                                        (colorForE options.labelHighlightBgColor)
+                                    ]
                                 ]
 
                             closeAttrs =
