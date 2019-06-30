@@ -8,10 +8,11 @@ type Kind
     | FloatKind String
     | StringKind String
     | ColorKind String
+    | SectionKind
 
 
 foo =
-    toFile [ ( "my label", IntKind "mylabelkey" ) ]
+    toFile [ ( "my section title", IntKind "mysectionkey" ) ]
 
 
 toFile : List ( String, Kind ) -> String
@@ -47,8 +48,10 @@ typeAlias data =
 
         middle =
             data
+                |> List.map Tuple.second
+                |> List.filterMap typeAliasEntry
                 |> List.indexedMap
-                    (\i ( label, kind ) ->
+                    (\i entry ->
                         let
                             pre_ =
                                 if i == 0 then
@@ -56,11 +59,8 @@ typeAlias data =
 
                                 else
                                     "    , "
-
-                            fieldName =
-                                kindToFieldName kind
                         in
-                        pre_ ++ fieldName ++ " : " ++ kindToType kind
+                        pre_ ++ entry
                     )
                 |> String.join "\n"
 
@@ -72,6 +72,16 @@ typeAlias data =
     , post
     ]
         |> String.join "\n"
+
+
+typeAliasEntry : Kind -> Maybe String
+typeAliasEntry kind =
+    case ( kindToFieldName kind, kindToType kind ) of
+        ( Just fieldName, Just type_ ) ->
+            Just (fieldName ++ " : " ++ type_)
+
+        _ ->
+            Nothing
 
 
 empty : List ( String, Kind ) -> String
@@ -86,8 +96,10 @@ empty defaults =
 
         middle =
             data
+                |> List.map Tuple.second
+                |> List.filterMap emptyEntry
                 |> List.indexedMap
-                    (\i ( label, kind ) ->
+                    (\i entry ->
                         let
                             pre_ =
                                 if i == 0 then
@@ -95,11 +107,8 @@ empty defaults =
 
                                 else
                                     "    , "
-
-                            fieldName =
-                                kindToFieldName kind
                         in
-                        pre_ ++ fieldName ++ " = " ++ kindToDefault kind
+                        pre_ ++ entry
                     )
                 |> String.join "\n"
 
@@ -111,6 +120,16 @@ empty defaults =
     , post
     ]
         |> String.join "\n"
+
+
+emptyEntry : Kind -> Maybe String
+emptyEntry kind =
+    case ( kindToFieldName kind, kindToDefault kind ) of
+        ( Just fieldName, Just default ) ->
+            Just (fieldName ++ " = " ++ default)
+
+        _ ->
+            Nothing
 
 
 logics : List ( String, Kind ) -> String
@@ -135,27 +154,11 @@ logics =
                                 else
                                     "    , " ++ kindToLogic kind
 
-                            fieldName =
-                                kindToFieldName kind
-
-                            fieldLine =
-                                "        \"" ++ fieldName ++ "\""
-
-                            labelLine =
-                                "        \"" ++ label ++ "\""
-
-                            getter =
-                                "        ." ++ fieldName
-
-                            setter =
-                                "        (\\a c -> { c | " ++ fieldName ++ " = a })"
+                            args =
+                                kindToLogicArgs ( label, kind )
+                                    |> List.map (\str -> "        " ++ str)
                         in
-                        [ pre_
-                        , fieldLine
-                        , labelLine
-                        , getter
-                        , setter
-                        ]
+                        (pre_ :: args)
                             |> String.join "\n"
                     )
                 |> String.join "\n"
@@ -170,36 +173,42 @@ logics =
         |> String.join "\n"
 
 
-kindToType : Kind -> String
+kindToType : Kind -> Maybe String
 kindToType kind =
     case kind of
         IntKind _ ->
-            "Int"
+            Just "Int"
 
         FloatKind _ ->
-            "Float"
+            Just "Float"
 
         StringKind _ ->
-            "String"
+            Just "String"
 
         ColorKind _ ->
-            "Color"
+            Just "Color"
+
+        SectionKind ->
+            Nothing
 
 
-kindToDefault : Kind -> String
+kindToDefault : Kind -> Maybe String
 kindToDefault kind =
     case kind of
         IntKind _ ->
-            "defaults.int"
+            Just "defaults.int"
 
         FloatKind _ ->
-            "defaults.float"
+            Just "defaults.float"
 
         StringKind _ ->
-            "defaults.string"
+            Just "defaults.string"
 
         ColorKind _ ->
-            "defaults.color"
+            Just "defaults.color"
+
+        SectionKind ->
+            Nothing
 
 
 kindToLogic : Kind -> String
@@ -217,18 +226,53 @@ kindToLogic kind =
         ColorKind _ ->
             "ConfigForm.color"
 
+        SectionKind ->
+            "ConfigForm.section"
 
-kindToFieldName : Kind -> String
+
+kindToLogicArgs : ( String, Kind ) -> List String
+kindToLogicArgs ( label, kind ) =
+    case kindToFieldName kind of
+        Just fieldName ->
+            -- need all args
+            let
+                fieldLine =
+                    "\"" ++ fieldName ++ "\""
+
+                labelLine =
+                    "\"" ++ label ++ "\""
+
+                getter =
+                    "." ++ fieldName
+
+                setter =
+                    "(\\a c -> { c | " ++ fieldName ++ " = a })"
+            in
+            [ fieldLine
+            , labelLine
+            , getter
+            , setter
+            ]
+
+        Nothing ->
+            [ "\"" ++ label ++ "\""
+            ]
+
+
+kindToFieldName : Kind -> Maybe String
 kindToFieldName kind =
     case kind of
         IntKind str ->
-            str
+            Just str
 
         FloatKind str ->
-            str
+            Just str
 
         StringKind str ->
-            str
+            Just str
 
         ColorKind str ->
-            str
+            Just str
+
+        SectionKind ->
+            Nothing

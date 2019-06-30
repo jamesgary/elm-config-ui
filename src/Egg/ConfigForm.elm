@@ -1,7 +1,7 @@
 module Egg.ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults, Logic
     , Field
-    , int, float, string, color
+    , int, float, string, color, section
     , Msg
     , update, updateFromJson
     , encode, encodeConfigForm
@@ -29,7 +29,7 @@ module Egg.ConfigForm exposing
 
 # Field functions
 
-@docs int, float, string, color
+@docs int, float, string, color, section
 
 
 # Msg
@@ -90,6 +90,7 @@ type Field
     | FloatField FloatFieldData
     | StringField StringFieldData
     | ColorField ColorFieldData
+    | SectionField String
 
 
 type alias IntFieldData =
@@ -182,6 +183,7 @@ type LogicKind config
     | FloatLogic (config -> Float) (Float -> config -> config)
     | StringLogic (config -> String) (String -> config -> config)
     | ColorLogic (config -> Color) (Color -> config -> config)
+    | SectionLogic
 
 
 int : String -> String -> (config -> Int) -> (Int -> config -> config) -> Logic config
@@ -216,6 +218,14 @@ color fieldName label getter setter =
     }
 
 
+section : String -> Logic config
+section sectionStr =
+    { fieldName = ""
+    , label = sectionStr
+    , kind = SectionLogic
+    }
+
+
 type Msg config
     = ChangedConfigForm String Field
     | ClickedPointerLockLabel String
@@ -224,23 +234,36 @@ type Msg config
 encode : List (Logic config) -> config -> JE.Value
 encode logics config =
     logics
-        |> List.map
+        |> List.filterMap
             (\logic ->
-                ( logic.fieldName
-                , case logic.kind of
+                case logic.kind of
                     IntLogic getter _ ->
-                        JE.int (getter config)
+                        Just
+                            ( logic.fieldName
+                            , JE.int (getter config)
+                            )
 
                     FloatLogic getter _ ->
-                        JE.float (getter config)
+                        Just
+                            ( logic.fieldName
+                            , JE.float (getter config)
+                            )
 
                     StringLogic getter _ ->
-                        JE.string (getter config)
+                        Just
+                            ( logic.fieldName
+                            , JE.string (getter config)
+                            )
 
                     ColorLogic getter _ ->
-                        getter config
-                            |> encodeColor
-                )
+                        Just
+                            ( logic.fieldName
+                            , getter config
+                                |> encodeColor
+                            )
+
+                    SectionLogic ->
+                        Nothing
             )
         |> JE.object
 
@@ -275,34 +298,43 @@ encodeConfigForm configForm =
 encodeFields : OrderedDict String Field -> JE.Value
 encodeFields fields =
     fields
-        |> OrderedDict.map
-            (\fieldName field ->
-                encodeField field
-            )
         |> OrderedDict.toList
-        |> List.map
-            (\( fieldName, json ) ->
-                ( fieldName
-                , json
-                )
+        |> List.filterMap
+            (\( fieldName, field ) ->
+                case encodeField field of
+                    Just json ->
+                        Just
+                            ( fieldName
+                            , json
+                            )
+
+                    Nothing ->
+                        Nothing
             )
         |> JE.object
 
 
-encodeField : Field -> JE.Value
+encodeField : Field -> Maybe JE.Value
 encodeField field =
     case field of
         IntField data ->
             JE.int data.val
+                |> Just
 
         FloatField data ->
             JE.float data.val
+                |> Just
 
         StringField data ->
             JE.string data.val
+                |> Just
 
         ColorField data ->
             encodeColor data.val
+                |> Just
+
+        SectionField _ ->
+            Nothing
 
 
 update : List (Logic config) -> config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
@@ -528,6 +560,9 @@ decodeConfigForm logics config json =
                                         , isOpen = False
                                         }
                                 }
+
+                        SectionLogic ->
+                            SectionField logic.fieldName
                     )
                 )
             |> OrderedDict.fromList
@@ -584,6 +619,9 @@ decodeConfig logics emptyConfig configJson =
 
                             Err err ->
                                 config
+
+                    SectionLogic ->
+                        config
             )
             emptyConfig
 
@@ -617,6 +655,10 @@ viewElement options logics configForm =
                             defaultAttrs =
                                 [ E.height E.fill
                                 , E.paddingXY 10 2
+                                ]
+
+                            sectionAttrs =
+                                [ EFont.bold
                                 ]
 
                             resizeAttrs =
@@ -717,6 +759,9 @@ viewElement options logics configForm =
 
                                             ColorLogic getter setter ->
                                                 closeAttrs
+
+                                            SectionLogic ->
+                                                sectionAttrs
                                        )
                         in
                         E.el
@@ -926,6 +971,9 @@ viewChanger options configForm index logic =
                                    ]
                             )
                             E.none
+
+                SectionField str ->
+                    E.none
 
         Nothing ->
             E.none

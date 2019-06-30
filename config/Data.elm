@@ -14,6 +14,7 @@ sample =
     , ( "Subheader color", ColorKind "subheaderColor" )
     , ( "Subheader padding", IntKind "subheaderPadding" )
     , ( "Num of subheaders", IntKind "subheaderNum" )
+    , ( "Config", SectionKind )
     , ( "Config table BG color", ColorKind "configTableBgColor" )
     , ( "Config table border width", IntKind "configTableBorderWidth" )
     , ( "Config table border color", ColorKind "configTableBorderColor" )

@@ -83,6 +83,8 @@ logics =
         "Num of subheaders"
         .subheaderNum
         (\a c -> { c | subheaderNum = a })
+    , ConfigForm.section
+        "Config"
     , ConfigForm.color
         "configTableBgColor"
         "Config table BG color"
