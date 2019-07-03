@@ -642,7 +642,7 @@ colorValDecoder =
 viewElement : ViewOptions -> List (Logic config) -> ConfigForm config -> Element (Msg config)
 viewElement options logics configForm =
     E.indexedTable
-        [ E.spacing options.tableSpacing
+        [ E.spacingXY 0 options.tableSpacing
         , EFont.size options.fontSize
         ]
         { data = logics
@@ -656,6 +656,7 @@ viewElement options logics configForm =
                                 [ E.height E.fill
                                 , E.paddingXY 10 2
                                 ]
+                                    ++ borderAttrs logic
 
                             sectionAttrs =
                                 [ EFont.bold
@@ -779,6 +780,24 @@ viewElement options logics configForm =
         }
 
 
+borderAttrs : Logic config -> List (E.Attribute msg)
+borderAttrs logic =
+    case logic.kind of
+        SectionLogic ->
+            [ EBorder.widthEach
+                { top = 2
+                , left = 0
+                , bottom = 0
+                , right = 0
+                }
+            , EBorder.color (E.rgb 0 0 0)
+            , E.paddingXY 0 10
+            ]
+
+        _ ->
+            []
+
+
 viewHtml : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
 viewHtml options logics configForm =
     viewElement options logics configForm
@@ -791,6 +810,7 @@ viewChanger options configForm index logic =
         defaultAttrs =
             [ E.height (E.px options.inputHeight)
             ]
+                ++ borderAttrs logic
 
         tabAttrs =
             [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
@@ -973,7 +993,7 @@ viewChanger options configForm index logic =
                             E.none
 
                 SectionField str ->
-                    E.none
+                    E.el defaultAttrs E.none
 
         Nothing ->
             E.none

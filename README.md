@@ -35,6 +35,11 @@ make
 - ! for brand new values that haven't been set yet (maybe note that in the field)
 - save scrolltop
 - custom increment value/factor
+  - optional min
+  - optional max
+  - onScroll
+    - x
+    - x%
 
 ### Could be cool
 
