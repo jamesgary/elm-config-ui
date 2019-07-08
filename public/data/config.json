@@ -1,1 +1,37 @@
-{"headerFontSize":21,"headerString":"Head's up?","subheaderFontSize":45.2,"subheaderString":"Subhead's up!","subheaderColor":{"r":0.598,"g":0.922,"b":0.60124,"a":1},"subheaderPadding":12,"subheaderNum":5,"configTableBgColor":{"r":0.9347833333333334,"g":0.9371666666666667,"b":0.8895,"a":1},"configTableBorderWidth":1,"configTableBorderColor":{"r":0.2178,"g":0.186504,"b":0.022199999999999998,"a":1},"configTablePadding":14,"configTableSpacing":5,"configLabelHighlightBgColor":{"r":0.9551186666666667,"g":0.9986333333333334,"b":0.4547,"a":1},"configFontSize":19,"configInputHeight":34}
+{
+  "headerFontSize": 83,
+  "headerString": "Head's up?",
+  "subheaderFontSize": 22,
+  "subheaderString": "Subhead's up!",
+  "subheaderColor": {
+    "r": 0.7726666666666666,
+    "g": 0.9606666666666668,
+    "b": 0.7745466666666666,
+    "a": 1
+  },
+  "subheaderPadding": 12,
+  "subheaderNum": 6,
+  "configTableBgColor": {
+    "r": 0.9347833333333334,
+    "g": 0.9371666666666667,
+    "b": 0.8895,
+    "a": 1
+  },
+  "configTableBorderWidth": 1,
+  "configTableBorderColor": {
+    "r": 0.30160000000000003,
+    "g": 0.25628800000000007,
+    "b": 0.018400000000000027,
+    "a": 1
+  },
+  "configTablePadding": 10,
+  "configRowSpacing": 4,
+  "configLabelHighlightBgColor": {
+    "r": 0.9551186666666667,
+    "g": 0.9986333333333334,
+    "b": 0.4547,
+    "a": 1
+  },
+  "configFontSize": 21,
+  "configInputHeight": 31
+}

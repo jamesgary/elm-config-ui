@@ -19,7 +19,7 @@ type alias Config =
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
     , configTablePadding : Int
-    , configTableSpacing : Int
+    , configRowSpacing : Int
     , configLabelHighlightBgColor : Color
     , configFontSize : Int
     , configInputHeight : Int
@@ -39,7 +39,7 @@ empty defaults =
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
     , configTablePadding = defaults.int
-    , configTableSpacing = defaults.int
+    , configRowSpacing = defaults.int
     , configLabelHighlightBgColor = defaults.color
     , configFontSize = defaults.int
     , configInputHeight = defaults.int
@@ -84,45 +84,47 @@ logics =
         .subheaderNum
         (\a c -> { c | subheaderNum = a })
     , ConfigForm.section
-        "Config"
+        "Config table container"
     , ConfigForm.color
         "configTableBgColor"
-        "Config table BG color"
+        "BG color"
         .configTableBgColor
         (\a c -> { c | configTableBgColor = a })
     , ConfigForm.int
         "configTableBorderWidth"
-        "Config table border width"
+        "Border width"
         .configTableBorderWidth
         (\a c -> { c | configTableBorderWidth = a })
     , ConfigForm.color
         "configTableBorderColor"
-        "Config table border color"
+        "Border color"
         .configTableBorderColor
         (\a c -> { c | configTableBorderColor = a })
     , ConfigForm.int
         "configTablePadding"
-        "Config table padding"
+        "Padding"
         .configTablePadding
         (\a c -> { c | configTablePadding = a })
+    , ConfigForm.section
+        "Config"
     , ConfigForm.int
-        "configTableSpacing"
-        "Config table spacing"
-        .configTableSpacing
-        (\a c -> { c | configTableSpacing = a })
+        "configRowSpacing"
+        "Row spacing"
+        .configRowSpacing
+        (\a c -> { c | configRowSpacing = a })
     , ConfigForm.color
         "configLabelHighlightBgColor"
-        "Config label highlight BG color"
+        "Label highlight BG color"
         .configLabelHighlightBgColor
         (\a c -> { c | configLabelHighlightBgColor = a })
     , ConfigForm.int
         "configFontSize"
-        "Config font size"
+        "Font size"
         .configFontSize
         (\a c -> { c | configFontSize = a })
     , ConfigForm.int
         "configInputHeight"
-        "Config input height"
+        "Input height"
         .configInputHeight
         (\a c -> { c | configInputHeight = a })
     ]

@@ -40,7 +40,6 @@ type alias Model =
 
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
-    | ClickedCopyConfig
     | ReceivedFromPort JE.Value
 
 
@@ -138,19 +137,6 @@ update msg model =
                     Nothing ->
                         Cmd.none
                 ]
-            )
-
-        ClickedCopyConfig ->
-            ( model
-            , sendToPort <|
-                JE.object
-                    [ ( "id", JE.string "COPY_CONFIG" )
-                    , ( "val"
-                      , ConfigForm.encode
-                            Config.logics
-                            model.config
-                      )
-                    ]
             )
 
         ReceivedFromPort portJson ->
@@ -253,20 +239,11 @@ view ({ config } as model) =
                     ]
                     (E.column
                         [ E.padding config.configTablePadding
-                        , E.padding 20
+                        , E.spacing 15
                         ]
-                        [ EInput.button
-                            [ EBackground.color (E.rgb 0.99 0.99 0.99)
-                            , EBorder.color (E.rgb 0.1 0.1 0.1)
-                            , EBorder.width 1
-                            , E.paddingXY 20 10
-                            ]
-                            { onPress = Just ClickedCopyConfig
-                            , label = E.text "Copy Config"
-                            }
-                        , ConfigForm.viewElement
+                        [ ConfigForm.viewElement
                             (ConfigForm.viewOptions
-                                |> ConfigForm.withTableSpacing config.configTableSpacing
+                                |> ConfigForm.withRowSpacing config.configRowSpacing
                                 |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
                                 |> ConfigForm.withInputHeight config.configInputHeight
                                 |> ConfigForm.withFontSize config.configFontSize
@@ -274,6 +251,17 @@ view ({ config } as model) =
                             Config.logics
                             model.configForm
                             |> E.map ConfigFormMsg
+                        , Html.textarea
+                            [ Html.Attributes.value
+                                (ConfigForm.encode
+                                    Config.logics
+                                    model.config
+                                    |> JE.encode 2
+                                )
+                            ]
+                            []
+                            |> E.html
+                            |> E.el []
                         ]
                     )
                 )

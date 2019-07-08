@@ -1,3 +1,14 @@
+Start with width, height, padding, spacing, and alignment
+
+length =
+[v| px ] [ 123]          (gots to be draggable!)
+    fill
+    shrink
+
+width     [length]
+height    [length]
+---------
+
 code gen, or no code gen?
 
 perfect type safety, or a bit of dict?

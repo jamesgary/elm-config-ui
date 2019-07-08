@@ -6,7 +6,7 @@ module Egg.ConfigForm exposing
     , update, updateFromJson
     , encode, encodeConfigForm
     , viewHtml, viewElement
-    , viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
+    , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
     )
 
 {-|
@@ -54,7 +54,7 @@ module Egg.ConfigForm exposing
 
 # View options
 
-@docs viewOptions, withTableSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
+@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
 
 -}
 
@@ -154,7 +154,6 @@ init options =
                 options.logics
                 options.emptyConfig
                 options.configJson
-                |> Debug.log "YAY CONFIG"
 
         configForm =
             decodeConfigForm
@@ -642,7 +641,7 @@ colorValDecoder =
 viewElement : ViewOptions -> List (Logic config) -> ConfigForm config -> Element (Msg config)
 viewElement options logics configForm =
     E.indexedTable
-        [ E.spacingXY 0 options.tableSpacing
+        [ E.spacingXY 0 options.rowSpacing
         , EFont.size options.fontSize
         ]
         { data = logics
@@ -656,10 +655,15 @@ viewElement options logics configForm =
                                 [ E.height E.fill
                                 , E.paddingXY 10 2
                                 ]
-                                    ++ borderAttrs logic
 
                             sectionAttrs =
                                 [ EFont.bold
+                                , E.paddingEach
+                                    { top = 20
+                                    , right = 0
+                                    , bottom = 5
+                                    , left = 10
+                                    }
                                 ]
 
                             resizeAttrs =
@@ -780,24 +784,6 @@ viewElement options logics configForm =
         }
 
 
-borderAttrs : Logic config -> List (E.Attribute msg)
-borderAttrs logic =
-    case logic.kind of
-        SectionLogic ->
-            [ EBorder.widthEach
-                { top = 2
-                , left = 0
-                , bottom = 0
-                , right = 0
-                }
-            , EBorder.color (E.rgb 0 0 0)
-            , E.paddingXY 0 10
-            ]
-
-        _ ->
-            []
-
-
 viewHtml : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
 viewHtml options logics configForm =
     viewElement options logics configForm
@@ -810,7 +796,6 @@ viewChanger options configForm index logic =
         defaultAttrs =
             [ E.height (E.px options.inputHeight)
             ]
-                ++ borderAttrs logic
 
         tabAttrs =
             [ Html.Attributes.tabindex (1 + index) |> E.htmlAttribute
@@ -1029,33 +1014,27 @@ colorForE col =
 
 
 type alias ViewOptions =
-    { tableBgColor : Color
-    , tableSpacing : Int
-    , tablePadding : Int
-    , tableBorderWidth : Int
-    , tableBorderColor : Color
-    , labelHighlightBgColor : Color
-    , fontSize : Int
+    { fontSize : Int
+    , rowSpacing : Int
     , inputHeight : Int
+    , labelHighlightBgColor : Color
+    , sectionSpacing : Int
     }
 
 
 viewOptions : ViewOptions
 viewOptions =
-    { tableBgColor = Color.rgba 1 1 1 0
-    , tableSpacing = 5
-    , tablePadding = 5
-    , tableBorderWidth = 1
-    , tableBorderColor = Color.rgb 0 0 0
-    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
-    , fontSize = 19
+    { fontSize = 19
+    , rowSpacing = 5
     , inputHeight = 34
+    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
+    , sectionSpacing = 20
     }
 
 
-withTableSpacing : Int -> ViewOptions -> ViewOptions
-withTableSpacing val options =
-    { options | tableSpacing = val }
+withRowSpacing : Int -> ViewOptions -> ViewOptions
+withRowSpacing val options =
+    { options | rowSpacing = val }
 
 
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
