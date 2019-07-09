@@ -8,6 +8,7 @@ type Kind
     | FloatKind String
     | StringKind String
     | ColorKind String
+    | ElementKind String
     | SectionKind
 
 
@@ -36,6 +37,7 @@ module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
 import Egg.ConfigForm as ConfigForm
+import Element
 """
         |> String.trim
 
@@ -188,6 +190,9 @@ kindToType kind =
         ColorKind _ ->
             Just "Color"
 
+        ElementKind _ ->
+            Just "List (ConfigForm.ElementAttr)"
+
         SectionKind ->
             Nothing
 
@@ -207,6 +212,9 @@ kindToDefault kind =
         ColorKind _ ->
             Just "defaults.color"
 
+        ElementKind _ ->
+            Just "[]"
+
         SectionKind ->
             Nothing
 
@@ -225,6 +233,9 @@ kindToLogic kind =
 
         ColorKind _ ->
             "ConfigForm.color"
+
+        ElementKind _ ->
+            "ConfigForm.element"
 
         SectionKind ->
             "ConfigForm.section"
@@ -272,6 +283,9 @@ kindToFieldName kind =
             Just str
 
         ColorKind str ->
+            Just str
+
+        ElementKind str ->
             Just str
 
         SectionKind ->

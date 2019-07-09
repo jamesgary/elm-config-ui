@@ -8,6 +8,7 @@ import Html exposing (Html)
 sample : List ( String, Kind )
 sample =
     [ ( "Header font size", IntKind "headerFontSize" )
+    , ( "Header element", ElementKind "headerElement" )
     , ( "Header string", StringKind "headerString" )
     , ( "Subheader font size", IntKind "subheaderFontSize" )
     , ( "Subheader string", StringKind "subheaderString" )

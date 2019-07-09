@@ -1,12 +1,13 @@
 module Egg.ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults, Logic
     , Field
-    , int, float, string, color, section
+    , int, float, string, color, element, section
     , Msg
     , update, updateFromJson
     , encode, encodeConfigForm
     , viewHtml, viewElement
     , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
+    , ElementAttr
     )
 
 {-|
@@ -29,7 +30,7 @@ module Egg.ConfigForm exposing
 
 # Field functions
 
-@docs int, float, string, color, section
+@docs int, float, string, color, element, section
 
 
 # Msg
@@ -90,6 +91,7 @@ type Field
     | FloatField FloatFieldData
     | StringField StringFieldData
     | ColorField ColorFieldData
+    | ElementField ElementFieldData
     | SectionField String
 
 
@@ -114,6 +116,30 @@ type alias ColorFieldData =
     { val : Color
     , meta : ColorFieldMeta
     }
+
+
+type alias ElementFieldData =
+    { val : List ElementAttr
+
+    --, meta : some form data probably
+    }
+
+
+type ElementAttr
+    = AlignmentX AlignmentXData
+    | AlignmentY AlignmentYData
+
+
+type AlignmentXData
+    = AlignLeft
+    | CenterX
+    | AlignRight
+
+
+type AlignmentYData
+    = AlignTop
+    | CenterY
+    | AlignBottom
 
 
 type ColorFieldMeta
@@ -182,6 +208,7 @@ type LogicKind config
     | FloatLogic (config -> Float) (Float -> config -> config)
     | StringLogic (config -> String) (String -> config -> config)
     | ColorLogic (config -> Color) (Color -> config -> config)
+    | ElementLogic (config -> List ElementAttr) (List ElementAttr -> config -> config)
     | SectionLogic
 
 
@@ -214,6 +241,14 @@ color fieldName label getter setter =
     { fieldName = fieldName
     , label = label
     , kind = ColorLogic getter setter
+    }
+
+
+element : String -> String -> (config -> List ElementAttr) -> (List ElementAttr -> config -> config) -> Logic config
+element fieldName label getter setter =
+    { fieldName = fieldName
+    , label = label
+    , kind = ElementLogic getter setter
     }
 
 
@@ -261,6 +296,13 @@ encode logics config =
                                 |> encodeColor
                             )
 
+                    ElementLogic getter _ ->
+                        Just
+                            ( logic.fieldName
+                            , getter config
+                                |> encodeElement
+                            )
+
                     SectionLogic ->
                         Nothing
             )
@@ -279,6 +321,12 @@ encodeColor col =
                     , ( "a", JE.float alpha )
                     ]
            )
+
+
+encodeElement : List ElementAttr -> JE.Value
+encodeElement attrs =
+    -- TODO
+    JE.null
 
 
 encodeConfigForm : ConfigForm config -> JE.Value
@@ -332,6 +380,10 @@ encodeField field =
             encodeColor data.val
                 |> Just
 
+        ElementField data ->
+            -- TODO
+            Nothing
+
         SectionField _ ->
             Nothing
 
@@ -379,6 +431,9 @@ configFromConfigForm logics configForm config =
                         setter data.val newConfig
 
                     ( Just (ColorField data), ColorLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    ( Just (ElementField data), ElementLogic getter setter ) ->
                         setter data.val newConfig
 
                     _ ->
@@ -560,6 +615,23 @@ decodeConfigForm logics config json =
                                         }
                                 }
 
+                        ElementLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.at [ "fields", logic.fieldName ] elementValDecoder
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
+                            ElementField
+                                { val = val
+                                }
+
                         SectionLogic ->
                             SectionField logic.fieldName
                     )
@@ -619,6 +691,14 @@ decodeConfig logics emptyConfig configJson =
                             Err err ->
                                 config
 
+                    ElementLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName elementValDecoder) configJson of
+                            Ok col ->
+                                setter col config
+
+                            Err err ->
+                                config
+
                     SectionLogic ->
                         config
             )
@@ -632,6 +712,11 @@ colorValDecoder =
         (JD.field "g" JD.float)
         (JD.field "b" JD.float)
         (JD.field "a" JD.float)
+
+
+elementValDecoder : JD.Decoder (List ElementAttr)
+elementValDecoder =
+    JD.succeed []
 
 
 
@@ -764,6 +849,9 @@ viewElement options logics configForm =
 
                                             ColorLogic getter setter ->
                                                 closeAttrs
+
+                                            ElementLogic getter setter ->
+                                                []
 
                                             SectionLogic ->
                                                 sectionAttrs
@@ -976,6 +1064,9 @@ viewChanger options configForm index logic =
                                    ]
                             )
                             E.none
+
+                ElementField str ->
+                    E.text "HOO BOY TO DO"
 
                 SectionField str ->
                     E.el defaultAttrs E.none

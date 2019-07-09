@@ -5,10 +5,12 @@ module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
 import Egg.ConfigForm as ConfigForm
+import Element
 
 
 type alias Config =
     { headerFontSize : Int
+    , headerElement : List (ConfigForm.ElementAttr)
     , headerString : String
     , subheaderFontSize : Int
     , subheaderString : String
@@ -29,6 +31,7 @@ type alias Config =
 empty : ConfigForm.Defaults -> Config
 empty defaults =
     { headerFontSize = defaults.int
+    , headerElement = []
     , headerString = defaults.string
     , subheaderFontSize = defaults.int
     , subheaderString = defaults.string
@@ -53,6 +56,11 @@ logics =
         "Header font size"
         .headerFontSize
         (\a c -> { c | headerFontSize = a })
+    , ConfigForm.element
+        "headerElement"
+        "Header element"
+        .headerElement
+        (\a c -> { c | headerElement = a })
     , ConfigForm.string
         "headerString"
         "Header string"
