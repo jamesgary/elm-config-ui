@@ -1,7 +1,7 @@
 module Egg.ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults, Logic
     , Field
-    , int, float, string, color, section
+    , int, float, string, bool, color, section
     , Msg
     , update, updateFromJson
     , encode, encodeConfigForm
@@ -29,7 +29,7 @@ module Egg.ConfigForm exposing
 
 # Field functions
 
-@docs int, float, string, color, section
+@docs int, float, string, bool, color, section
 
 
 # Msg
@@ -89,6 +89,7 @@ type Field
     = IntField IntFieldData
     | FloatField FloatFieldData
     | StringField StringFieldData
+    | BoolField BoolFieldData
     | ColorField ColorFieldData
     | SectionField String
 
@@ -107,6 +108,11 @@ type alias FloatFieldData =
 
 type alias StringFieldData =
     { val : String
+    }
+
+
+type alias BoolFieldData =
+    { val : Bool
     }
 
 
@@ -134,6 +140,7 @@ type alias Defaults =
     { int : Int
     , float : Float
     , string : String
+    , bool : Bool
     , color : Color
     }
 
@@ -182,6 +189,7 @@ type LogicKind config
     | FloatLogic (config -> Float) (Float -> config -> config)
     | StringLogic (config -> String) (String -> config -> config)
     | ColorLogic (config -> Color) (Color -> config -> config)
+    | BoolLogic (config -> Bool) (Bool -> config -> config)
     | SectionLogic
 
 
@@ -206,6 +214,14 @@ string fieldName label getter setter =
     { fieldName = fieldName
     , label = label
     , kind = StringLogic getter setter
+    }
+
+
+bool : String -> String -> (config -> Bool) -> (Bool -> config -> config) -> Logic config
+bool fieldName label getter setter =
+    { fieldName = fieldName
+    , label = label
+    , kind = BoolLogic getter setter
     }
 
 
@@ -252,6 +268,12 @@ encode logics config =
                         Just
                             ( logic.fieldName
                             , JE.string (getter config)
+                            )
+
+                    BoolLogic getter _ ->
+                        Just
+                            ( logic.fieldName
+                            , JE.bool (getter config)
                             )
 
                     ColorLogic getter _ ->
@@ -328,6 +350,10 @@ encodeField field =
             JE.string data.val
                 |> Just
 
+        BoolField data ->
+            JE.bool data.val
+                |> Just
+
         ColorField data ->
             encodeColor data.val
                 |> Just
@@ -376,6 +402,9 @@ configFromConfigForm logics configForm config =
                         setter data.val newConfig
 
                     ( Just (StringField data), StringLogic getter setter ) ->
+                        setter data.val newConfig
+
+                    ( Just (BoolField data), BoolLogic getter setter ) ->
                         setter data.val newConfig
 
                     ( Just (ColorField data), ColorLogic getter setter ) ->
@@ -538,6 +567,23 @@ decodeConfigForm logics config json =
                                 { val = val
                                 }
 
+                        BoolLogic getter setter ->
+                            let
+                                decoder =
+                                    JD.at [ "fields", logic.fieldName ] JD.bool
+
+                                val =
+                                    case JD.decodeValue decoder json of
+                                        Ok v ->
+                                            v
+
+                                        Err err ->
+                                            getter config
+                            in
+                            BoolField
+                                { val = val
+                                }
+
                         ColorLogic getter setter ->
                             let
                                 decoder =
@@ -605,6 +651,14 @@ decodeConfig logics emptyConfig configJson =
 
                     StringLogic getter setter ->
                         case JD.decodeValue (JD.field logic.fieldName JD.string) configJson of
+                            Ok str ->
+                                setter str config
+
+                            Err err ->
+                                config
+
+                    BoolLogic getter setter ->
+                        case JD.decodeValue (JD.field logic.fieldName JD.bool) configJson of
                             Ok str ->
                                 setter str config
 
@@ -762,6 +816,9 @@ viewElement options logics configForm =
                                             FloatLogic getter setter ->
                                                 resizeAttrs
 
+                                            BoolLogic getter setter ->
+                                                []
+
                                             ColorLogic getter setter ->
                                                 closeAttrs
 
@@ -852,6 +909,19 @@ viewChanger options configForm index logic =
                                 ChangedConfigForm
                                     logic.fieldName
                                     (StringField { data | val = newStr })
+                        }
+
+                BoolField data ->
+                    EInput.checkbox
+                        (defaultAttrs ++ tabAttrs)
+                        { onChange =
+                            \newBool ->
+                                ChangedConfigForm
+                                    logic.fieldName
+                                    (BoolField { data | val = newBool })
+                        , icon = EInput.defaultCheckbox
+                        , checked = data.val
+                        , label = EInput.labelHidden logic.fieldName
                         }
 
                 IntField data ->

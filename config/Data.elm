@@ -9,6 +9,7 @@ sample : List ( String, Kind )
 sample =
     [ ( "Header font size", IntKind "headerFontSize" )
     , ( "Header string", StringKind "headerString" )
+    , ( "Show subheaders", BoolKind "showSubheaders" )
     , ( "Subheader font size", IntKind "subheaderFontSize" )
     , ( "Subheader string", StringKind "subheaderString" )
     , ( "Subheader color", ColorKind "subheaderColor" )

@@ -7,6 +7,7 @@ type Kind
     = IntKind String
     | FloatKind String
     | StringKind String
+    | BoolKind String
     | ColorKind String
     | SectionKind
 
@@ -185,6 +186,9 @@ kindToType kind =
         StringKind _ ->
             Just "String"
 
+        BoolKind _ ->
+            Just "Bool"
+
         ColorKind _ ->
             Just "Color"
 
@@ -204,6 +208,9 @@ kindToDefault kind =
         StringKind _ ->
             Just "defaults.string"
 
+        BoolKind _ ->
+            Just "defaults.bool"
+
         ColorKind _ ->
             Just "defaults.color"
 
@@ -222,6 +229,9 @@ kindToLogic kind =
 
         StringKind _ ->
             "ConfigForm.string"
+
+        BoolKind _ ->
+            "ConfigForm.bool"
 
         ColorKind _ ->
             "ConfigForm.color"
@@ -269,6 +279,9 @@ kindToFieldName kind =
             Just str
 
         StringKind str ->
+            Just str
+
+        BoolKind str ->
             Just str
 
         ColorKind str ->

@@ -90,6 +90,7 @@ init jsonFlags =
                                 { int = 1
                                 , float = 1
                                 , string = "SORRY IM NEW HERE"
+                                , bool = True
                                 , color = Color.rgba 1 0 1 1 -- hot pink!
                                 }
                         }
@@ -271,18 +272,22 @@ view ({ config } as model) =
                 [ EFont.size model.config.headerFontSize
                 ]
                 [ E.text <| "Header: " ++ model.config.headerString ]
-            , E.column []
-                (List.range 1 model.config.subheaderNum
-                    |> List.map
-                        (\_ ->
-                            E.el
-                                [ EFont.size model.config.subheaderFontSize
-                                , EBackground.color (colorForE model.config.subheaderColor)
-                                , E.padding model.config.subheaderPadding
-                                ]
-                                (E.text <| "Subheader: " ++ model.config.subheaderString)
-                        )
-                )
+            , if model.config.showSubheaders then
+                E.column []
+                    (List.range 1 model.config.subheaderNum
+                        |> List.map
+                            (\_ ->
+                                E.el
+                                    [ EFont.size model.config.subheaderFontSize
+                                    , EBackground.color (colorForE model.config.subheaderColor)
+                                    , E.padding model.config.subheaderPadding
+                                    ]
+                                    (E.text <| "Subheader: " ++ model.config.subheaderString)
+                            )
+                    )
+
+              else
+                E.none
             ]
         )
 
