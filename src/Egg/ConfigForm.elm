@@ -118,6 +118,10 @@ type alias ColorFieldData =
     }
 
 
+
+-- Element stuff
+
+
 type alias ElementFieldData =
     { val : List ElementAttr
 
@@ -263,6 +267,8 @@ section sectionStr =
 type Msg config
     = ChangedConfigForm String Field
     | ClickedPointerLockLabel String
+    | SelectedElementAttr String ElementFieldData String
+    | SelectedAlignmentX String ElementFieldData String
 
 
 encode : List (Logic config) -> config -> JE.Value
@@ -401,6 +407,71 @@ update logics config configForm msg =
             , { configForm
                 | fields = newConfigForm
               }
+            , Nothing
+            )
+
+        SelectedElementAttr fieldName fieldData optionVal ->
+            let
+                maybeAttr =
+                    case optionVal of
+                        "alignX" ->
+                            Just (AlignmentX AlignLeft)
+
+                        "alignY" ->
+                            Just (AlignmentY AlignTop)
+
+                        _ ->
+                            Nothing
+            in
+            ( config
+            , case maybeAttr of
+                Just attr ->
+                    { configForm
+                        | fields =
+                            configForm.fields
+                                |> OrderedDict.insert fieldName
+                                    (ElementField
+                                        { val = fieldData.val ++ [ attr ]
+                                        }
+                                    )
+                    }
+
+                Nothing ->
+                    configForm
+            , Nothing
+            )
+
+        SelectedAlignmentX fieldName fieldData optionVal ->
+            let
+                maybeAttr =
+                    case optionVal of
+                        "alignLeft" ->
+                            Just (AlignmentX AlignLeft)
+
+                        "centerX" ->
+                            Just (AlignmentX CenterX)
+
+                        "alignRight" ->
+                            Just (AlignmentX AlignRight)
+
+                        _ ->
+                            Nothing
+            in
+            ( config
+            , case maybeAttr of
+                Just attr ->
+                    { configForm
+                        | fields =
+                            configForm.fields
+                                |> OrderedDict.insert fieldName
+                                    (ElementField
+                                        { val = fieldData.val ++ [ attr ]
+                                        }
+                                    )
+                    }
+
+                Nothing ->
+                    configForm
             , Nothing
             )
 
@@ -739,6 +810,7 @@ viewElement options logics configForm =
                             defaultAttrs =
                                 [ E.height E.fill
                                 , E.paddingXY 10 2
+                                , E.alignTop
                                 ]
 
                             sectionAttrs =
@@ -1065,8 +1137,68 @@ viewChanger options configForm index logic =
                             )
                             E.none
 
-                ElementField str ->
-                    E.text "HOO BOY TO DO"
+                ElementField data ->
+                    E.column []
+                        [ Html.select
+                            [ Html.Attributes.style "font-size" (px options.fontSize)
+                            , Html.Events.onInput (SelectedElementAttr logic.fieldName data)
+                            ]
+                            [ Html.option
+                                [ Html.Attributes.disabled True
+                                , Html.Attributes.selected True
+                                ]
+                                [ Html.text "Add element attribute"
+                                ]
+                            , Html.option
+                                [ Html.Attributes.disabled False
+                                , Html.Attributes.value "alignX"
+                                ]
+                                [ Html.text "Align X"
+                                ]
+                            , Html.option
+                                [ Html.Attributes.disabled False
+                                , Html.Attributes.value "alignY"
+                                ]
+                                [ Html.text "Align Y"
+                                ]
+                            ]
+                            |> E.html
+                        , E.column []
+                            (data.val
+                                |> List.map
+                                    (\attr ->
+                                        case attr of
+                                            AlignmentX alignmentData ->
+                                                E.row []
+                                                    [ E.text "Alignment X"
+                                                    , Html.select
+                                                        [ Html.Attributes.style "font-size" (px options.fontSize)
+                                                        , Html.Events.onInput (SelectedAlignmentX logic.fieldName data)
+                                                        ]
+                                                        [ Html.option
+                                                            [ Html.Attributes.value "alignLeft"
+                                                            ]
+                                                            [ Html.text "Left"
+                                                            ]
+                                                        , Html.option
+                                                            [ Html.Attributes.value "centerX"
+                                                            ]
+                                                            [ Html.text "Center"
+                                                            ]
+                                                        , Html.option
+                                                            [ Html.Attributes.value "alignRight"
+                                                            ]
+                                                            [ Html.text "Right"
+                                                            ]
+                                                        ]
+                                                        |> E.html
+                                                    ]
+
+                                            AlignmentY alignmentData ->
+                                                E.text "Yin"
+                                    )
+                            )
+                        ]
 
                 SectionField str ->
                     E.el defaultAttrs E.none
@@ -1141,3 +1273,8 @@ withFontSize val options =
 withInputHeight : Int -> ViewOptions -> ViewOptions
 withInputHeight val options =
     { options | inputHeight = val }
+
+
+px : Int -> String
+px num =
+    String.fromInt num ++ "px"

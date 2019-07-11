@@ -57,18 +57,43 @@ make
 
 ## WHAT IF ELM-UI??
 
-attributes
+ALIGNMENT
+- X (left, center, right)
+- Y (top, center, bottom)
+
+DIMENSIONS
 - width (px, shrink, fill, fillPortion, maximum, minimum)
 - height
+
+BOX MODEL (?)
 - padding (xy, each)
 - spacing (xy, evenly)
+
+BACKGROUND
+- color
+
+BORDER
+- (all? X/Y? each?)
+- width
+- color
+- style?
+
+FONT
+- color
+- size
+- family
 - alignment
-  - centerX
-  - centerY
-  - alignLeft
-  - alignRight
-  - alignTop
-  - alignBottom
+- letter spacing
+- word spacing
+- more styles
+- weight
+- variants
+- glow
+- shadow
+
+
+
+
 - transparency
 - alpha
 - pointer
