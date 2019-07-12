@@ -35,12 +35,15 @@ main =
 type alias Model =
     { config : Config
     , configForm : ConfigForm Config
+    , isConfigOpen : Bool
     }
 
 
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
     | ReceivedFromPort JE.Value
+    | ClickedOpenConfig
+    | ClickedCloseConfig
 
 
 
@@ -55,6 +58,9 @@ type alias Flags =
 
 type alias LocalStorage =
     { configForm : JE.Value
+
+    -- other things you may not necessarily want in your config form
+    , isConfigOpen : Bool
     }
 
 
@@ -69,6 +75,7 @@ decodeLocalStorage : JD.Decoder LocalStorage
 decodeLocalStorage =
     JD.succeed LocalStorage
         |> JDP.optional "configForm" JD.value (JE.object [])
+        |> JDP.optional "isConfigOpen" JD.bool False
 
 
 
@@ -97,6 +104,7 @@ init jsonFlags =
             in
             ( { config = config
               , configForm = configForm
+              , isConfigOpen = flags.localStorage.isConfigOpen
               }
             , Cmd.none
             )
@@ -183,6 +191,24 @@ update msg model =
                     in
                     ( model, Cmd.none )
 
+        ClickedOpenConfig ->
+            let
+                newModel =
+                    { model | isConfigOpen = True }
+            in
+            ( newModel
+            , saveToLocalStorageCmd newModel
+            )
+
+        ClickedCloseConfig ->
+            let
+                newModel =
+                    { model | isConfigOpen = False }
+            in
+            ( newModel
+            , saveToLocalStorageCmd newModel
+            )
+
 
 type ReceiveMsg
     = ConfigFormPortMsg JE.Value
@@ -214,6 +240,9 @@ saveToLocalStorageCmd model =
                       , ConfigForm.encodeConfigForm
                             model.configForm
                       )
+                    , ( "isConfigOpen"
+                      , JE.bool model.isConfigOpen
+                      )
                     ]
               )
             ]
@@ -223,49 +252,7 @@ view : Model -> Html Msg
 view ({ config } as model) =
     E.layout
         [ E.padding 20
-        , E.inFront <|
-            E.el
-                [ E.alignRight
-                , E.padding 20
-                , E.height E.fill
-                , E.width E.fill
-                , E.scrollbarY
-                ]
-                (E.el
-                    [ EBackground.color (colorForE config.configTableBgColor)
-                    , EBorder.color (colorForE config.configTableBorderColor)
-                    , EBorder.width config.configTableBorderWidth
-                    , E.scrollbarY
-                    , E.alignRight
-                    ]
-                    (E.column
-                        [ E.padding config.configTablePadding
-                        , E.spacing 15
-                        ]
-                        [ ConfigForm.viewElement
-                            (ConfigForm.viewOptions
-                                |> ConfigForm.withRowSpacing config.configRowSpacing
-                                |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
-                                |> ConfigForm.withInputHeight config.configInputHeight
-                                |> ConfigForm.withFontSize config.configFontSize
-                            )
-                            Config.logics
-                            model.configForm
-                            |> E.map ConfigFormMsg
-                        , Html.textarea
-                            [ Html.Attributes.value
-                                (ConfigForm.encode
-                                    Config.logics
-                                    model.config
-                                    |> JE.encode 2
-                                )
-                            ]
-                            []
-                            |> E.html
-                            |> E.el []
-                        ]
-                    )
-                )
+        , E.inFront <| viewConfig model
         ]
         (E.column []
             [ E.row
@@ -289,6 +276,72 @@ view ({ config } as model) =
               else
                 E.none
             ]
+        )
+
+
+viewConfig : Model -> Element Msg
+viewConfig ({ config } as model) =
+    E.el
+        [ E.alignRight
+        , E.padding 20
+        , E.height E.fill
+        , E.width E.fill
+        , E.scrollbarY
+        ]
+        (E.el
+            [ EBackground.color (colorForE config.configTableBgColor)
+            , EBorder.color (colorForE config.configTableBorderColor)
+            , EBorder.width config.configTableBorderWidth
+            , E.scrollbarY
+            , E.alignRight
+            ]
+            (E.column
+                [ E.padding config.configTablePadding
+                , E.spacing 15
+                ]
+                (if model.isConfigOpen then
+                    [ EInput.button
+                        [ E.alignRight
+                        ]
+                        { onPress = Just ClickedCloseConfig
+                        , label =
+                            E.el
+                                [ EFont.underline
+                                ]
+                                (E.text "Close Config")
+                        }
+                    , ConfigForm.viewElement
+                        (ConfigForm.viewOptions
+                            |> ConfigForm.withRowSpacing config.configRowSpacing
+                            |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                            |> ConfigForm.withInputHeight config.configInputHeight
+                            |> ConfigForm.withFontSize config.configFontSize
+                        )
+                        Config.logics
+                        model.configForm
+                        |> E.map ConfigFormMsg
+                    , Html.textarea
+                        [ Html.Attributes.value
+                            (ConfigForm.encode
+                                Config.logics
+                                model.config
+                                |> JE.encode 2
+                            )
+                        ]
+                        []
+                        |> E.html
+                        |> E.el []
+                    ]
+
+                 else
+                    [ EInput.button
+                        []
+                        { onPress = Just ClickedOpenConfig
+                        , label = E.el [ EFont.underline ] (E.text "Open Config")
+                        }
+                    ]
+                )
+            )
         )
 
 

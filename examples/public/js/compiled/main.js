@@ -5775,9 +5775,10 @@ var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 				fallback),
 			decoder);
 	});
-var author$project$Main$LocalStorage = function (configForm) {
-	return {configForm: configForm};
-};
+var author$project$Main$LocalStorage = F2(
+	function (configForm, isConfigOpen) {
+		return {configForm: configForm, isConfigOpen: isConfigOpen};
+	});
 var elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -5793,10 +5794,15 @@ var elm$json$Json$Encode$object = function (pairs) {
 };
 var author$project$Main$decodeLocalStorage = A4(
 	NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
-	'configForm',
-	elm$json$Json$Decode$value,
-	elm$json$Json$Encode$object(_List_Nil),
-	elm$json$Json$Decode$succeed(author$project$Main$LocalStorage));
+	'isConfigOpen',
+	elm$json$Json$Decode$bool,
+	false,
+	A4(
+		NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+		'configForm',
+		elm$json$Json$Decode$value,
+		elm$json$Json$Encode$object(_List_Nil),
+		elm$json$Json$Decode$succeed(author$project$Main$LocalStorage)));
 var author$project$Main$decodeFlags = A3(
 	NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 	'configFile',
@@ -5830,15 +5836,15 @@ var author$project$Main$init = function (jsonFlags) {
 		var config = _n1.a;
 		var configForm = _n1.b;
 		return _Utils_Tuple2(
-			{config: config, configForm: configForm},
+			{config: config, configForm: configForm, isConfigOpen: flags.localStorage.isConfigOpen},
 			elm$core$Platform$Cmd$none);
 	} else {
 		var err = _n0.a;
 		return _Debug_todo(
 			'Main',
 			{
-				start: {line: 105, column: 13},
-				end: {line: 105, column: 23}
+				start: {line: 113, column: 13},
+				end: {line: 113, column: 23}
 			})(
 			elm$json$Json$Decode$errorToString(err));
 	}
@@ -6598,54 +6604,22 @@ var author$project$Main$saveToLocalStorageCmd = function (model) {
 							[
 								_Utils_Tuple2(
 								'configForm',
-								author$project$ConfigForm$encodeConfigForm(model.configForm))
+								author$project$ConfigForm$encodeConfigForm(model.configForm)),
+								_Utils_Tuple2(
+								'isConfigOpen',
+								elm$json$Json$Encode$bool(model.isConfigOpen))
 							])))
 				])));
 };
 var author$project$Main$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'ConfigFormMsg') {
-			var configFormMsg = msg.a;
-			var _n1 = A4(author$project$ConfigForm$update, author$project$Config$logics, model.config, model.configForm, configFormMsg);
-			var newConfig = _n1.a;
-			var newConfigForm = _n1.b;
-			var maybeJsonCmd = _n1.c;
-			var newModel = _Utils_update(
-				model,
-				{config: newConfig, configForm: newConfigForm});
-			return _Utils_Tuple2(
-				newModel,
-				elm$core$Platform$Cmd$batch(
-					_List_fromArray(
-						[
-							author$project$Main$saveToLocalStorageCmd(newModel),
-							function () {
-							if (maybeJsonCmd.$ === 'Just') {
-								var jsonCmd = maybeJsonCmd.a;
-								return author$project$Main$sendToPort(
-									elm$json$Json$Encode$object(
-										_List_fromArray(
-											[
-												_Utils_Tuple2(
-												'id',
-												elm$json$Json$Encode$string('CONFIG')),
-												_Utils_Tuple2('val', jsonCmd)
-											])));
-							} else {
-								return elm$core$Platform$Cmd$none;
-							}
-						}()
-						])));
-		} else {
-			var portJson = msg.a;
-			var _n3 = A2(elm$json$Json$Decode$decodeValue, author$project$Main$fromPortDecoder, portJson);
-			if (_n3.$ === 'Ok') {
-				var receiveMsg = _n3.a;
-				var json = receiveMsg.a;
-				var _n5 = A4(author$project$ConfigForm$updateFromJson, author$project$Config$logics, model.config, model.configForm, json);
-				var newConfig = _n5.a;
-				var newConfigForm = _n5.b;
-				var maybeJsonCmd = _n5.c;
+		switch (msg.$) {
+			case 'ConfigFormMsg':
+				var configFormMsg = msg.a;
+				var _n1 = A4(author$project$ConfigForm$update, author$project$Config$logics, model.config, model.configForm, configFormMsg);
+				var newConfig = _n1.a;
+				var newConfigForm = _n1.b;
+				var maybeJsonCmd = _n1.c;
 				var newModel = _Utils_update(
 					model,
 					{config: newConfig, configForm: newConfigForm});
@@ -6672,16 +6646,81 @@ var author$project$Main$update = F2(
 								}
 							}()
 							])));
-			} else {
-				var err = _n3.a;
-				var _n7 = A2(
-					elm$core$Debug$log,
-					'Could not decode incoming port msg: ',
-					elm$json$Json$Decode$errorToString(err));
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
-			}
+			case 'ReceivedFromPort':
+				var portJson = msg.a;
+				var _n3 = A2(elm$json$Json$Decode$decodeValue, author$project$Main$fromPortDecoder, portJson);
+				if (_n3.$ === 'Ok') {
+					var receiveMsg = _n3.a;
+					var json = receiveMsg.a;
+					var _n5 = A4(author$project$ConfigForm$updateFromJson, author$project$Config$logics, model.config, model.configForm, json);
+					var newConfig = _n5.a;
+					var newConfigForm = _n5.b;
+					var maybeJsonCmd = _n5.c;
+					var newModel = _Utils_update(
+						model,
+						{config: newConfig, configForm: newConfigForm});
+					return _Utils_Tuple2(
+						newModel,
+						elm$core$Platform$Cmd$batch(
+							_List_fromArray(
+								[
+									author$project$Main$saveToLocalStorageCmd(newModel),
+									function () {
+									if (maybeJsonCmd.$ === 'Just') {
+										var jsonCmd = maybeJsonCmd.a;
+										return author$project$Main$sendToPort(
+											elm$json$Json$Encode$object(
+												_List_fromArray(
+													[
+														_Utils_Tuple2(
+														'id',
+														elm$json$Json$Encode$string('CONFIG')),
+														_Utils_Tuple2('val', jsonCmd)
+													])));
+									} else {
+										return elm$core$Platform$Cmd$none;
+									}
+								}()
+								])));
+				} else {
+					var err = _n3.a;
+					var _n7 = A2(
+						elm$core$Debug$log,
+						'Could not decode incoming port msg: ',
+						elm$json$Json$Decode$errorToString(err));
+					return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+				}
+			case 'ClickedOpenConfig':
+				var newModel = _Utils_update(
+					model,
+					{isConfigOpen: true});
+				return _Utils_Tuple2(
+					newModel,
+					author$project$Main$saveToLocalStorageCmd(newModel));
+			default:
+				var newModel = _Utils_update(
+					model,
+					{isConfigOpen: false});
+				return _Utils_Tuple2(
+					newModel,
+					author$project$Main$saveToLocalStorageCmd(newModel));
 		}
 	});
+var mdgriffith$elm_ui$Internal$Model$Rgba = F4(
+	function (a, b, c, d) {
+		return {$: 'Rgba', a: a, b: b, c: c, d: d};
+	});
+var mdgriffith$elm_ui$Element$rgba = mdgriffith$elm_ui$Internal$Model$Rgba;
+var author$project$Main$colorForE = function (color) {
+	return function (_n0) {
+		var red = _n0.red;
+		var green = _n0.green;
+		var blue = _n0.blue;
+		var alpha = _n0.alpha;
+		return A4(mdgriffith$elm_ui$Element$rgba, red, green, blue, alpha);
+	}(
+		avh4$elm_color$Color$toRgba(color));
+};
 var author$project$ConfigForm$encode = F2(
 	function (logics, config) {
 		return elm$json$Json$Encode$object(
@@ -6738,11 +6777,6 @@ var author$project$ConfigForm$ChangedConfigForm = F2(
 var author$project$ConfigForm$ClickedPointerLockLabel = function (a) {
 	return {$: 'ClickedPointerLockLabel', a: a};
 };
-var mdgriffith$elm_ui$Internal$Model$Rgba = F4(
-	function (a, b, c, d) {
-		return {$: 'Rgba', a: a, b: b, c: c, d: d};
-	});
-var mdgriffith$elm_ui$Element$rgba = mdgriffith$elm_ui$Internal$Model$Rgba;
 var author$project$ConfigForm$colorForE = function (col) {
 	return function (_n0) {
 		var red = _n0.red;
@@ -14760,18 +14794,10 @@ var author$project$ConfigForm$withRowSpacing = F2(
 			options,
 			{rowSpacing: val});
 	});
+var author$project$Main$ClickedCloseConfig = {$: 'ClickedCloseConfig'};
+var author$project$Main$ClickedOpenConfig = {$: 'ClickedOpenConfig'};
 var author$project$Main$ConfigFormMsg = function (a) {
 	return {$: 'ConfigFormMsg', a: a};
-};
-var author$project$Main$colorForE = function (color) {
-	return function (_n0) {
-		var red = _n0.red;
-		var green = _n0.green;
-		var blue = _n0.blue;
-		var alpha = _n0.alpha;
-		return A4(mdgriffith$elm_ui$Element$rgba, red, green, blue, alpha);
-	}(
-		avh4$elm_color$Color$toRgba(color));
 };
 var elm$html$Html$textarea = _VirtualDom_node('textarea');
 var mdgriffith$elm_ui$Element$column = F2(
@@ -14792,6 +14818,101 @@ var mdgriffith$elm_ui$Element$column = F2(
 						attrs))),
 			mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var mdgriffith$elm_ui$Internal$Flag$overflow = mdgriffith$elm_ui$Internal$Flag$flag(20);
+var mdgriffith$elm_ui$Element$scrollbarY = A2(mdgriffith$elm_ui$Internal$Model$Class, mdgriffith$elm_ui$Internal$Flag$overflow, mdgriffith$elm_ui$Internal$Style$classes.scrollbarsY);
+var mdgriffith$elm_ui$Element$Font$underline = mdgriffith$elm_ui$Internal$Model$htmlClass(mdgriffith$elm_ui$Internal$Style$classes.underline);
+var author$project$Main$viewConfig = function (model) {
+	var config = model.config;
+	return A2(
+		mdgriffith$elm_ui$Element$el,
+		_List_fromArray(
+			[
+				mdgriffith$elm_ui$Element$alignRight,
+				mdgriffith$elm_ui$Element$padding(20),
+				mdgriffith$elm_ui$Element$height(mdgriffith$elm_ui$Element$fill),
+				mdgriffith$elm_ui$Element$width(mdgriffith$elm_ui$Element$fill),
+				mdgriffith$elm_ui$Element$scrollbarY
+			]),
+		A2(
+			mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					mdgriffith$elm_ui$Element$Background$color(
+					author$project$Main$colorForE(config.configTableBgColor)),
+					mdgriffith$elm_ui$Element$Border$color(
+					author$project$Main$colorForE(config.configTableBorderColor)),
+					mdgriffith$elm_ui$Element$Border$width(config.configTableBorderWidth),
+					mdgriffith$elm_ui$Element$scrollbarY,
+					mdgriffith$elm_ui$Element$alignRight
+				]),
+			A2(
+				mdgriffith$elm_ui$Element$column,
+				_List_fromArray(
+					[
+						mdgriffith$elm_ui$Element$padding(config.configTablePadding),
+						mdgriffith$elm_ui$Element$spacing(15)
+					]),
+				model.isConfigOpen ? _List_fromArray(
+					[
+						A2(
+						mdgriffith$elm_ui$Element$Input$button,
+						_List_fromArray(
+							[mdgriffith$elm_ui$Element$alignRight]),
+						{
+							label: A2(
+								mdgriffith$elm_ui$Element$el,
+								_List_fromArray(
+									[mdgriffith$elm_ui$Element$Font$underline]),
+								mdgriffith$elm_ui$Element$text('Close Config')),
+							onPress: elm$core$Maybe$Just(author$project$Main$ClickedCloseConfig)
+						}),
+						A2(
+						mdgriffith$elm_ui$Element$map,
+						author$project$Main$ConfigFormMsg,
+						A3(
+							author$project$ConfigForm$viewElement,
+							A2(
+								author$project$ConfigForm$withFontSize,
+								config.configFontSize,
+								A2(
+									author$project$ConfigForm$withInputHeight,
+									config.configInputHeight,
+									A2(
+										author$project$ConfigForm$withLabelHighlightBgColor,
+										config.configLabelHighlightBgColor,
+										A2(author$project$ConfigForm$withRowSpacing, config.configRowSpacing, author$project$ConfigForm$viewOptions)))),
+							author$project$Config$logics,
+							model.configForm)),
+						A2(
+						mdgriffith$elm_ui$Element$el,
+						_List_Nil,
+						mdgriffith$elm_ui$Element$html(
+							A2(
+								elm$html$Html$textarea,
+								_List_fromArray(
+									[
+										elm$html$Html$Attributes$value(
+										A2(
+											elm$json$Json$Encode$encode,
+											2,
+											A2(author$project$ConfigForm$encode, author$project$Config$logics, model.config)))
+									]),
+								_List_Nil)))
+					]) : _List_fromArray(
+					[
+						A2(
+						mdgriffith$elm_ui$Element$Input$button,
+						_List_Nil,
+						{
+							label: A2(
+								mdgriffith$elm_ui$Element$el,
+								_List_fromArray(
+									[mdgriffith$elm_ui$Element$Font$underline]),
+								mdgriffith$elm_ui$Element$text('Open Config')),
+							onPress: elm$core$Maybe$Just(author$project$Main$ClickedOpenConfig)
+						})
+					]))));
+};
 var mdgriffith$elm_ui$Internal$Model$OnlyDynamic = F2(
 	function (a, b) {
 		return {$: 'OnlyDynamic', a: a, b: b};
@@ -15062,8 +15183,6 @@ var mdgriffith$elm_ui$Element$row = F2(
 						attrs))),
 			mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var mdgriffith$elm_ui$Internal$Flag$overflow = mdgriffith$elm_ui$Internal$Flag$flag(20);
-var mdgriffith$elm_ui$Element$scrollbarY = A2(mdgriffith$elm_ui$Internal$Model$Class, mdgriffith$elm_ui$Internal$Flag$overflow, mdgriffith$elm_ui$Internal$Style$classes.scrollbarsY);
 var author$project$Main$view = function (model) {
 	var config = model.config;
 	return A2(
@@ -15072,70 +15191,7 @@ var author$project$Main$view = function (model) {
 			[
 				mdgriffith$elm_ui$Element$padding(20),
 				mdgriffith$elm_ui$Element$inFront(
-				A2(
-					mdgriffith$elm_ui$Element$el,
-					_List_fromArray(
-						[
-							mdgriffith$elm_ui$Element$alignRight,
-							mdgriffith$elm_ui$Element$padding(20),
-							mdgriffith$elm_ui$Element$height(mdgriffith$elm_ui$Element$fill),
-							mdgriffith$elm_ui$Element$width(mdgriffith$elm_ui$Element$fill),
-							mdgriffith$elm_ui$Element$scrollbarY
-						]),
-					A2(
-						mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[
-								mdgriffith$elm_ui$Element$Background$color(
-								author$project$Main$colorForE(config.configTableBgColor)),
-								mdgriffith$elm_ui$Element$Border$color(
-								author$project$Main$colorForE(config.configTableBorderColor)),
-								mdgriffith$elm_ui$Element$Border$width(config.configTableBorderWidth),
-								mdgriffith$elm_ui$Element$scrollbarY,
-								mdgriffith$elm_ui$Element$alignRight
-							]),
-						A2(
-							mdgriffith$elm_ui$Element$column,
-							_List_fromArray(
-								[
-									mdgriffith$elm_ui$Element$padding(config.configTablePadding),
-									mdgriffith$elm_ui$Element$spacing(15)
-								]),
-							_List_fromArray(
-								[
-									A2(
-									mdgriffith$elm_ui$Element$map,
-									author$project$Main$ConfigFormMsg,
-									A3(
-										author$project$ConfigForm$viewElement,
-										A2(
-											author$project$ConfigForm$withFontSize,
-											config.configFontSize,
-											A2(
-												author$project$ConfigForm$withInputHeight,
-												config.configInputHeight,
-												A2(
-													author$project$ConfigForm$withLabelHighlightBgColor,
-													config.configLabelHighlightBgColor,
-													A2(author$project$ConfigForm$withRowSpacing, config.configRowSpacing, author$project$ConfigForm$viewOptions)))),
-										author$project$Config$logics,
-										model.configForm)),
-									A2(
-									mdgriffith$elm_ui$Element$el,
-									_List_Nil,
-									mdgriffith$elm_ui$Element$html(
-										A2(
-											elm$html$Html$textarea,
-											_List_fromArray(
-												[
-													elm$html$Html$Attributes$value(
-													A2(
-														elm$json$Json$Encode$encode,
-														2,
-														A2(author$project$ConfigForm$encode, author$project$Config$logics, model.config)))
-												]),
-											_List_Nil)))
-								])))))
+				author$project$Main$viewConfig(model))
 			]),
 		A2(
 			mdgriffith$elm_ui$Element$column,
