@@ -8,14 +8,7 @@ import ConfigForm as ConfigForm
 
 
 type alias Config =
-    { headerFontSize : Int
-    , headerString : String
-    , showSubheaders : Bool
-    , subheaderFontSize : Int
-    , subheaderString : String
-    , subheaderColor : Color
-    , subheaderPadding : Int
-    , subheaderNum : Int
+    { skyColor : Color
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -30,14 +23,7 @@ type alias Config =
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { headerFontSize = defaults.int
-    , headerString = defaults.string
-    , showSubheaders = defaults.bool
-    , subheaderFontSize = defaults.int
-    , subheaderString = defaults.string
-    , subheaderColor = defaults.color
-    , subheaderPadding = defaults.int
-    , subheaderNum = defaults.int
+    { skyColor = defaults.color
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -52,46 +38,11 @@ empty defaults =
 
 logics : List (ConfigForm.Logic Config)
 logics =
-    [ ConfigForm.int
-        "headerFontSize"
-        "Header font size"
-        .headerFontSize
-        (\a c -> { c | headerFontSize = a })
-    , ConfigForm.string
-        "headerString"
-        "Header string"
-        .headerString
-        (\a c -> { c | headerString = a })
-    , ConfigForm.bool
-        "showSubheaders"
-        "Show subheaders"
-        .showSubheaders
-        (\a c -> { c | showSubheaders = a })
-    , ConfigForm.int
-        "subheaderFontSize"
-        "Subheader font size"
-        .subheaderFontSize
-        (\a c -> { c | subheaderFontSize = a })
-    , ConfigForm.string
-        "subheaderString"
-        "Subheader string"
-        .subheaderString
-        (\a c -> { c | subheaderString = a })
-    , ConfigForm.color
-        "subheaderColor"
-        "Subheader color"
-        .subheaderColor
-        (\a c -> { c | subheaderColor = a })
-    , ConfigForm.int
-        "subheaderPadding"
-        "Subheader padding"
-        .subheaderPadding
-        (\a c -> { c | subheaderPadding = a })
-    , ConfigForm.int
-        "subheaderNum"
-        "Num of subheaders"
-        .subheaderNum
-        (\a c -> { c | subheaderNum = a })
+    [ ConfigForm.color
+        "skyColor"
+        "Sky color"
+        .skyColor
+        (\a c -> { c | skyColor = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

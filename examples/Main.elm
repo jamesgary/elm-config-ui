@@ -15,6 +15,8 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
+import Svg exposing (Svg)
+import Svg.Attributes
 
 
 port sendToPort : JD.Value -> Cmd msg
@@ -249,34 +251,13 @@ saveToLocalStorageCmd model =
 
 
 view : Model -> Html Msg
-view ({ config } as model) =
+view model =
     E.layout
-        [ E.padding 20
-        , E.inFront <| viewConfig model
+        [ E.inFront <| viewConfig model
+        , E.width E.fill
+        , E.height E.fill
         ]
-        (E.column []
-            [ E.row
-                [ EFont.size model.config.headerFontSize
-                ]
-                [ E.text <| "Header: " ++ model.config.headerString ]
-            , if model.config.showSubheaders then
-                E.column []
-                    (List.range 1 model.config.subheaderNum
-                        |> List.map
-                            (\_ ->
-                                E.el
-                                    [ EFont.size model.config.subheaderFontSize
-                                    , EBackground.color (colorForE model.config.subheaderColor)
-                                    , E.padding model.config.subheaderPadding
-                                    ]
-                                    (E.text <| "Subheader: " ++ model.config.subheaderString)
-                            )
-                    )
-
-              else
-                E.none
-            ]
-        )
+        (viewLandscape model)
 
 
 viewConfig : Model -> Element Msg
@@ -344,6 +325,29 @@ viewConfig ({ config } as model) =
                 )
             )
         )
+
+
+viewLandscape : Model -> Element Msg
+viewLandscape ({ config } as model) =
+    Svg.svg
+        [ Svg.Attributes.width "100%"
+        , Svg.Attributes.height "100%"
+        ]
+        [ --sky
+          Svg.rect
+            [ Svg.Attributes.x "0"
+            , Svg.Attributes.y "0"
+            , Svg.Attributes.width "100%"
+            , Svg.Attributes.height "100%"
+            , Svg.Attributes.fill (Color.toCssString config.skyColor)
+            ]
+            []
+        ]
+        |> E.html
+        |> E.el
+            [ E.width E.fill
+            , E.height E.fill
+            ]
 
 
 subscriptions : Model -> Sub Msg
