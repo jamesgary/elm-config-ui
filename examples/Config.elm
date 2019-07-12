@@ -24,6 +24,7 @@ type alias Config =
     , configLabelHighlightBgColor : Color
     , configFontSize : Int
     , configInputHeight : Int
+    , configInputWidth : Int
     }
 
 
@@ -45,6 +46,7 @@ empty defaults =
     , configLabelHighlightBgColor = defaults.color
     , configFontSize = defaults.int
     , configInputHeight = defaults.int
+    , configInputWidth = defaults.int
     }
 
 
@@ -113,7 +115,7 @@ logics =
         .configTablePadding
         (\a c -> { c | configTablePadding = a })
     , ConfigForm.section
-        "Config"
+        "Config table"
     , ConfigForm.int
         "configRowSpacing"
         "Row spacing"
@@ -134,6 +136,11 @@ logics =
         "Input height"
         .configInputHeight
         (\a c -> { c | configInputHeight = a })
+    , ConfigForm.int
+        "configInputWidth"
+        "Input width"
+        .configInputWidth
+        (\a c -> { c | configInputWidth = a })
     ]
 
 

@@ -6,7 +6,7 @@ module ConfigForm exposing
     , update, updateFromJson
     , encode, encodeConfigForm
     , viewHtml, viewElement
-    , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize
+    , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
     )
 
 {-|
@@ -54,7 +54,7 @@ module ConfigForm exposing
 
 # View options
 
-@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputHeight, withFontSize, withScrollbars
+@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize, withScrollbars
 
 -}
 
@@ -851,7 +851,8 @@ viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Element
 viewChanger options configForm index logic =
     let
         defaultAttrs =
-            [ E.height (E.px options.inputHeight)
+            [ E.width (E.px options.inputWidth)
+            , E.height (E.px options.inputHeight)
             ]
 
         tabAttrs =
@@ -1086,6 +1087,7 @@ colorForE col =
 type alias ViewOptions =
     { fontSize : Int
     , rowSpacing : Int
+    , inputWidth : Int
     , inputHeight : Int
     , labelHighlightBgColor : Color
     , sectionSpacing : Int
@@ -1096,6 +1098,7 @@ viewOptions : ViewOptions
 viewOptions =
     { fontSize = 19
     , rowSpacing = 5
+    , inputWidth = 200
     , inputHeight = 34
     , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
     , sectionSpacing = 20
@@ -1115,6 +1118,11 @@ withLabelHighlightBgColor val options =
 withFontSize : Int -> ViewOptions -> ViewOptions
 withFontSize val options =
     { options | fontSize = val }
+
+
+withInputWidth : Int -> ViewOptions -> ViewOptions
+withInputWidth val options =
+    { options | inputWidth = val }
 
 
 withInputHeight : Int -> ViewOptions -> ViewOptions

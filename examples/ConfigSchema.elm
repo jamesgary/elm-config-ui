@@ -19,11 +19,12 @@ myConfigFields =
     , ( "Border width", IntKind "configTableBorderWidth" )
     , ( "Border color", ColorKind "configTableBorderColor" )
     , ( "Padding", IntKind "configTablePadding" )
-    , ( "Config", SectionKind )
+    , ( "Config table", SectionKind )
     , ( "Row spacing", IntKind "configRowSpacing" )
     , ( "Label highlight BG color", ColorKind "configLabelHighlightBgColor" )
     , ( "Font size", IntKind "configFontSize" )
     , ( "Input height", IntKind "configInputHeight" )
+    , ( "Input width", IntKind "configInputWidth" )
     ]
 
 

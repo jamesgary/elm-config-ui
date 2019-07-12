@@ -314,6 +314,7 @@ viewConfig ({ config } as model) =
                         (ConfigForm.viewOptions
                             |> ConfigForm.withRowSpacing config.configRowSpacing
                             |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                            |> ConfigForm.withInputWidth config.configInputWidth
                             |> ConfigForm.withInputHeight config.configInputHeight
                             |> ConfigForm.withFontSize config.configFontSize
                         )
