@@ -4,7 +4,7 @@
 module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
-import Egg.ConfigForm as ConfigForm
+import ConfigForm as ConfigForm
 
 
 type alias Config =

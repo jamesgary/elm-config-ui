@@ -3,7 +3,7 @@ port module Main exposing (main)
 import Browser
 import Color exposing (Color)
 import Config exposing (Config)
-import Egg.ConfigForm as ConfigForm exposing (ConfigForm)
+import ConfigForm as ConfigForm exposing (ConfigForm)
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Border as EBorder

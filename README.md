@@ -1,4 +1,6 @@
-# Config Thing
+# elm-config-gui
+
+Have a bunch of magic numbers you want to tweak in the browser? Try `elm-config-gui`!
 
 ## Install
 

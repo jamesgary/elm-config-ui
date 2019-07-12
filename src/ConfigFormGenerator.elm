@@ -1,4 +1,4 @@
-module Egg.ConfigFormGenerator exposing (Kind(..), toFile)
+module ConfigFormGenerator exposing (Kind(..), toFile)
 
 import Dict exposing (Dict)
 
@@ -36,7 +36,7 @@ header =
 module Config exposing (Config, empty, logics)
 
 import Color exposing (Color)
-import Egg.ConfigForm as ConfigForm
+import ConfigForm as ConfigForm
 """
         |> String.trim
 
