@@ -9,6 +9,8 @@ import ConfigForm as ConfigForm
 
 type alias Config =
     { skyColor : Color
+    , groundColor : Color
+    , groundHeightPerc : Float
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -24,6 +26,8 @@ type alias Config =
 empty : ConfigForm.Defaults -> Config
 empty defaults =
     { skyColor = defaults.color
+    , groundColor = defaults.color
+    , groundHeightPerc = defaults.float
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -43,6 +47,16 @@ logics =
         "Sky color"
         .skyColor
         (\a c -> { c | skyColor = a })
+    , ConfigForm.color
+        "groundColor"
+        "Ground color"
+        .groundColor
+        (\a c -> { c | groundColor = a })
+    , ConfigForm.float
+        "groundHeightPerc"
+        "Ground height %"
+        .groundHeightPerc
+        (\a c -> { c | groundHeightPerc = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

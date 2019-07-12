@@ -7,6 +7,8 @@ import Html exposing (Html)
 myConfigFields : List ( String, Kind )
 myConfigFields =
     [ ( "Sky color", ColorKind "skyColor" )
+    , ( "Ground color", ColorKind "groundColor" )
+    , ( "Ground height %", FloatKind "groundHeightPerc" )
     , ( "Config table container", SectionKind )
     , ( "BG color", ColorKind "configTableBgColor" )
     , ( "Border width", IntKind "configTableBorderWidth" )

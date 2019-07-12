@@ -1,16 +1,17 @@
 {
-  "headerFontSize": 83,
-  "headerString": "Head's up?",
-  "subheaderFontSize": 22,
-  "subheaderString": "Subhead's up!",
-  "subheaderColor": {
-    "r": 0.7726666666666666,
-    "g": 0.9606666666666668,
-    "b": 0.7745466666666666,
+  "skyColor": {
+    "r": 0.6845333333333334,
+    "g": 0.9687999999999998,
+    "b": 0.9687999999999999,
     "a": 1
   },
-  "subheaderPadding": 12,
-  "subheaderNum": 6,
+  "groundColor": {
+    "r": 0.05920000000000003,
+    "g": 0.9808,
+    "b": 0.2619520000000001,
+    "a": 1
+  },
+  "groundHeightPerc": 87,
   "configTableBgColor": {
     "r": 0.9347833333333334,
     "g": 0.9371666666666667,
@@ -33,5 +34,6 @@
     "a": 1
   },
   "configFontSize": 21,
-  "configInputHeight": 31
+  "configInputHeight": 33,
+  "configInputWidth": 143
 }

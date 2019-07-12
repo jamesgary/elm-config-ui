@@ -342,6 +342,15 @@ viewLandscape ({ config } as model) =
             , Svg.Attributes.fill (Color.toCssString config.skyColor)
             ]
             []
+        , --ground
+          Svg.rect
+            [ Svg.Attributes.x "0"
+            , Svg.Attributes.y (String.fromFloat (100 - config.groundHeightPerc) ++ "%")
+            , Svg.Attributes.width "100%"
+            , Svg.Attributes.height (String.fromFloat config.groundHeightPerc ++ "%")
+            , Svg.Attributes.fill (Color.toCssString config.groundColor)
+            ]
+            []
         ]
         |> E.html
         |> E.el
