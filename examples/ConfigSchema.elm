@@ -6,14 +6,38 @@ import Html exposing (Html)
 
 myConfigFields : List ( String, Kind )
 myConfigFields =
-    [ ( "Sky color", ColorKind "skyColor" )
+    [ ( "Viewport width (px)", IntKind "viewportWidth" )
+    , ( "Viewport height (px)", IntKind "viewportHeight" )
+    , ( "Sky color", ColorKind "skyColor" )
+
+    -- ground
+    , ( "Ground", SectionKind )
     , ( "Ground color", ColorKind "groundColor" )
-    , ( "Ground height %", FloatKind "groundHeightPerc" )
+    , ( "Ground height (px)", IntKind "groundHeight" )
+
+    -- tree
+    , ( "Tree", SectionKind )
+    , ( "Tree color", ColorKind "treeColor" )
+    , ( "Tree trunk width", IntKind "treeTrunkWidth" )
+    , ( "Tree trunk height", IntKind "treeTrunkHeight" )
+
+    -- branches
+    , ( "Branches", SectionKind )
+    , ( "# of branches", IntKind "numBranches" )
+    , ( "Branch angle range (deg)", FloatKind "branchAngleRangeDegs" )
+    , ( "Branch length %", FloatKind "branchLengthPerc" )
+    , ( "Branch width %", FloatKind "branchWidthPerc" )
+    , ( "Branch recursions", IntKind "branchRecursions" )
+    , ( "Max branches (keep low!)", IntKind "maxBranches" )
+
+    -- config table container
     , ( "Config table container", SectionKind )
     , ( "BG color", ColorKind "configTableBgColor" )
     , ( "Border width", IntKind "configTableBorderWidth" )
     , ( "Border color", ColorKind "configTableBorderColor" )
     , ( "Padding", IntKind "configTablePadding" )
+
+    -- config table
     , ( "Config table", SectionKind )
     , ( "Row spacing", IntKind "configRowSpacing" )
     , ( "Label highlight BG color", ColorKind "configLabelHighlightBgColor" )

@@ -8,9 +8,20 @@ import ConfigForm as ConfigForm
 
 
 type alias Config =
-    { skyColor : Color
+    { viewportWidth : Int
+    , viewportHeight : Int
+    , skyColor : Color
     , groundColor : Color
-    , groundHeightPerc : Float
+    , groundHeight : Int
+    , treeColor : Color
+    , treeTrunkWidth : Int
+    , treeTrunkHeight : Int
+    , numBranches : Int
+    , branchAngleRangeDegs : Float
+    , branchLengthPerc : Float
+    , branchWidthPerc : Float
+    , branchRecursions : Int
+    , maxBranches : Int
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -25,9 +36,20 @@ type alias Config =
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { skyColor = defaults.color
+    { viewportWidth = defaults.int
+    , viewportHeight = defaults.int
+    , skyColor = defaults.color
     , groundColor = defaults.color
-    , groundHeightPerc = defaults.float
+    , groundHeight = defaults.int
+    , treeColor = defaults.color
+    , treeTrunkWidth = defaults.int
+    , treeTrunkHeight = defaults.int
+    , numBranches = defaults.int
+    , branchAngleRangeDegs = defaults.float
+    , branchLengthPerc = defaults.float
+    , branchWidthPerc = defaults.float
+    , branchRecursions = defaults.int
+    , maxBranches = defaults.int
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -42,21 +64,82 @@ empty defaults =
 
 logics : List (ConfigForm.Logic Config)
 logics =
-    [ ConfigForm.color
+    [ ConfigForm.int
+        "viewportWidth"
+        "Viewport width (px)"
+        .viewportWidth
+        (\a c -> { c | viewportWidth = a })
+    , ConfigForm.int
+        "viewportHeight"
+        "Viewport height (px)"
+        .viewportHeight
+        (\a c -> { c | viewportHeight = a })
+    , ConfigForm.color
         "skyColor"
         "Sky color"
         .skyColor
         (\a c -> { c | skyColor = a })
+    , ConfigForm.section
+        "Ground"
     , ConfigForm.color
         "groundColor"
         "Ground color"
         .groundColor
         (\a c -> { c | groundColor = a })
+    , ConfigForm.int
+        "groundHeight"
+        "Ground height (px)"
+        .groundHeight
+        (\a c -> { c | groundHeight = a })
+    , ConfigForm.section
+        "Tree"
+    , ConfigForm.color
+        "treeColor"
+        "Tree color"
+        .treeColor
+        (\a c -> { c | treeColor = a })
+    , ConfigForm.int
+        "treeTrunkWidth"
+        "Tree trunk width"
+        .treeTrunkWidth
+        (\a c -> { c | treeTrunkWidth = a })
+    , ConfigForm.int
+        "treeTrunkHeight"
+        "Tree trunk height"
+        .treeTrunkHeight
+        (\a c -> { c | treeTrunkHeight = a })
+    , ConfigForm.section
+        "Branches"
+    , ConfigForm.int
+        "numBranches"
+        "# of branches"
+        .numBranches
+        (\a c -> { c | numBranches = a })
     , ConfigForm.float
-        "groundHeightPerc"
-        "Ground height %"
-        .groundHeightPerc
-        (\a c -> { c | groundHeightPerc = a })
+        "branchAngleRangeDegs"
+        "Branch angle range (deg)"
+        .branchAngleRangeDegs
+        (\a c -> { c | branchAngleRangeDegs = a })
+    , ConfigForm.float
+        "branchLengthPerc"
+        "Branch length %"
+        .branchLengthPerc
+        (\a c -> { c | branchLengthPerc = a })
+    , ConfigForm.float
+        "branchWidthPerc"
+        "Branch width %"
+        .branchWidthPerc
+        (\a c -> { c | branchWidthPerc = a })
+    , ConfigForm.int
+        "branchRecursions"
+        "Branch recursions"
+        .branchRecursions
+        (\a c -> { c | branchRecursions = a })
+    , ConfigForm.int
+        "maxBranches"
+        "Max branches (keep low!)"
+        .maxBranches
+        (\a c -> { c | maxBranches = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

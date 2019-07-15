@@ -254,10 +254,56 @@ view : Model -> Html Msg
 view model =
     E.layout
         [ E.inFront <| viewConfig model
+        , E.inFront <| viewMessages model
         , E.width E.fill
         , E.height E.fill
+        , E.padding 20
         ]
         (viewLandscape model)
+
+
+viewMessages : Model -> Element Msg
+viewMessages model =
+    let
+        totalBranches =
+            model.config.numBranches ^ model.config.branchRecursions
+
+        messages =
+            if totalBranches > model.config.maxBranches then
+                [ "Max branches exceeded! "
+                , String.fromInt model.config.numBranches
+                , " branches ^ "
+                , String.fromInt model.config.branchRecursions
+                , " recursions = "
+                , String.fromInt totalBranches
+                , " branches (max is "
+                , String.fromInt model.config.maxBranches
+                , ")"
+                ]
+                    |> String.join ""
+                    |> List.singleton
+
+            else
+                []
+    in
+    if List.isEmpty messages then
+        E.none
+
+    else
+        E.column
+            [ EBackground.color (E.rgba 1 1 1 0.8)
+            , EBorder.color (E.rgba 0.5 0.5 0.5 1)
+            , EBorder.width 1
+            , E.padding 10
+            , E.moveDown 30
+            , E.moveRight 30
+            ]
+            (messages
+                |> List.map
+                    (\message ->
+                        E.text message
+                    )
+            )
 
 
 viewConfig : Model -> Element Msg
@@ -327,13 +373,29 @@ viewConfig ({ config } as model) =
         )
 
 
+hasSafeRecursionsExceeded : Model -> Bool
+hasSafeRecursionsExceeded model =
+    model.config.numBranches ^ model.config.branchRecursions > model.config.maxBranches
+
+
 viewLandscape : Model -> Element Msg
 viewLandscape ({ config } as model) =
+    let
+        getSafeRecursions numRec =
+            if config.numBranches ^ numRec > config.maxBranches then
+                getSafeRecursions (numRec - 1)
+
+            else
+                numRec
+
+        safeRecursions =
+            getSafeRecursions config.branchRecursions
+    in
     Svg.svg
         [ Svg.Attributes.width "100%"
         , Svg.Attributes.height "100%"
         ]
-        [ --sky
+        [ -- sky
           Svg.rect
             [ Svg.Attributes.x "0"
             , Svg.Attributes.y "0"
@@ -342,21 +404,110 @@ viewLandscape ({ config } as model) =
             , Svg.Attributes.fill (Color.toCssString config.skyColor)
             ]
             []
-        , --ground
-          Svg.rect
+
+        -- ground
+        , Svg.rect
             [ Svg.Attributes.x "0"
-            , Svg.Attributes.y (String.fromFloat (100 - config.groundHeightPerc) ++ "%")
+            , Svg.Attributes.y <| pxInt <| config.viewportHeight - config.groundHeight
             , Svg.Attributes.width "100%"
-            , Svg.Attributes.height (String.fromFloat config.groundHeightPerc ++ "%")
+            , Svg.Attributes.height <| pxInt config.groundHeight
             , Svg.Attributes.fill (Color.toCssString config.groundColor)
             ]
             []
+
+        -- tree trunk
+        , Svg.line
+            [ Svg.Attributes.x1 <| pxInt <| config.viewportWidth // 2
+            , Svg.Attributes.y1 <| pxInt <| config.viewportHeight - config.groundHeight
+            , Svg.Attributes.x2 <| pxInt <| config.viewportWidth // 2
+            , Svg.Attributes.y2 <| pxInt <| config.viewportHeight - config.groundHeight - config.treeTrunkHeight
+            , Svg.Attributes.stroke (Color.toCssString config.treeColor)
+            , Svg.Attributes.strokeWidth <| pxInt <| config.treeTrunkWidth
+            ]
+            []
+
+        -- tree branches
+        , Svg.g []
+            (viewBranches
+                config
+                ( toFloat config.viewportWidth / 2
+                , toFloat <| config.viewportHeight - config.groundHeight - config.treeTrunkHeight
+                )
+                (-pi / 2)
+                (toFloat config.treeTrunkHeight)
+                (toFloat config.treeTrunkWidth)
+                config.numBranches
+                safeRecursions
+            )
         ]
         |> E.html
         |> E.el
-            [ E.width E.fill
-            , E.height E.fill
+            [ E.width <| E.px <| config.viewportWidth
+            , E.height <| E.px <| config.viewportHeight
+            , EBorder.width 1
+            , EBorder.color (E.rgb 0 0 0)
             ]
+
+
+viewBranches : Config -> ( Float, Float ) -> Float -> Float -> Float -> Int -> Int -> List (Svg Msg)
+viewBranches config ( x, y ) direction length width numBranches branchRecursions =
+    if branchRecursions <= 0 then
+        []
+
+    else
+        List.range 0 (numBranches - 1)
+            |> List.map
+                (\i ->
+                    let
+                        progress =
+                            if numBranches <= 1 then
+                                0.5
+
+                            else
+                                toFloat i / toFloat (numBranches - 1)
+
+                        newLength =
+                            length * config.branchLengthPerc / 100
+
+                        newWidth =
+                            width * config.branchWidthPerc / 100
+
+                        angleRange =
+                            degrees config.branchAngleRangeDegs
+
+                        angle =
+                            direction + (-0.5 * angleRange + (progress * angleRange))
+
+                        ( xOffset, yOffset ) =
+                            fromPolar ( newLength, angle )
+                    in
+                    Svg.line
+                        [ Svg.Attributes.x1 <| pxFloat <| x
+                        , Svg.Attributes.y1 <| pxFloat <| y
+                        , Svg.Attributes.x2 <| pxFloat <| x + xOffset
+                        , Svg.Attributes.y2 <| pxFloat <| y + yOffset
+                        , Svg.Attributes.stroke (Color.toCssString config.treeColor)
+                        , Svg.Attributes.strokeWidth <| pxFloat <| newWidth
+                        ]
+                        []
+                        :: viewBranches config ( x + xOffset, y + yOffset ) angle newLength newWidth numBranches (branchRecursions - 1)
+                )
+            |> List.concat
+
+
+percFloat : Float -> String
+percFloat val =
+    String.fromFloat val ++ "%"
+
+
+pxInt : Int -> String
+pxInt val =
+    String.fromInt val ++ "px"
+
+
+pxFloat : Float -> String
+pxFloat val =
+    String.fromFloat val ++ "px"
 
 
 subscriptions : Model -> Sub Msg
