@@ -15,6 +15,7 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
+import Random
 import Svg exposing (Svg)
 import Svg.Attributes
 
@@ -405,6 +406,19 @@ viewLandscape ({ config } as model) =
             ]
             []
 
+        -- tree branches
+        , viewBranches
+            config
+            (Random.initialSeed config.seed)
+            { pos =
+                ( toFloat config.viewportWidth / 2
+                , toFloat <| config.viewportHeight - config.groundHeight + config.treeTrunkWidth
+                )
+            , direction = -pi / 2
+            , length = toFloat config.treeHeightFactor
+            , numRecursions = safeRecursions
+            }
+
         -- ground
         , Svg.rect
             [ Svg.Attributes.x "0"
@@ -414,31 +428,6 @@ viewLandscape ({ config } as model) =
             , Svg.Attributes.fill (Color.toCssString config.groundColor)
             ]
             []
-
-        -- tree trunk
-        , Svg.line
-            [ Svg.Attributes.x1 <| pxInt <| config.viewportWidth // 2
-            , Svg.Attributes.y1 <| pxInt <| config.viewportHeight - config.groundHeight
-            , Svg.Attributes.x2 <| pxInt <| config.viewportWidth // 2
-            , Svg.Attributes.y2 <| pxInt <| config.viewportHeight - config.groundHeight - config.treeTrunkHeight
-            , Svg.Attributes.stroke (Color.toCssString config.treeColor)
-            , Svg.Attributes.strokeWidth <| pxInt <| config.treeTrunkWidth
-            ]
-            []
-
-        -- tree branches
-        , Svg.g []
-            (viewBranches
-                config
-                ( toFloat config.viewportWidth / 2
-                , toFloat <| config.viewportHeight - config.groundHeight - config.treeTrunkHeight
-                )
-                (-pi / 2)
-                (toFloat config.treeTrunkHeight)
-                (toFloat config.treeTrunkWidth)
-                config.numBranches
-                safeRecursions
-            )
         ]
         |> E.html
         |> E.el
@@ -449,50 +438,86 @@ viewLandscape ({ config } as model) =
             ]
 
 
-viewBranches : Config -> ( Float, Float ) -> Float -> Float -> Float -> Int -> Int -> List (Svg Msg)
-viewBranches config ( x, y ) direction length width numBranches branchRecursions =
-    if branchRecursions <= 0 then
-        []
+viewBranches : Config -> Random.Seed -> BranchGenData -> Svg Msg
+viewBranches config seed genData =
+    Random.step
+        (branchGenerator config genData)
+        (Random.initialSeed config.seed)
+        |> Tuple.first
 
-    else
-        List.range 0 (numBranches - 1)
-            |> List.map
-                (\i ->
-                    let
-                        progress =
-                            if numBranches <= 1 then
-                                0.5
 
-                            else
-                                toFloat i / toFloat (numBranches - 1)
+type alias BranchGenData =
+    { pos : ( Float, Float )
+    , direction : Float
+    , length : Float
+    , numRecursions : Int
+    }
 
-                        newLength =
-                            length * config.branchLengthPerc / 100
 
-                        newWidth =
-                            width * config.branchWidthPerc / 100
+branchGenerator : Config -> BranchGenData -> Random.Generator (Svg Msg)
+branchGenerator config data =
+    let
+        ( x1, y1 ) =
+            data.pos
 
-                        angleRange =
-                            degrees config.branchAngleRangeDegs
+        directionGen =
+            Random.float
+                (data.direction - degrees config.directionRand)
+                (data.direction + degrees config.directionRand)
 
-                        angle =
-                            direction + (-0.5 * angleRange + (progress * angleRange))
+        lengthGen =
+            Random.float
+                (data.length * (config.lengthGrowthMin / 100))
+                (data.length * (config.lengthGrowthMax / 100))
 
-                        ( xOffset, yOffset ) =
-                            fromPolar ( newLength, angle )
-                    in
-                    Svg.line
-                        [ Svg.Attributes.x1 <| pxFloat <| x
-                        , Svg.Attributes.y1 <| pxFloat <| y
-                        , Svg.Attributes.x2 <| pxFloat <| x + xOffset
-                        , Svg.Attributes.y2 <| pxFloat <| y + yOffset
-                        , Svg.Attributes.stroke (Color.toCssString config.treeColor)
-                        , Svg.Attributes.strokeWidth <| pxFloat <| newWidth
-                        ]
-                        []
-                        :: viewBranches config ( x + xOffset, y + yOffset ) angle newLength newWidth numBranches (branchRecursions - 1)
-                )
-            |> List.concat
+        posGen =
+            Random.map2
+    in
+    Random.pair directionGen lengthGen
+        |> Random.andThen
+            (\( direction, length ) ->
+                let
+                    ( xDiff, yDiff ) =
+                        fromPolar ( length, direction )
+
+                    ( x2, y2 ) =
+                        ( x1 + xDiff, y1 + yDiff )
+
+                    childBranchGen =
+                        branchGenerator
+                            config
+                            { data
+                                | pos = ( x2, y2 )
+                                , direction = direction
+                                , length = length
+                                , numRecursions = data.numRecursions - 1
+                            }
+
+                    numBranches =
+                        3
+
+                    parentBranch =
+                        Svg.line
+                            [ Svg.Attributes.x1 <| pxFloat <| x1
+                            , Svg.Attributes.y1 <| pxFloat <| y1
+                            , Svg.Attributes.x2 <| pxFloat <| x2
+                            , Svg.Attributes.y2 <| pxFloat <| y2
+                            , Svg.Attributes.stroke (Color.toCssString config.treeColor)
+                            , Svg.Attributes.strokeWidth <| pxInt <| config.treeTrunkWidth
+                            ]
+                            []
+                in
+                if data.numRecursions > 0 then
+                    Random.list 3 childBranchGen
+                        |> Random.map
+                            (\childBranches ->
+                                Svg.g []
+                                    (parentBranch :: childBranches)
+                            )
+
+                else
+                    Random.constant parentBranch
+            )
 
 
 percFloat : Float -> String

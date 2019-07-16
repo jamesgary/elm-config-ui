@@ -9,6 +9,12 @@ myConfigFields =
     [ ( "Viewport width (px)", IntKind "viewportWidth" )
     , ( "Viewport height (px)", IntKind "viewportHeight" )
     , ( "Sky color", ColorKind "skyColor" )
+    , ( "Random Seed", IntKind "seed" )
+
+    -- randomness
+    , ( "Direction (deg) randomness", FloatKind "directionRand" )
+    , ( "Length % growth min", FloatKind "lengthGrowthMin" )
+    , ( "Length % growth max", FloatKind "lengthGrowthMax" )
 
     -- ground
     , ( "Ground", SectionKind )
@@ -19,7 +25,7 @@ myConfigFields =
     , ( "Tree", SectionKind )
     , ( "Tree color", ColorKind "treeColor" )
     , ( "Tree trunk width", IntKind "treeTrunkWidth" )
-    , ( "Tree trunk height", IntKind "treeTrunkHeight" )
+    , ( "Tree height factor", IntKind "treeHeightFactor" )
 
     -- branches
     , ( "Branches", SectionKind )

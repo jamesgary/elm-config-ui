@@ -1,12 +1,16 @@
 {
-  "viewportWidth": 1019,
-  "viewportHeight": 739,
+  "viewportWidth": 601,
+  "viewportHeight": 714,
   "skyColor": {
     "r": 0.6845333333333334,
     "g": 0.9687999999999998,
     "b": 0.9687999999999999,
     "a": 1
   },
+  "seed": 2881889,
+  "directionRand": 54,
+  "lengthGrowthMin": 50,
+  "lengthGrowthMax": 100,
   "groundColor": {
     "r": 0.05920000000000003,
     "g": 0.9808,
@@ -20,13 +24,13 @@
     "b": 0.15639999999999998,
     "a": 1
   },
-  "treeTrunkWidth": 10,
-  "treeTrunkHeight": 211,
-  "numBranches": 6,
-  "branchAngleRangeDegs": 95,
-  "branchLengthPerc": 66,
-  "branchWidthPerc": 53,
-  "branchRecursions": 4,
+  "treeTrunkWidth": 2,
+  "treeHeightFactor": 84,
+  "numBranches": 3,
+  "branchAngleRangeDegs": 152,
+  "branchLengthPerc": 3,
+  "branchWidthPerc": 13,
+  "branchRecursions": 2,
   "maxBranches": 1400,
   "configTableBgColor": {
     "r": 0.9347833333333334,

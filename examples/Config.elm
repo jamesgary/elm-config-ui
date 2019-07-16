@@ -11,11 +11,15 @@ type alias Config =
     { viewportWidth : Int
     , viewportHeight : Int
     , skyColor : Color
+    , seed : Int
+    , directionRand : Float
+    , lengthGrowthMin : Float
+    , lengthGrowthMax : Float
     , groundColor : Color
     , groundHeight : Int
     , treeColor : Color
     , treeTrunkWidth : Int
-    , treeTrunkHeight : Int
+    , treeHeightFactor : Int
     , numBranches : Int
     , branchAngleRangeDegs : Float
     , branchLengthPerc : Float
@@ -39,11 +43,15 @@ empty defaults =
     { viewportWidth = defaults.int
     , viewportHeight = defaults.int
     , skyColor = defaults.color
+    , seed = defaults.int
+    , directionRand = defaults.float
+    , lengthGrowthMin = defaults.float
+    , lengthGrowthMax = defaults.float
     , groundColor = defaults.color
     , groundHeight = defaults.int
     , treeColor = defaults.color
     , treeTrunkWidth = defaults.int
-    , treeTrunkHeight = defaults.int
+    , treeHeightFactor = defaults.int
     , numBranches = defaults.int
     , branchAngleRangeDegs = defaults.float
     , branchLengthPerc = defaults.float
@@ -79,6 +87,26 @@ logics =
         "Sky color"
         .skyColor
         (\a c -> { c | skyColor = a })
+    , ConfigForm.int
+        "seed"
+        "Random Seed"
+        .seed
+        (\a c -> { c | seed = a })
+    , ConfigForm.float
+        "directionRand"
+        "Direction (deg) randomness"
+        .directionRand
+        (\a c -> { c | directionRand = a })
+    , ConfigForm.float
+        "lengthGrowthMin"
+        "Length % growth min"
+        .lengthGrowthMin
+        (\a c -> { c | lengthGrowthMin = a })
+    , ConfigForm.float
+        "lengthGrowthMax"
+        "Length % growth max"
+        .lengthGrowthMax
+        (\a c -> { c | lengthGrowthMax = a })
     , ConfigForm.section
         "Ground"
     , ConfigForm.color
@@ -104,10 +132,10 @@ logics =
         .treeTrunkWidth
         (\a c -> { c | treeTrunkWidth = a })
     , ConfigForm.int
-        "treeTrunkHeight"
-        "Tree trunk height"
-        .treeTrunkHeight
-        (\a c -> { c | treeTrunkHeight = a })
+        "treeHeightFactor"
+        "Tree height factor"
+        .treeHeightFactor
+        (\a c -> { c | treeHeightFactor = a })
     , ConfigForm.section
         "Branches"
     , ConfigForm.int
