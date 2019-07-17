@@ -11,30 +11,24 @@ myConfigFields =
     , ( "Sky color", ColorKind "skyColor" )
     , ( "Random Seed", IntKind "seed" )
 
-    -- randomness
-    , ( "Direction (deg) randomness", FloatKind "directionRand" )
-    , ( "Length % growth min", FloatKind "lengthGrowthMin" )
-    , ( "Length % growth max", FloatKind "lengthGrowthMax" )
-
     -- ground
     , ( "Ground", SectionKind )
     , ( "Ground color", ColorKind "groundColor" )
     , ( "Ground height (px)", IntKind "groundHeight" )
 
     -- tree
-    , ( "Tree", SectionKind )
-    , ( "Tree color", ColorKind "treeColor" )
-    , ( "Tree trunk width", IntKind "treeTrunkWidth" )
-    , ( "Tree height factor", IntKind "treeHeightFactor" )
+    , ( "Tree logic", SectionKind )
+    , ( "cloudHeight", FloatKind "cloudHeight" )
+    , ( "cloudRad", FloatKind "cloudRad" )
+    , ( "cloudCount", IntKind "cloudCount" )
+    , ( "growDist", FloatKind "growDist" )
+    , ( "minDist", FloatKind "minDist" )
+    , ( "maxDist", FloatKind "maxDist" )
 
-    -- branches
-    , ( "Branches", SectionKind )
-    , ( "# of branches", IntKind "numBranches" )
-    , ( "Branch angle range (deg)", FloatKind "branchAngleRangeDegs" )
-    , ( "Branch length %", FloatKind "branchLengthPerc" )
-    , ( "Branch width %", FloatKind "branchWidthPerc" )
-    , ( "Branch recursions", IntKind "branchRecursions" )
-    , ( "Max branches (keep low!)", IntKind "maxBranches" )
+    -- tree visuals
+    , ( "Tree visuals", SectionKind )
+    , ( "Cloud point radius", FloatKind "cloudPointRad" )
+    , ( "Cloud point color", ColorKind "cloudPointColor" )
 
     -- config table container
     , ( "Config table container", SectionKind )

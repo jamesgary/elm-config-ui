@@ -12,20 +12,16 @@ type alias Config =
     , viewportHeight : Int
     , skyColor : Color
     , seed : Int
-    , directionRand : Float
-    , lengthGrowthMin : Float
-    , lengthGrowthMax : Float
     , groundColor : Color
     , groundHeight : Int
-    , treeColor : Color
-    , treeTrunkWidth : Int
-    , treeHeightFactor : Int
-    , numBranches : Int
-    , branchAngleRangeDegs : Float
-    , branchLengthPerc : Float
-    , branchWidthPerc : Float
-    , branchRecursions : Int
-    , maxBranches : Int
+    , cloudHeight : Float
+    , cloudRad : Float
+    , cloudCount : Int
+    , growDist : Float
+    , minDist : Float
+    , maxDist : Float
+    , cloudPointRad : Float
+    , cloudPointColor : Color
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -44,20 +40,16 @@ empty defaults =
     , viewportHeight = defaults.int
     , skyColor = defaults.color
     , seed = defaults.int
-    , directionRand = defaults.float
-    , lengthGrowthMin = defaults.float
-    , lengthGrowthMax = defaults.float
     , groundColor = defaults.color
     , groundHeight = defaults.int
-    , treeColor = defaults.color
-    , treeTrunkWidth = defaults.int
-    , treeHeightFactor = defaults.int
-    , numBranches = defaults.int
-    , branchAngleRangeDegs = defaults.float
-    , branchLengthPerc = defaults.float
-    , branchWidthPerc = defaults.float
-    , branchRecursions = defaults.int
-    , maxBranches = defaults.int
+    , cloudHeight = defaults.float
+    , cloudRad = defaults.float
+    , cloudCount = defaults.int
+    , growDist = defaults.float
+    , minDist = defaults.float
+    , maxDist = defaults.float
+    , cloudPointRad = defaults.float
+    , cloudPointColor = defaults.color
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -92,21 +84,6 @@ logics =
         "Random Seed"
         .seed
         (\a c -> { c | seed = a })
-    , ConfigForm.float
-        "directionRand"
-        "Direction (deg) randomness"
-        .directionRand
-        (\a c -> { c | directionRand = a })
-    , ConfigForm.float
-        "lengthGrowthMin"
-        "Length % growth min"
-        .lengthGrowthMin
-        (\a c -> { c | lengthGrowthMin = a })
-    , ConfigForm.float
-        "lengthGrowthMax"
-        "Length % growth max"
-        .lengthGrowthMax
-        (\a c -> { c | lengthGrowthMax = a })
     , ConfigForm.section
         "Ground"
     , ConfigForm.color
@@ -120,54 +97,49 @@ logics =
         .groundHeight
         (\a c -> { c | groundHeight = a })
     , ConfigForm.section
-        "Tree"
-    , ConfigForm.color
-        "treeColor"
-        "Tree color"
-        .treeColor
-        (\a c -> { c | treeColor = a })
+        "Tree logic"
+    , ConfigForm.float
+        "cloudHeight"
+        "cloudHeight"
+        .cloudHeight
+        (\a c -> { c | cloudHeight = a })
+    , ConfigForm.float
+        "cloudRad"
+        "cloudRad"
+        .cloudRad
+        (\a c -> { c | cloudRad = a })
     , ConfigForm.int
-        "treeTrunkWidth"
-        "Tree trunk width"
-        .treeTrunkWidth
-        (\a c -> { c | treeTrunkWidth = a })
-    , ConfigForm.int
-        "treeHeightFactor"
-        "Tree height factor"
-        .treeHeightFactor
-        (\a c -> { c | treeHeightFactor = a })
+        "cloudCount"
+        "cloudCount"
+        .cloudCount
+        (\a c -> { c | cloudCount = a })
+    , ConfigForm.float
+        "growDist"
+        "growDist"
+        .growDist
+        (\a c -> { c | growDist = a })
+    , ConfigForm.float
+        "minDist"
+        "minDist"
+        .minDist
+        (\a c -> { c | minDist = a })
+    , ConfigForm.float
+        "maxDist"
+        "maxDist"
+        .maxDist
+        (\a c -> { c | maxDist = a })
     , ConfigForm.section
-        "Branches"
-    , ConfigForm.int
-        "numBranches"
-        "# of branches"
-        .numBranches
-        (\a c -> { c | numBranches = a })
+        "Tree visuals"
     , ConfigForm.float
-        "branchAngleRangeDegs"
-        "Branch angle range (deg)"
-        .branchAngleRangeDegs
-        (\a c -> { c | branchAngleRangeDegs = a })
-    , ConfigForm.float
-        "branchLengthPerc"
-        "Branch length %"
-        .branchLengthPerc
-        (\a c -> { c | branchLengthPerc = a })
-    , ConfigForm.float
-        "branchWidthPerc"
-        "Branch width %"
-        .branchWidthPerc
-        (\a c -> { c | branchWidthPerc = a })
-    , ConfigForm.int
-        "branchRecursions"
-        "Branch recursions"
-        .branchRecursions
-        (\a c -> { c | branchRecursions = a })
-    , ConfigForm.int
-        "maxBranches"
-        "Max branches (keep low!)"
-        .maxBranches
-        (\a c -> { c | maxBranches = a })
+        "cloudPointRad"
+        "Cloud point radius"
+        .cloudPointRad
+        (\a c -> { c | cloudPointRad = a })
+    , ConfigForm.color
+        "cloudPointColor"
+        "Cloud point color"
+        .cloudPointColor
+        (\a c -> { c | cloudPointColor = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

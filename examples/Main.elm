@@ -15,9 +15,11 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
+import Math.Vector2 as Vec2 exposing (Vec2)
 import Random
 import Svg exposing (Svg)
 import Svg.Attributes
+import Tree exposing (Tree)
 
 
 port sendToPort : JD.Value -> Cmd msg
@@ -39,6 +41,7 @@ type alias Model =
     { config : Config
     , configForm : ConfigForm Config
     , isConfigOpen : Bool
+    , tree : Tree
     }
 
 
@@ -108,12 +111,36 @@ init jsonFlags =
             ( { config = config
               , configForm = configForm
               , isConfigOpen = flags.localStorage.isConfigOpen
+              , tree = initTree config
               }
             , Cmd.none
             )
 
         Err err ->
             Debug.todo (JD.errorToString err)
+
+
+initTree : Config -> Tree
+initTree config =
+    Random.step
+        (Tree.generator
+            { rootPos =
+                Vec2.vec2
+                    (toFloat config.viewportWidth / 2)
+                    (toFloat <| config.viewportHeight - config.groundHeight)
+            , cloudCenter =
+                Vec2.vec2
+                    (toFloat config.viewportWidth / 2)
+                    (toFloat config.viewportHeight - toFloat config.groundHeight - config.cloudHeight)
+            , cloudRad = config.cloudRad
+            , cloudCount = config.cloudCount
+            , growDist = config.growDist
+            , minDist = config.minDist
+            , maxDist = config.maxDist
+            }
+        )
+        (Random.initialSeed config.seed)
+        |> Tuple.first
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -132,6 +159,7 @@ update msg model =
                     { model
                         | config = newConfig
                         , configForm = newConfigForm
+                        , tree = initTree newConfig
                     }
             in
             ( newModel
@@ -168,6 +196,7 @@ update msg model =
                                     { model
                                         | config = newConfig
                                         , configForm = newConfigForm
+                                        , tree = initTree newConfig
                                     }
                             in
                             ( newModel
@@ -266,26 +295,8 @@ view model =
 viewMessages : Model -> Element Msg
 viewMessages model =
     let
-        totalBranches =
-            model.config.numBranches ^ model.config.branchRecursions
-
         messages =
-            if totalBranches > model.config.maxBranches then
-                [ "Max branches exceeded! "
-                , String.fromInt model.config.numBranches
-                , " branches ^ "
-                , String.fromInt model.config.branchRecursions
-                , " recursions = "
-                , String.fromInt totalBranches
-                , " branches (max is "
-                , String.fromInt model.config.maxBranches
-                , ")"
-                ]
-                    |> String.join ""
-                    |> List.singleton
-
-            else
-                []
+            []
     in
     if List.isEmpty messages then
         E.none
@@ -374,24 +385,8 @@ viewConfig ({ config } as model) =
         )
 
 
-hasSafeRecursionsExceeded : Model -> Bool
-hasSafeRecursionsExceeded model =
-    model.config.numBranches ^ model.config.branchRecursions > model.config.maxBranches
-
-
 viewLandscape : Model -> Element Msg
 viewLandscape ({ config } as model) =
-    let
-        getSafeRecursions numRec =
-            if config.numBranches ^ numRec > config.maxBranches then
-                getSafeRecursions (numRec - 1)
-
-            else
-                numRec
-
-        safeRecursions =
-            getSafeRecursions config.branchRecursions
-    in
     Svg.svg
         [ Svg.Attributes.width "100%"
         , Svg.Attributes.height "100%"
@@ -406,19 +401,6 @@ viewLandscape ({ config } as model) =
             ]
             []
 
-        -- tree branches
-        , viewBranches
-            config
-            (Random.initialSeed config.seed)
-            { pos =
-                ( toFloat config.viewportWidth / 2
-                , toFloat <| config.viewportHeight - config.groundHeight + config.treeTrunkWidth
-                )
-            , direction = -pi / 2
-            , length = toFloat config.treeHeightFactor
-            , numRecursions = safeRecursions
-            }
-
         -- ground
         , Svg.rect
             [ Svg.Attributes.x "0"
@@ -428,6 +410,13 @@ viewLandscape ({ config } as model) =
             , Svg.Attributes.fill (Color.toCssString config.groundColor)
             ]
             []
+
+        -- tree
+        , Tree.toSvg
+            { cloudPointRad = config.cloudPointRad
+            , cloudPointColor = config.cloudPointColor
+            }
+            model.tree
         ]
         |> E.html
         |> E.el
@@ -436,88 +425,6 @@ viewLandscape ({ config } as model) =
             , EBorder.width 1
             , EBorder.color (E.rgb 0 0 0)
             ]
-
-
-viewBranches : Config -> Random.Seed -> BranchGenData -> Svg Msg
-viewBranches config seed genData =
-    Random.step
-        (branchGenerator config genData)
-        (Random.initialSeed config.seed)
-        |> Tuple.first
-
-
-type alias BranchGenData =
-    { pos : ( Float, Float )
-    , direction : Float
-    , length : Float
-    , numRecursions : Int
-    }
-
-
-branchGenerator : Config -> BranchGenData -> Random.Generator (Svg Msg)
-branchGenerator config data =
-    let
-        ( x1, y1 ) =
-            data.pos
-
-        directionGen =
-            Random.float
-                (data.direction - degrees config.directionRand)
-                (data.direction + degrees config.directionRand)
-
-        lengthGen =
-            Random.float
-                (data.length * (config.lengthGrowthMin / 100))
-                (data.length * (config.lengthGrowthMax / 100))
-
-        posGen =
-            Random.map2
-    in
-    Random.pair directionGen lengthGen
-        |> Random.andThen
-            (\( direction, length ) ->
-                let
-                    ( xDiff, yDiff ) =
-                        fromPolar ( length, direction )
-
-                    ( x2, y2 ) =
-                        ( x1 + xDiff, y1 + yDiff )
-
-                    childBranchGen =
-                        branchGenerator
-                            config
-                            { data
-                                | pos = ( x2, y2 )
-                                , direction = direction
-                                , length = length
-                                , numRecursions = data.numRecursions - 1
-                            }
-
-                    numBranches =
-                        3
-
-                    parentBranch =
-                        Svg.line
-                            [ Svg.Attributes.x1 <| pxFloat <| x1
-                            , Svg.Attributes.y1 <| pxFloat <| y1
-                            , Svg.Attributes.x2 <| pxFloat <| x2
-                            , Svg.Attributes.y2 <| pxFloat <| y2
-                            , Svg.Attributes.stroke (Color.toCssString config.treeColor)
-                            , Svg.Attributes.strokeWidth <| pxInt <| config.treeTrunkWidth
-                            ]
-                            []
-                in
-                if data.numRecursions > 0 then
-                    Random.list 3 childBranchGen
-                        |> Random.map
-                            (\childBranches ->
-                                Svg.g []
-                                    (parentBranch :: childBranches)
-                            )
-
-                else
-                    Random.constant parentBranch
-            )
 
 
 percFloat : Float -> String

@@ -16,6 +16,7 @@
             "elm/random": "1.0.0",
             "elm/svg": "1.0.1",
             "elm-community/random-extra": "3.1.0",
+            "elm-explorations/linear-algebra": "1.0.3",
             "mdgriffith/elm-ui": "1.1.0",
             "simonh1000/elm-colorpicker": "2.0.0",
             "y0hy0h/ordered-containers": "1.0.0"
