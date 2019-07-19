@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Events
 import Color exposing (Color)
 import Config exposing (Config)
 import ConfigForm as ConfigForm exposing (ConfigForm)
@@ -41,6 +42,7 @@ type alias Model =
     { config : Config
     , configForm : ConfigForm Config
     , isConfigOpen : Bool
+    , autostep : Bool
     , tree : Tree
     }
 
@@ -50,6 +52,9 @@ type Msg
     | ReceivedFromPort JE.Value
     | ClickedOpenConfig
     | ClickedCloseConfig
+    | ClickedStep
+    | ClickedAutoStep
+    | Tick Float
 
 
 
@@ -112,6 +117,7 @@ init jsonFlags =
               , configForm = configForm
               , isConfigOpen = flags.localStorage.isConfigOpen
               , tree = initTree config
+              , autostep = False
               }
             , Cmd.none
             )
@@ -241,6 +247,32 @@ update msg model =
             , saveToLocalStorageCmd newModel
             )
 
+        ClickedStep ->
+            ( { model
+                | tree = Tree.step model.tree
+              }
+            , Cmd.none
+            )
+
+        ClickedAutoStep ->
+            ( { model
+                | autostep = not model.autostep
+              }
+            , Cmd.none
+            )
+
+        Tick d ->
+            ( { model
+                | tree =
+                    if model.autostep then
+                        Tree.step model.tree
+
+                    else
+                        model.tree
+              }
+            , Cmd.none
+            )
+
 
 type ReceiveMsg
     = ConfigFormPortMsg JE.Value
@@ -289,7 +321,50 @@ view model =
         , E.height E.fill
         , E.padding 20
         ]
-        (viewLandscape model)
+        (E.row
+            [ E.spacing 10
+            ]
+            [ viewLandscape model
+            , viewControlButtons model
+            ]
+        )
+
+
+viewControlButtons : Model -> Element Msg
+viewControlButtons model =
+    E.column
+        [ E.spacing 10
+        , E.alignTop
+        ]
+        [ EInput.button
+            [ E.paddingXY 20 10
+            , E.pointer
+            , EFont.size 24
+            , EBackground.color (E.rgb 0.9 0.9 0.5)
+            , EBorder.width 2
+            , EBorder.rounded 5
+            ]
+            { onPress = Just ClickedStep
+            , label =
+                E.text "Step"
+            }
+        , EInput.button
+            [ E.paddingXY 20 10
+            , E.pointer
+            , EFont.size 24
+            , EBackground.color (E.rgb 0.9 0.9 0.5)
+            , EBorder.width 2
+            , EBorder.rounded 5
+            ]
+            { onPress = Just ClickedAutoStep
+            , label =
+                if model.autostep then
+                    E.text "Turn off auto-step"
+
+                else
+                    E.text "Turn on auto-step"
+            }
+        ]
 
 
 viewMessages : Model -> Element Msg
@@ -323,8 +398,6 @@ viewConfig ({ config } as model) =
     E.el
         [ E.alignRight
         , E.padding 20
-        , E.height E.fill
-        , E.width E.fill
         , E.scrollbarY
         ]
         (E.el
@@ -415,6 +488,8 @@ viewLandscape ({ config } as model) =
         , Tree.toSvg
             { cloudPointRad = config.cloudPointRad
             , cloudPointColor = config.cloudPointColor
+            , treeColor = config.treeColor
+            , branchThickness = config.branchThickness
             }
             model.tree
         ]
@@ -446,6 +521,11 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ receiveFromPort ReceivedFromPort
+        , if model.autostep then
+            Browser.Events.onAnimationFrameDelta Tick
+
+          else
+            Sub.none
         ]
 
 

@@ -29,6 +29,8 @@ myConfigFields =
     , ( "Tree visuals", SectionKind )
     , ( "Cloud point radius", FloatKind "cloudPointRad" )
     , ( "Cloud point color", ColorKind "cloudPointColor" )
+    , ( "Tree color", ColorKind "treeColor" )
+    , ( "Branch thickness", FloatKind "branchThickness" )
 
     -- config table container
     , ( "Config table container", SectionKind )

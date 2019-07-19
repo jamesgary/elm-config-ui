@@ -22,6 +22,8 @@ type alias Config =
     , maxDist : Float
     , cloudPointRad : Float
     , cloudPointColor : Color
+    , treeColor : Color
+    , branchThickness : Float
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -50,6 +52,8 @@ empty defaults =
     , maxDist = defaults.float
     , cloudPointRad = defaults.float
     , cloudPointColor = defaults.color
+    , treeColor = defaults.color
+    , branchThickness = defaults.float
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -140,6 +144,16 @@ logics =
         "Cloud point color"
         .cloudPointColor
         (\a c -> { c | cloudPointColor = a })
+    , ConfigForm.color
+        "treeColor"
+        "Tree color"
+        .treeColor
+        (\a c -> { c | treeColor = a })
+    , ConfigForm.float
+        "branchThickness"
+        "Branch thickness"
+        .branchThickness
+        (\a c -> { c | branchThickness = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color
