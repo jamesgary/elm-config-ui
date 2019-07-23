@@ -6,6 +6,7 @@ import Color exposing (Color)
 import Config exposing (Config)
 import ConfigForm as ConfigForm exposing (ConfigForm)
 import Dict exposing (Dict)
+import Direction2d exposing (Direction2d)
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Border as EBorder
@@ -51,6 +52,8 @@ type alias Model =
 type alias Boid =
     { pos : Point2d
     , vel : Vector2d
+    , velForCenterOfMass : Vector2d
+    , velForRepulsion : Vector2d
     , color : Color
     }
 
@@ -143,13 +146,15 @@ boidGenerator : Config -> Random.Generator Boid
 boidGenerator config =
     Random.map4
         (\x y angle color ->
-            { pos = Point2d.fromCoordinates ( toFloat x, toFloat y )
-            , vel = Vector2d.fromPolarComponents ( 1, angle )
+            { pos = Point2d.fromCoordinates ( x, y )
+            , vel = Vector2d.zero
+            , velForCenterOfMass = Vector2d.zero
+            , velForRepulsion = Vector2d.zero
             , color = color
             }
         )
-        (Random.int 0 config.viewportWidth)
-        (Random.int 0 config.viewportHeight)
+        (Random.float 0 config.viewportWidth)
+        (Random.float 0 config.viewportHeight)
         (Random.float 0 (2 * pi))
         colorGenerator
 
@@ -294,17 +299,19 @@ moveBoid config delta otherBoids boid =
     let
         seenBoids =
             boidsInRange
+                ( config.viewportWidth, config.viewportHeight )
                 config.boidSight
                 otherBoids
                 boid.pos
 
-        centerOfMass =
+        -- center of mass
+        centerOfMassOfSeenBoids =
             seenBoids
                 |> List.map .pos
                 |> Point2d.centroid
 
-        flyToCenterOfMassVel =
-            case centerOfMass of
+        velForCenterOfMass =
+            case centerOfMassOfSeenBoids of
                 Just center ->
                     center
                         |> Vector2d.from boid.pos
@@ -314,25 +321,121 @@ moveBoid config delta otherBoids boid =
                 Nothing ->
                     Vector2d.zero
 
+        -- repulsion
+        tooCloseBoids =
+            boidsInRange
+                ( config.viewportWidth, config.viewportHeight )
+                config.boidPersonalSpace
+                otherBoids
+                boid.pos
+
+        centerOfMassOfTooCloseBoids =
+            tooCloseBoids
+                |> List.map .pos
+                |> Point2d.centroid
+
+        velForRepulsion =
+            case centerOfMassOfTooCloseBoids of
+                Just center ->
+                    center
+                        |> Vector2d.from boid.pos
+                        |> Vector2d.normalize
+                        |> Vector2d.scaleBy (-0.01 * config.avoidanceFactor / toFloat (List.length tooCloseBoids))
+
+                Nothing ->
+                    Vector2d.zero
+
+        -- alignment
+        velForAlignment =
+            seenBoids
+                |> List.map .vel
+                |> List.foldl Vector2d.sum Vector2d.zero
+                |> Vector2d.scaleBy (config.alignmentFactor / toFloat (List.length seenBoids))
+
+        -- momentum
+        velForMomentum =
+            boid.vel
+                |> Vector2d.scaleBy config.momentumFactor
+
+        -- wrap it all up
         newVel =
-            flyToCenterOfMassVel
+            [ velForCenterOfMass
+            , velForRepulsion
+            , velForAlignment
+
+            --, velForMomentum
+            ]
+                |> List.foldl Vector2d.sum Vector2d.zero
+                |> (\v ->
+                        if Vector2d.length v > config.maxSpeed then
+                            v
+                                |> Vector2d.direction
+                                |> Maybe.map Direction2d.toVector
+                                |> Maybe.withDefault Vector2d.zero
+
+                        else
+                            v
+                   )
 
         newPos =
             boid.pos
                 |> Point2d.translateBy (Vector2d.scaleBy delta newVel)
+                |> Point2d.coordinates
+                |> (\( x, y ) ->
+                        ( if x < 0 then
+                            config.viewportWidth - abs x
+
+                          else if x > config.viewportWidth then
+                            x - config.viewportWidth
+
+                          else
+                            x
+                        , if y < 0 then
+                            config.viewportHeight - abs y
+
+                          else if y > config.viewportHeight then
+                            y - config.viewportHeight
+
+                          else
+                            y
+                        )
+                   )
+                |> Point2d.fromCoordinates
     in
     { boid
         | pos = newPos
         , vel = newVel
+        , velForCenterOfMass = velForCenterOfMass
+        , velForRepulsion = velForRepulsion
     }
 
 
-boidsInRange : Float -> List Boid -> Point2d -> List Boid
-boidsInRange range boids pos =
+boidsInRange : ( Float, Float ) -> Float -> List Boid -> Point2d -> List Boid
+boidsInRange ( width, height ) range boids pos =
+    let
+        ( x1, y1 ) =
+            pos
+                |> Point2d.coordinates
+    in
     boids
         |> List.filter
             (\boid ->
-                Point2d.distanceFrom pos boid.pos <= range
+                let
+                    ( x2, y2 ) =
+                        boid.pos
+                            |> Point2d.coordinates
+
+                    xDist =
+                        min
+                            (abs (x1 - x2))
+                            (abs (abs (x1 - x2) - width))
+
+                    yDist =
+                        min
+                            (abs (y1 - y2))
+                            (abs (abs (y1 - y2) - height))
+                in
+                (xDist ^ 2 + yDist ^ 2) <= range ^ 2
             )
 
 
@@ -475,8 +578,8 @@ viewBoids ({ config } as model) =
         ]
         |> E.html
         |> E.el
-            [ E.width <| E.px <| config.viewportWidth
-            , E.height <| E.px <| config.viewportHeight
+            [ E.width <| E.px <| round config.viewportWidth
+            , E.height <| E.px <| round config.viewportHeight
             , EBorder.width 1
             , EBorder.color (E.rgb 0 0 0)
             ]
@@ -485,9 +588,6 @@ viewBoids ({ config } as model) =
 viewBoid : Config -> Boid -> Svg Msg
 viewBoid config boid =
     let
-        ( x, y ) =
-            Point2d.coordinates boid.pos
-
         ( beakEndpointX, beakEndpointY ) =
             boid.pos
                 |> Point2d.translateBy
@@ -496,37 +596,80 @@ viewBoid config boid =
                         |> Vector2d.scaleBy config.boidRad
                     )
                 |> Point2d.coordinates
-    in
-    Svg.g []
-        [ if config.showSight then
-            Svg.circle
-                [ Svg.Attributes.cx <| pxFloat x
-                , Svg.Attributes.cy <| pxFloat y
-                , Svg.Attributes.r <| pxFloat <| config.boidSight
-                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                , Svg.Attributes.fill "none"
-                ]
-                []
 
-          else
-            Svg.g [] []
-        , Svg.circle
-            [ Svg.Attributes.cx <| pxFloat x
-            , Svg.Attributes.cy <| pxFloat y
-            , Svg.Attributes.r <| pxFloat <| config.boidRad
-            , Svg.Attributes.fill <| Color.toCssString <| boid.color
+        arrows =
+            if config.showVels then
+                Svg.g []
+                    [ viewArrow Color.black boid.pos boid.vel
+                    , viewArrow Color.gray boid.pos boid.velForCenterOfMass
+                    , viewArrow Color.gray boid.pos boid.velForRepulsion
+                    ]
+
+            else
+                Svg.g [] []
+
+        poses =
+            [ Point2d.coordinates boid.pos
             ]
-            []
-        , Svg.line
-            [ Svg.Attributes.x1 <| pxFloat x
-            , Svg.Attributes.y1 <| pxFloat y
-            , Svg.Attributes.x2 <| pxFloat beakEndpointX
-            , Svg.Attributes.y2 <| pxFloat beakEndpointY
-            , Svg.Attributes.stroke <| Color.toCssString Color.white
-            , Svg.Attributes.strokeWidth <| pxFloat 2
-            ]
-            []
+    in
+    poses
+        |> List.map
+            (\( x, y ) ->
+                Svg.g []
+                    [ if config.showSight then
+                        Svg.circle
+                            [ Svg.Attributes.cx <| pxFloat x
+                            , Svg.Attributes.cy <| pxFloat y
+                            , Svg.Attributes.r <| pxFloat <| config.boidSight
+                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                            , Svg.Attributes.fill "none"
+                            ]
+                            []
+
+                      else
+                        Svg.g [] []
+                    , Svg.circle
+                        [ Svg.Attributes.cx <| pxFloat x
+                        , Svg.Attributes.cy <| pxFloat y
+                        , Svg.Attributes.r <| pxFloat <| config.boidRad
+                        , Svg.Attributes.fill <| Color.toCssString <| boid.color
+                        ]
+                        []
+                    , Svg.line
+                        [ Svg.Attributes.x1 <| pxFloat x
+                        , Svg.Attributes.y1 <| pxFloat y
+                        , Svg.Attributes.x2 <| pxFloat beakEndpointX
+                        , Svg.Attributes.y2 <| pxFloat beakEndpointY
+                        , Svg.Attributes.stroke <| Color.toCssString Color.white
+                        , Svg.Attributes.strokeWidth <| pxFloat 2
+                        ]
+                        []
+                    , arrows
+                    ]
+            )
+        |> Svg.g []
+
+
+viewArrow : Color -> Point2d -> Vector2d -> Svg Msg
+viewArrow color origin vec =
+    let
+        ( x1, y1 ) =
+            Point2d.coordinates origin
+
+        ( x2, y2 ) =
+            origin
+                |> Point2d.translateBy (Vector2d.scaleBy 1000 vec)
+                |> Point2d.coordinates
+    in
+    Svg.line
+        [ Svg.Attributes.x1 <| pxFloat x1
+        , Svg.Attributes.y1 <| pxFloat y1
+        , Svg.Attributes.x2 <| pxFloat x2
+        , Svg.Attributes.y2 <| pxFloat y2
+        , Svg.Attributes.stroke <| Color.toCssString color
+        , Svg.Attributes.strokeWidth <| pxFloat 3
         ]
+        []
 
 
 percFloat : Float -> String

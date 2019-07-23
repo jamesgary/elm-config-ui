@@ -8,14 +8,20 @@ import ConfigForm as ConfigForm
 
 
 type alias Config =
-    { viewportWidth : Int
-    , viewportHeight : Int
+    { viewportWidth : Float
+    , viewportHeight : Float
     , skyColor : Color
     , numBoids : Int
     , boidRad : Float
     , boidSight : Float
-    , showSight : Bool
+    , boidPersonalSpace : Float
+    , alignmentFactor : Float
     , centerOfMassFactor : Float
+    , avoidanceFactor : Float
+    , momentumFactor : Float
+    , maxSpeed : Float
+    , showSight : Bool
+    , showVels : Bool
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -30,14 +36,20 @@ type alias Config =
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { viewportWidth = defaults.int
-    , viewportHeight = defaults.int
+    { viewportWidth = defaults.float
+    , viewportHeight = defaults.float
     , skyColor = defaults.color
     , numBoids = defaults.int
     , boidRad = defaults.float
     , boidSight = defaults.float
-    , showSight = defaults.bool
+    , boidPersonalSpace = defaults.float
+    , alignmentFactor = defaults.float
     , centerOfMassFactor = defaults.float
+    , avoidanceFactor = defaults.float
+    , momentumFactor = defaults.float
+    , maxSpeed = defaults.float
+    , showSight = defaults.bool
+    , showVels = defaults.bool
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -52,12 +64,12 @@ empty defaults =
 
 logics : List (ConfigForm.Logic Config)
 logics =
-    [ ConfigForm.int
+    [ ConfigForm.float
         "viewportWidth"
         "Viewport width (px)"
         .viewportWidth
         (\a c -> { c | viewportWidth = a })
-    , ConfigForm.int
+    , ConfigForm.float
         "viewportHeight"
         "Viewport height (px)"
         .viewportHeight
@@ -74,24 +86,56 @@ logics =
         (\a c -> { c | numBoids = a })
     , ConfigForm.float
         "boidRad"
-        "Boid Radius"
+        "Boid radius (px)"
         .boidRad
         (\a c -> { c | boidRad = a })
     , ConfigForm.float
         "boidSight"
-        "Boid Sight"
+        "Boid sight (px)"
         .boidSight
         (\a c -> { c | boidSight = a })
+    , ConfigForm.float
+        "boidPersonalSpace"
+        "Boid personal space (px)"
+        .boidPersonalSpace
+        (\a c -> { c | boidPersonalSpace = a })
+    , ConfigForm.float
+        "alignmentFactor"
+        "Alignment factor"
+        .alignmentFactor
+        (\a c -> { c | alignmentFactor = a })
+    , ConfigForm.float
+        "centerOfMassFactor"
+        "Center of mass factor"
+        .centerOfMassFactor
+        (\a c -> { c | centerOfMassFactor = a })
+    , ConfigForm.float
+        "avoidanceFactor"
+        "Avoidance factor"
+        .avoidanceFactor
+        (\a c -> { c | avoidanceFactor = a })
+    , ConfigForm.float
+        "momentumFactor"
+        "Momentum factor"
+        .momentumFactor
+        (\a c -> { c | momentumFactor = a })
+    , ConfigForm.float
+        "maxSpeed"
+        "Max speed"
+        .maxSpeed
+        (\a c -> { c | maxSpeed = a })
+    , ConfigForm.section
+        "Boid Visuals"
     , ConfigForm.bool
         "showSight"
         "Show sight"
         .showSight
         (\a c -> { c | showSight = a })
-    , ConfigForm.float
-        "centerOfMassFactor"
-        "Center of Mass Factor"
-        .centerOfMassFactor
-        (\a c -> { c | centerOfMassFactor = a })
+    , ConfigForm.bool
+        "showVels"
+        "Show vels"
+        .showVels
+        (\a c -> { c | showVels = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

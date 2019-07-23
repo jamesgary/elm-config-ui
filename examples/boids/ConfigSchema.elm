@@ -6,16 +6,25 @@ import Html exposing (Html)
 
 myConfigFields : List ( String, Kind )
 myConfigFields =
-    [ ( "Viewport width (px)", IntKind "viewportWidth" )
-    , ( "Viewport height (px)", IntKind "viewportHeight" )
+    [ ( "Viewport width (px)", FloatKind "viewportWidth" )
+    , ( "Viewport height (px)", FloatKind "viewportHeight" )
     , ( "Sky color", ColorKind "skyColor" )
 
     -- boids
     , ( "# of boids", IntKind "numBoids" )
-    , ( "Boid Radius", FloatKind "boidRad" )
-    , ( "Boid Sight", FloatKind "boidSight" )
+    , ( "Boid radius (px)", FloatKind "boidRad" )
+    , ( "Boid sight (px)", FloatKind "boidSight" )
+    , ( "Boid personal space (px)", FloatKind "boidPersonalSpace" )
+    , ( "Alignment factor", FloatKind "alignmentFactor" )
+    , ( "Center of mass factor", FloatKind "centerOfMassFactor" )
+    , ( "Avoidance factor", FloatKind "avoidanceFactor" )
+    , ( "Momentum factor", FloatKind "momentumFactor" )
+    , ( "Max speed", FloatKind "maxSpeed" )
+
+    -- visuals
+    , ( "Boid Visuals", SectionKind )
     , ( "Show sight", BoolKind "showSight" )
-    , ( "Center of Mass Factor", FloatKind "centerOfMassFactor" )
+    , ( "Show vels", BoolKind "showVels" )
 
     -- config table container
     , ( "Config table container", SectionKind )
