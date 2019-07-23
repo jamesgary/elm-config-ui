@@ -16,7 +16,7 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
-import Math.Vector2 as Vec2 exposing (Vec2)
+import Point3d exposing (Point3d)
 import Random
 import Svg exposing (Svg)
 import Svg.Attributes
@@ -131,16 +131,20 @@ initTree config =
     Random.step
         (Tree.generator
             { rootPos =
-                Vec2.vec2
-                    (toFloat config.viewportWidth / 2)
-                    (toFloat <| config.viewportHeight - config.groundHeight)
+                Point3d.fromCoordinates
+                    ( toFloat config.viewportWidth / 2
+                    , toFloat <| config.viewportHeight - config.groundHeight
+                    , 0
+                    )
             , cloudCenter =
-                Vec2.vec2
-                    (toFloat config.viewportWidth / 2)
-                    (toFloat config.viewportHeight - toFloat config.groundHeight - config.cloudHeight)
+                Point3d.fromCoordinates
+                    ( toFloat config.viewportWidth / 2
+                    , toFloat config.viewportHeight - toFloat config.groundHeight - config.cloudHeight
+                    , 0
+                    )
             , cloudRad = config.cloudRad
             , cloudCount = config.cloudCount
-            , growDist = config.growDist
+            , growDist = -config.growDist
             , minDist = config.minDist
             , maxDist = config.maxDist
             }

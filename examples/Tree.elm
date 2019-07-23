@@ -2,16 +2,22 @@ module Tree exposing (Options, Tree, generator, step, toSvg)
 
 import Color exposing (Color)
 import Dict exposing (Dict)
+import Direction3d exposing (Direction3d)
+import LineSegment2d exposing (LineSegment2d)
+import LineSegment3d exposing (LineSegment3d)
 import List.Extra
-import Math.Vector2 as Vec2 exposing (Vec2)
+import Point2d exposing (Point2d)
+import Point3d exposing (Point3d)
 import Random
+import SketchPlane3d exposing (SketchPlane3d)
 import Svg exposing (Svg)
 import Svg.Attributes
+import Vector3d exposing (Vector3d)
 
 
 type alias Tree =
     { branches : Dict Int Branch
-    , cloudPoints : List Vec2
+    , cloudPoints : List Point3d
     , hasBranched : Bool
     , options : Options
     }
@@ -19,15 +25,14 @@ type alias Tree =
 
 type alias Branch =
     -- TODO split type into done and in-process types
-    { startPos : Vec2
-    , endPos : Vec2
-    , growDirs : List Vec2
+    { line : LineSegment3d
+    , growDirs : List Direction3d
     }
 
 
 type alias Options =
-    { rootPos : Vec2
-    , cloudCenter : Vec2
+    { rootPos : Point3d
+    , cloudCenter : Point3d
     , cloudRad : Float
     , cloudCount : Int
     , growDist : Float
@@ -52,10 +57,14 @@ generator options =
                 { branches =
                     Dict.empty
                         |> idInsert
-                            { startPos = options.rootPos
-                            , endPos =
-                                Vec2.vec2 0 -options.growDist
-                                    |> Vec2.add options.rootPos
+                            { line =
+                                LineSegment3d.from
+                                    options.rootPos
+                                    (options.rootPos
+                                        |> Point3d.translateIn
+                                            Direction3d.positiveY
+                                            options.growDist
+                                    )
                             , growDirs = []
                             }
                 , cloudPoints = cloudPoints
@@ -74,31 +83,60 @@ idInsert v d =
     Dict.insert id v d
 
 
-cloudPointsGenerator : Options -> Random.Generator (List Vec2)
+cloudPointsGenerator : Options -> Random.Generator (List Point3d)
 cloudPointsGenerator options =
     Random.list options.cloudCount (cloudPointGenerator options)
 
 
-cloudPointGenerator : Options -> Random.Generator Vec2
+cloudPointGenerator : Options -> Random.Generator Point3d
 cloudPointGenerator options =
     let
-        ( centerX, centerY ) =
-            vec2ToTuple options.cloudCenter
+        ( centerX, centerY, centerZ ) =
+            options.cloudCenter
+                |> Point3d.coordinates
     in
-    Random.pair (Random.float 0 1) (Random.float 0 1)
-        |> Random.map
-            (\( rand1, rand2 ) ->
-                let
-                    theta =
-                        rand1 * 2 * pi
+    Random.map3
+        (\u v w ->
+            let
+                theta =
+                    u * 2 * pi
 
-                    r =
-                        options.cloudRad * sqrt rand2
-                in
-                Vec2.vec2
-                    (r * cos theta + centerX)
-                    (r * sin theta + centerY)
-            )
+                phi =
+                    acos (2 * v - 1)
+
+                r =
+                    options.cloudRad * logBase 3 w
+
+                sinTheta =
+                    sin theta
+
+                cosTheta =
+                    cos theta
+
+                sinPhi =
+                    sin phi
+
+                cosPhi =
+                    cos phi
+
+                x =
+                    r * sinPhi * cosTheta
+
+                y =
+                    r * sinPhi * sinTheta
+
+                z =
+                    r * cosPhi
+            in
+            Point3d.fromCoordinates
+                ( centerX + x
+                , centerY + y
+                , centerZ + z
+                )
+        )
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
 
 
 step : Tree -> Tree
@@ -129,9 +167,11 @@ growTrunk : Tree -> Tree
 growTrunk tree =
     let
         highPoint branch =
-            min (Vec2.getY branch.startPos)
-                (Vec2.getY branch.endPos)
+            branch.line
+                |> LineSegment3d.endPoint
+                |> Point3d.yCoordinate
 
+        highestBranch : Maybe Branch
         highestBranch =
             tree.branches
                 |> Dict.values
@@ -140,15 +180,24 @@ growTrunk tree =
     in
     case highestBranch of
         Just branch ->
+            let
+                endPoint =
+                    branch.line
+                        |> LineSegment3d.endPoint
+            in
             { tree
                 | branches =
                     tree.branches
                         |> idInsert
-                            -- assuming endPos is top
-                            { startPos = branch.endPos
-                            , endPos =
-                                branch.endPos
-                                    |> Vec2.add (Vec2.vec2 0 -tree.options.growDist)
+                            -- assuming endPoint is top
+                            { line =
+                                LineSegment3d.from
+                                    endPoint
+                                    (endPoint
+                                        |> Point3d.translateIn
+                                            Direction3d.positiveY
+                                            tree.options.growDist
+                                    )
                             , growDirs = []
                             }
             }
@@ -167,23 +216,30 @@ tryBranching tree =
                         -- remove crowded points
                         -- add dirs to branches
                         let
+                            maybeClosestBranch : Maybe ( Int, Branch )
                             maybeClosestBranch =
                                 branches
                                     |> Dict.toList
                                     |> List.Extra.minimumBy
-                                        (\( i, b ) ->
-                                            b.endPos
-                                                |> Vec2.distance point
+                                        (\( id, branch ) ->
+                                            branch.line
+                                                |> LineSegment3d.endPoint
+                                                |> Point3d.distanceFrom point
                                         )
                         in
                         case maybeClosestBranch of
                             Just ( id, branch ) ->
                                 let
                                     dist =
-                                        Vec2.distance point branch.endPos
+                                        branch.line
+                                            |> LineSegment3d.endPoint
+                                            |> Point3d.distanceFrom point
 
-                                    dir =
-                                        Vec2.direction point branch.endPos
+                                    maybeDir : Maybe Direction3d
+                                    maybeDir =
+                                        branch.line
+                                            |> LineSegment3d.endPoint
+                                            |> Direction3d.from point
                                 in
                                 if dist < tree.options.minDist then
                                     -- too close, throw away point
@@ -191,19 +247,28 @@ tryBranching tree =
                                     , branches
                                     )
 
-                                else if dist < tree.options.maxDist then
-                                    -- sweet spot, keep point and add dir
-                                    ( point :: pointsToKeep
-                                    , branches
-                                        |> Dict.insert id
-                                            { branch | growDirs = dir :: branch.growDirs }
-                                    )
-
                                 else
-                                    -- too far, keep but ignore
-                                    ( point :: pointsToKeep
-                                    , branches
-                                    )
+                                    case maybeDir of
+                                        Just dir ->
+                                            if dist < tree.options.maxDist then
+                                                -- sweet spot, keep point and add dir
+                                                ( point :: pointsToKeep
+                                                , branches
+                                                    |> Dict.insert id
+                                                        { branch | growDirs = dir :: branch.growDirs }
+                                                )
+
+                                            else
+                                                -- too far, keep but ignore
+                                                ( point :: pointsToKeep
+                                                , branches
+                                                )
+
+                                        Nothing ->
+                                            -- should never get here
+                                            ( pointsToKeep
+                                            , branches
+                                            )
 
                             Nothing ->
                                 -- should never get here
@@ -213,28 +278,36 @@ tryBranching tree =
                     )
                     ( [], tree.branches )
 
+        newlyGrownBranches : List Branch
         newlyGrownBranches =
             branchesWithDirs
                 |> Dict.values
                 |> List.filterMap
                     (\branch ->
                         let
-                            unnormalizedDir =
+                            growthVec3d =
                                 branch.growDirs
-                                    |> List.map Vec2.normalize
-                                    |> List.foldl Vec2.add (Vec2.vec2 0 0)
+                                    |> List.map Direction3d.toVector
+                                    |> List.foldl Vector3d.sum Vector3d.zero
+                                    |> Vector3d.scaleBy (1 / toFloat (List.length branch.growDirs))
+                                    -- ^ the average dir
+                                    |> Vector3d.scaleBy tree.options.growDist
+
+                            endPoint =
+                                branch.line
+                                    |> LineSegment3d.endPoint
                         in
-                        if unnormalizedDir == Vec2.vec2 0 0 then
+                        if List.isEmpty branch.growDirs then
                             Nothing
 
                         else
                             Just
-                                { startPos = branch.endPos
-                                , endPos =
-                                    unnormalizedDir
-                                        |> Vec2.normalize
-                                        |> Vec2.scale tree.options.growDist
-                                        |> Vec2.add branch.endPos
+                                { line =
+                                    LineSegment3d.from
+                                        endPoint
+                                        (endPoint
+                                            |> Point3d.translateBy growthVec3d
+                                        )
                                 , growDirs = []
                                 }
                     )
@@ -254,15 +327,6 @@ tryBranching tree =
     )
 
 
-vec2ToTuple : Vec2 -> ( Float, Float )
-vec2ToTuple v =
-    v
-        |> Vec2.toRecord
-        |> (\{ x, y } ->
-                ( x, y )
-           )
-
-
 
 -- view stuff
 
@@ -277,34 +341,39 @@ toSvg options tree =
 
 drawCloudPoints : ViewOptions -> Tree -> Svg msg
 drawCloudPoints options tree =
-    tree.cloudPoints
+    let
+        points2d =
+            tree.cloudPoints
+                |> List.map (Point3d.projectInto SketchPlane3d.xy)
+    in
+    points2d
         |> List.map
             (\point ->
                 [ Svg.circle
-                    [ Svg.Attributes.cx <| pxFloat <| Vec2.getX point
-                    , Svg.Attributes.cy <| pxFloat <| Vec2.getY point
+                    [ Svg.Attributes.cx <| pxFloat <| Point2d.xCoordinate point
+                    , Svg.Attributes.cy <| pxFloat <| Point2d.yCoordinate point
                     , Svg.Attributes.r <| pxFloat <| options.cloudPointRad
                     , Svg.Attributes.fill (Color.toCssString options.cloudPointColor)
                     ]
                     []
 
                 -- ranges
-                , Svg.circle
-                    [ Svg.Attributes.cx <| pxFloat <| Vec2.getX point
-                    , Svg.Attributes.cy <| pxFloat <| Vec2.getY point
-                    , Svg.Attributes.r <| pxFloat <| tree.options.minDist
-                    , Svg.Attributes.fill "transparent"
-                    , Svg.Attributes.stroke "#faa"
-                    ]
-                    []
-                , Svg.circle
-                    [ Svg.Attributes.cx <| pxFloat <| Vec2.getX point
-                    , Svg.Attributes.cy <| pxFloat <| Vec2.getY point
-                    , Svg.Attributes.r <| pxFloat <| tree.options.maxDist
-                    , Svg.Attributes.fill "transparent"
-                    , Svg.Attributes.stroke "#f33"
-                    ]
-                    []
+                --, Svg.circle
+                --    [ Svg.Attributes.cx <| pxFloat <| Vec2.getX point
+                --    , Svg.Attributes.cy <| pxFloat <| Vec2.getY point
+                --    , Svg.Attributes.r <| pxFloat <| tree.options.minDist
+                --    , Svg.Attributes.fill "transparent"
+                --    , Svg.Attributes.stroke "#faa"
+                --    ]
+                --    []
+                --, Svg.circle
+                --    [ Svg.Attributes.cx <| pxFloat <| Vec2.getX point
+                --    , Svg.Attributes.cy <| pxFloat <| Vec2.getY point
+                --    , Svg.Attributes.r <| pxFloat <| tree.options.maxDist
+                --    , Svg.Attributes.fill "transparent"
+                --    , Svg.Attributes.stroke "#f33"
+                --    ]
+                --    []
                 ]
             )
         |> List.concat
@@ -313,16 +382,21 @@ drawCloudPoints options tree =
 
 drawBranches : ViewOptions -> Tree -> Svg msg
 drawBranches options tree =
-    tree.branches
-        |> Dict.values
+    let
+        lines2d =
+            tree.branches
+                |> Dict.values
+                |> List.map .line
+                |> List.map (LineSegment3d.projectInto SketchPlane3d.xy)
+    in
+    lines2d
         |> List.map
-            (\branch ->
+            (\line ->
                 let
-                    ( x1, y1 ) =
-                        vec2ToTuple branch.startPos
-
-                    ( x2, y2 ) =
-                        vec2ToTuple branch.endPos
+                    ( ( x1, y1 ), ( x2, y2 ) ) =
+                        line
+                            |> LineSegment2d.endpoints
+                            |> Tuple.mapBoth Point2d.coordinates Point2d.coordinates
                 in
                 Svg.line
                     [ Svg.Attributes.x1 <| pxFloat <| x1
