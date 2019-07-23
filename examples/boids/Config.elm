@@ -13,6 +13,9 @@ type alias Config =
     , skyColor : Color
     , numBoids : Int
     , boidRad : Float
+    , boidSight : Float
+    , showSight : Bool
+    , centerOfMassFactor : Float
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -32,6 +35,9 @@ empty defaults =
     , skyColor = defaults.color
     , numBoids = defaults.int
     , boidRad = defaults.float
+    , boidSight = defaults.float
+    , showSight = defaults.bool
+    , centerOfMassFactor = defaults.float
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -71,6 +77,21 @@ logics =
         "Boid Radius"
         .boidRad
         (\a c -> { c | boidRad = a })
+    , ConfigForm.float
+        "boidSight"
+        "Boid Sight"
+        .boidSight
+        (\a c -> { c | boidSight = a })
+    , ConfigForm.bool
+        "showSight"
+        "Show sight"
+        .showSight
+        (\a c -> { c | showSight = a })
+    , ConfigForm.float
+        "centerOfMassFactor"
+        "Center of Mass Factor"
+        .centerOfMassFactor
+        (\a c -> { c | centerOfMassFactor = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

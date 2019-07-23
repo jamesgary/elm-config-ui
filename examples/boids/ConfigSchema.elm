@@ -13,6 +13,9 @@ myConfigFields =
     -- boids
     , ( "# of boids", IntKind "numBoids" )
     , ( "Boid Radius", FloatKind "boidRad" )
+    , ( "Boid Sight", FloatKind "boidSight" )
+    , ( "Show sight", BoolKind "showSight" )
+    , ( "Center of Mass Factor", FloatKind "centerOfMassFactor" )
 
     -- config table container
     , ( "Config table container", SectionKind )

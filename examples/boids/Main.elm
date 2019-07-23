@@ -5,6 +5,7 @@ import Browser.Events
 import Color exposing (Color)
 import Config exposing (Config)
 import ConfigForm as ConfigForm exposing (ConfigForm)
+import Dict exposing (Dict)
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Border as EBorder
@@ -16,10 +17,11 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
-import Math.Vector2 as Vec2 exposing (Vec2)
+import Point2d exposing (Point2d)
 import Random
 import Svg exposing (Svg)
 import Svg.Attributes
+import Vector2d exposing (Vector2d)
 
 
 port sendToPort : JD.Value -> Cmd msg
@@ -47,8 +49,8 @@ type alias Model =
 
 
 type alias Boid =
-    { pos : Vec2
-    , vel : Vec2
+    { pos : Point2d
+    , vel : Vector2d
     , color : Color
     }
 
@@ -141,10 +143,8 @@ boidGenerator : Config -> Random.Generator Boid
 boidGenerator config =
     Random.map4
         (\x y angle color ->
-            { pos = Vec2.vec2 (toFloat x) (toFloat y)
-            , vel =
-                fromPolar ( 1, angle )
-                    |> (\( vx, vy ) -> Vec2.vec2 vx vy)
+            { pos = Point2d.fromCoordinates ( toFloat x, toFloat y )
+            , vel = Vector2d.fromPolarComponents ( 1, angle )
             , color = color
             }
         )
@@ -250,9 +250,89 @@ update msg model =
             , saveToLocalStorageCmd newModel
             )
 
-        Tick d ->
-            ( model
+        Tick delta ->
+            ( { model | boids = moveBoids model delta }
             , Cmd.none
+            )
+
+
+moveBoids : Model -> Float -> List Boid
+moveBoids model delta =
+    model.boids
+        |> mapOthers (moveBoid model.config delta)
+
+
+mapOthers : (List a -> a -> b) -> List a -> List b
+mapOthers func list =
+    -- apply a func to an item and all OTHER items in the list
+    let
+        indexedList : List ( Int, a )
+        indexedList =
+            list
+                |> List.indexedMap Tuple.pair
+
+        dict : Dict Int a
+        dict =
+            indexedList
+                |> Dict.fromList
+    in
+    indexedList
+        |> List.map
+            (\( i, val ) ->
+                let
+                    otherVals =
+                        dict
+                            |> Dict.remove i
+                            |> Dict.values
+                in
+                func otherVals val
+            )
+
+
+moveBoid : Config -> Float -> List Boid -> Boid -> Boid
+moveBoid config delta otherBoids boid =
+    let
+        seenBoids =
+            boidsInRange
+                config.boidSight
+                otherBoids
+                boid.pos
+
+        centerOfMass =
+            seenBoids
+                |> List.map .pos
+                |> Point2d.centroid
+
+        flyToCenterOfMassVel =
+            case centerOfMass of
+                Just center ->
+                    center
+                        |> Vector2d.from boid.pos
+                        |> Vector2d.normalize
+                        |> Vector2d.scaleBy (0.01 * config.centerOfMassFactor / toFloat (List.length seenBoids))
+
+                Nothing ->
+                    Vector2d.zero
+
+        newVel =
+            flyToCenterOfMassVel
+
+        newPos =
+            boid.pos
+                |> Point2d.translateBy (Vector2d.scaleBy delta newVel)
+    in
+    { boid
+        | pos = newPos
+        , vel = newVel
+    }
+
+
+boidsInRange : Float -> List Boid -> Point2d -> List Boid
+boidsInRange range boids pos =
+    boids
+        |> List.filter
+            (\boid ->
+                Point2d.distanceFrom pos boid.pos <= range
             )
 
 
@@ -404,13 +484,49 @@ viewBoids ({ config } as model) =
 
 viewBoid : Config -> Boid -> Svg Msg
 viewBoid config boid =
-    Svg.circle
-        [ Svg.Attributes.cx <| pxFloat <| Vec2.getX boid.pos
-        , Svg.Attributes.cy <| pxFloat <| Vec2.getY boid.pos
-        , Svg.Attributes.r <| pxFloat <| config.boidRad
-        , Svg.Attributes.fill <| Color.toCssString <| boid.color
+    let
+        ( x, y ) =
+            Point2d.coordinates boid.pos
+
+        ( beakEndpointX, beakEndpointY ) =
+            boid.pos
+                |> Point2d.translateBy
+                    (boid.vel
+                        |> Vector2d.normalize
+                        |> Vector2d.scaleBy config.boidRad
+                    )
+                |> Point2d.coordinates
+    in
+    Svg.g []
+        [ if config.showSight then
+            Svg.circle
+                [ Svg.Attributes.cx <| pxFloat x
+                , Svg.Attributes.cy <| pxFloat y
+                , Svg.Attributes.r <| pxFloat <| config.boidSight
+                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                , Svg.Attributes.fill "none"
+                ]
+                []
+
+          else
+            Svg.g [] []
+        , Svg.circle
+            [ Svg.Attributes.cx <| pxFloat x
+            , Svg.Attributes.cy <| pxFloat y
+            , Svg.Attributes.r <| pxFloat <| config.boidRad
+            , Svg.Attributes.fill <| Color.toCssString <| boid.color
+            ]
+            []
+        , Svg.line
+            [ Svg.Attributes.x1 <| pxFloat x
+            , Svg.Attributes.y1 <| pxFloat y
+            , Svg.Attributes.x2 <| pxFloat beakEndpointX
+            , Svg.Attributes.y2 <| pxFloat beakEndpointY
+            , Svg.Attributes.stroke <| Color.toCssString Color.white
+            , Svg.Attributes.strokeWidth <| pxFloat 2
+            ]
+            []
         ]
-        []
 
 
 percFloat : Float -> String
