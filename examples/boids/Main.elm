@@ -31,6 +31,20 @@ import Svg.Attributes
 import Vector2d exposing (Vector2d)
 
 
+log : String -> a -> a
+log msg val =
+    let
+        {--
+        _ =
+            Debug.log msg val
+
+        --}
+        _ =
+            0
+    in
+    val
+
+
 port sendToPort : JD.Value -> Cmd msg
 
 
@@ -41,9 +55,13 @@ main =
     Browser.element
         { init = init
         , view = view
-        , update = update
+        , update = updateResult
         , subscriptions = subscriptions
         }
+
+
+type alias ModelResult =
+    Result String Model
 
 
 type alias Model =
@@ -115,7 +133,7 @@ decodeLocalStorage =
 -- INIT
 
 
-init : JE.Value -> ( Model, Cmd Msg )
+init : JE.Value -> ( ModelResult, Cmd Msg )
 init jsonFlags =
     case JD.decodeValue decodeFlags jsonFlags of
         Ok flags ->
@@ -140,19 +158,22 @@ init jsonFlags =
                         (Random.Array.array config.numBoids (boidGenerator config))
                         (Random.initialSeed flags.timestamp)
             in
-            ( { config = config
-              , configForm = configForm
-              , isConfigOpen = flags.localStorage.isConfigOpen
-              , boids = boids
-              , seed = seed
-              , mousePos = Nothing
-              , selectedBoidIndex = Nothing
-              }
+            ( Ok
+                { config = config
+                , configForm = configForm
+                , isConfigOpen = flags.localStorage.isConfigOpen
+                , boids = boids
+                , seed = seed
+                , mousePos = Nothing
+                , selectedBoidIndex = Nothing
+                }
             , Cmd.none
             )
 
         Err err ->
-            Debug.todo (JD.errorToString err)
+            ( Err (JD.errorToString err)
+            , Cmd.none
+            )
 
 
 boidGenerator : Config -> Random.Generator Boid
@@ -171,6 +192,17 @@ boidGenerator config =
         (Random.float 0 config.viewportHeight)
         (Random.float 0 (2 * pi))
         colorGenerator
+
+
+updateResult : Msg -> ModelResult -> ( ModelResult, Cmd Msg )
+updateResult msg modelResult =
+    case modelResult of
+        Ok model ->
+            update msg model
+                |> Tuple.mapFirst Ok
+
+        Err _ ->
+            ( modelResult, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -247,7 +279,7 @@ update msg model =
                 Err err ->
                     let
                         _ =
-                            Debug.log "Could not decode incoming port msg: " (JD.errorToString err)
+                            log "Could not decode incoming port msg: " (JD.errorToString err)
                     in
                     ( model, Cmd.none )
 
@@ -493,14 +525,15 @@ wrappedPoses ( width, height ) pos =
                 |> Point2d.coordinates
     in
     [ pos
-    , Point2d.fromCoordinates ( x, y - height )
-    , Point2d.fromCoordinates ( x, y + height )
-    , Point2d.fromCoordinates ( x - width, y )
-    , Point2d.fromCoordinates ( x - width, y - height )
-    , Point2d.fromCoordinates ( x - width, y + height )
-    , Point2d.fromCoordinates ( x + width, y )
-    , Point2d.fromCoordinates ( x + width, y - height )
-    , Point2d.fromCoordinates ( x + width, y + height )
+
+    --, Point2d.fromCoordinates ( x, y - height )
+    --, Point2d.fromCoordinates ( x, y + height )
+    --, Point2d.fromCoordinates ( x - width, y )
+    --, Point2d.fromCoordinates ( x - width, y - height )
+    --, Point2d.fromCoordinates ( x - width, y + height )
+    --, Point2d.fromCoordinates ( x + width, y )
+    --, Point2d.fromCoordinates ( x + width, y - height )
+    --, Point2d.fromCoordinates ( x + width, y + height )
     ]
 
 
@@ -577,20 +610,25 @@ saveToLocalStorageCmd model =
             ]
 
 
-view : Model -> Html Msg
-view model =
-    E.layout
-        [ E.inFront <| viewConfig model
-        , E.width E.fill
-        , E.height E.fill
-        , E.padding 20
-        ]
-        (E.row
-            [ E.spacing 10
-            ]
-            [ viewBoids model
-            ]
-        )
+view : ModelResult -> Html Msg
+view modelResult =
+    case modelResult of
+        Ok model ->
+            E.layout
+                [ E.inFront <| viewConfig model
+                , E.width E.fill
+                , E.height E.fill
+                , E.padding 20
+                ]
+                (E.row
+                    [ E.spacing 10
+                    ]
+                    [ viewBoids model
+                    ]
+                )
+
+        Err err ->
+            Html.text err
 
 
 viewConfig : Model -> Element Msg
@@ -901,12 +939,17 @@ pxFloat val =
     String.fromFloat val ++ "px"
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch
-        [ receiveFromPort ReceivedFromPort
-        , Browser.Events.onAnimationFrameDelta Tick
-        ]
+subscriptions : ModelResult -> Sub Msg
+subscriptions modelResult =
+    case modelResult of
+        Ok model ->
+            Sub.batch
+                [ receiveFromPort ReceivedFromPort
+                , Browser.Events.onAnimationFrameDelta Tick
+                ]
+
+        Err _ ->
+            Sub.none
 
 
 colorForE : Color -> E.Color
