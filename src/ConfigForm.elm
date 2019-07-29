@@ -103,6 +103,7 @@ type alias IntFieldData =
 type alias FloatFieldData =
     { val : Float
     , str : String
+    , power : Int
     }
 
 
@@ -335,6 +336,12 @@ encodeFields fields =
         |> JE.object
 
 
+tuple2Encoder : (a -> JE.Value) -> (b -> JE.Value) -> ( a, b ) -> JE.Value
+tuple2Encoder enc1 enc2 ( val1, val2 ) =
+    -- from https://stackoverflow.com/a/52676142
+    JE.list identity [ enc1 val1, enc2 val2 ]
+
+
 encodeField : Field -> Maybe JE.Value
 encodeField field =
     case field of
@@ -343,7 +350,9 @@ encodeField field =
                 |> Just
 
         FloatField data ->
-            JE.float data.val
+            -- TODO be able to encode w/o dev data like power
+            ( data.val, data.power )
+                |> tuple2Encoder JE.float JE.int
                 |> Just
 
         StringField data ->
@@ -442,11 +451,15 @@ updateFromJson logics config configForm json =
                                                                     )
 
                                                             Just (FloatField data) ->
+                                                                let
+                                                                    newVal =
+                                                                        data.val + toFloat (num * (10 ^ data.power))
+                                                                in
                                                                 Just
                                                                     (FloatField
                                                                         { data
-                                                                            | val = data.val + toFloat num
-                                                                            , str = String.fromFloat (data.val + toFloat num)
+                                                                            | val = newVal
+                                                                            , str = String.fromFloat newVal
                                                                         }
                                                                     )
 
@@ -535,19 +548,32 @@ decodeConfigForm logics config json =
                         FloatLogic getter setter ->
                             let
                                 decoder =
-                                    JD.at [ "fields", logic.fieldName ] JD.float
+                                    JD.at [ "fields", logic.fieldName ]
+                                        (JD.oneOf
+                                            [ JD.float
+                                                |> JD.map
+                                                    (\f ->
+                                                        -- got a prod val
+                                                        ( f, 0 )
+                                                    )
+                                            , JD.map2 Tuple.pair
+                                                (JD.index 0 JD.float)
+                                                (JD.index 1 JD.int)
+                                            ]
+                                        )
 
-                                val =
+                                ( val, power ) =
                                     case JD.decodeValue decoder json of
                                         Ok v ->
                                             v
 
                                         Err err ->
-                                            getter config
+                                            ( getter config, 0 )
                             in
                             FloatField
                                 { val = val
                                 , str = String.fromFloat val
+                                , power = power
                                 }
 
                         StringLogic getter setter ->
@@ -625,6 +651,36 @@ decodeConfigForm logics config json =
 
 
 -- JSON encode/decoder stuff
+{-
+   floatDecoder : JD.Decoder FloatFieldData
+   floatDecoder =
+       let
+           d =
+               JD.oneOf
+                   [ JD.float
+                       |> JD.map
+                           (\f ->
+                               -- got a prod val
+                               ( f, 0 )
+                           )
+                   , JD.map2 Tuple.pair
+                       (JD.index 0 JD.float)
+                       (JD.index 1 JD.int)
+                   ]
+
+           ( val, power ) =
+               case JD.decodeValue decoder json of
+                   Ok v ->
+                       v
+
+                   Err err ->
+                       ( getter config, 0 )
+       in
+       { val = val
+       , str = String.fromFloat val
+       , power = power
+       }
+-}
 
 
 decodeConfig : List (Logic config) -> config -> JE.Value -> config
@@ -694,6 +750,196 @@ colorValDecoder =
 
 viewElement : ViewOptions -> List (Logic config) -> ConfigForm config -> Element (Msg config)
 viewElement options logics configForm =
+    let
+        defaultAttrs =
+            [ E.height E.fill
+            , E.paddingXY 10 2
+            ]
+
+        sectionAttrs =
+            [ EFont.bold
+            , E.paddingEach
+                { top = 20
+                , right = 0
+                , bottom = 5
+                , left = 10
+                }
+            ]
+
+        resizeAttrs logic =
+            [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
+            , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
+            , E.mouseOver
+                [ EBackground.color
+                    (colorForE options.labelHighlightBgColor)
+                ]
+            , E.width E.fill
+            , E.height E.fill
+            ]
+
+        closeAttrs i logic =
+            let
+                maybeCloseMsg =
+                    case OrderedDict.get logic.fieldName configForm.fields of
+                        Just (ColorField data) ->
+                            let
+                                shouldShow =
+                                    case data.meta of
+                                        ColorFieldMeta meta ->
+                                            meta.isOpen
+                            in
+                            if shouldShow then
+                                let
+                                    meta =
+                                        case data.meta of
+                                            ColorFieldMeta m ->
+                                                m
+                                in
+                                Just
+                                    (ChangedConfigForm
+                                        logic.fieldName
+                                        (ColorField
+                                            { data
+                                                | meta =
+                                                    ColorFieldMeta
+                                                        { meta
+                                                            | isOpen = False
+                                                        }
+                                            }
+                                        )
+                                    )
+
+                            else
+                                Nothing
+
+                        _ ->
+                            Nothing
+            in
+            case maybeCloseMsg of
+                Just msg ->
+                    [ E.inFront <|
+                        E.el
+                            [ E.width E.fill
+                            , E.padding 6
+                            ]
+                            (EInput.button
+                                [ E.alignRight
+                                , EBackground.color (E.rgba 1 1 1 0.9)
+                                , EBorder.color (E.rgba 0 0 0 0.9)
+                                , EBorder.width 1
+                                , EBorder.rounded 4
+                                , E.width (E.px (1.5 * toFloat options.fontSize |> round))
+                                , E.height (E.px (1.5 * toFloat options.fontSize |> round))
+                                , Html.Attributes.tabindex (1 + i) |> E.htmlAttribute
+                                ]
+                                { onPress = Just msg
+                                , label =
+                                    E.el
+                                        [ E.centerX
+                                        , E.centerY
+                                        , E.paddingEach
+                                            { top = 3
+                                            , right = 0
+                                            , bottom = 0
+                                            , left = 2
+                                            }
+                                        ]
+                                        (E.text "❌")
+                                }
+                            )
+                    ]
+
+                Nothing ->
+                    []
+
+        columnView i logic =
+            E.el
+                (defaultAttrs
+                    ++ (case logic.kind of
+                            StringLogic getter setter ->
+                                []
+
+                            IntLogic getter setter ->
+                                resizeAttrs logic
+
+                            FloatLogic getter setter ->
+                                let
+                                    powerEl =
+                                        case OrderedDict.get logic.fieldName configForm.fields of
+                                            Just (FloatField data) ->
+                                                E.row
+                                                    [ E.alignRight
+
+                                                    --, E.moveDown 28
+                                                    , E.paddingXY 5 2
+                                                    , EFont.size 16
+                                                    , EBackground.color
+                                                        (colorForE options.labelHighlightBgColor)
+                                                    ]
+                                                    [ E.el
+                                                        [ E.paddingXY 5 0 ]
+                                                        (E.text ("x" ++ String.fromInt (10 ^ data.power)))
+                                                    , EInput.button
+                                                        [ EFont.size (0.8 * toFloat options.fontSize |> round)
+                                                        , E.moveDown 1
+                                                        ]
+                                                        { label = E.text "↙️" -- down
+                                                        , onPress =
+                                                            Just
+                                                                (ChangedConfigForm
+                                                                    logic.fieldName
+                                                                    (FloatField
+                                                                        { data
+                                                                            | power = data.power - 1
+                                                                        }
+                                                                    )
+                                                                )
+                                                        }
+                                                    , EInput.button
+                                                        [ EFont.size (0.8 * toFloat options.fontSize |> round)
+                                                        , E.moveDown 1
+                                                        ]
+                                                        { label = E.text "↗️" -- up
+                                                        , onPress =
+                                                            Just
+                                                                (ChangedConfigForm
+                                                                    logic.fieldName
+                                                                    (FloatField
+                                                                        { data
+                                                                            | power = data.power + 1
+                                                                        }
+                                                                    )
+                                                                )
+                                                        }
+                                                    ]
+
+                                            _ ->
+                                                E.none
+                                in
+                                [ E.width E.fill
+                                , E.inFront
+                                    (E.row [ E.width E.fill, E.height E.fill ]
+                                        [ E.el (resizeAttrs logic) E.none
+                                        , powerEl
+                                        ]
+                                    )
+                                ]
+
+                            BoolLogic getter setter ->
+                                []
+
+                            ColorLogic getter setter ->
+                                closeAttrs i logic
+
+                            SectionLogic ->
+                                sectionAttrs
+                       )
+                )
+                (E.el
+                    [ E.centerY ]
+                    (E.text logic.label)
+                )
+    in
     E.indexedTable
         [ E.spacingXY 0 options.rowSpacing
         , EFont.size options.fontSize
@@ -702,136 +948,7 @@ viewElement options logics configForm =
         , columns =
             [ { header = E.none
               , width = E.shrink
-              , view =
-                    \i logic ->
-                        let
-                            defaultAttrs =
-                                [ E.height E.fill
-                                , E.paddingXY 10 2
-                                ]
-
-                            sectionAttrs =
-                                [ EFont.bold
-                                , E.paddingEach
-                                    { top = 20
-                                    , right = 0
-                                    , bottom = 5
-                                    , left = 10
-                                    }
-                                ]
-
-                            resizeAttrs =
-                                [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
-                                , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
-                                , E.mouseOver
-                                    [ EBackground.color
-                                        (colorForE options.labelHighlightBgColor)
-                                    ]
-                                ]
-
-                            closeAttrs =
-                                let
-                                    maybeCloseMsg =
-                                        case OrderedDict.get logic.fieldName configForm.fields of
-                                            Just (ColorField data) ->
-                                                let
-                                                    shouldShow =
-                                                        case data.meta of
-                                                            ColorFieldMeta meta ->
-                                                                meta.isOpen
-                                                in
-                                                if shouldShow then
-                                                    let
-                                                        meta =
-                                                            case data.meta of
-                                                                ColorFieldMeta m ->
-                                                                    m
-                                                    in
-                                                    Just
-                                                        (ChangedConfigForm
-                                                            logic.fieldName
-                                                            (ColorField
-                                                                { data
-                                                                    | meta =
-                                                                        ColorFieldMeta
-                                                                            { meta
-                                                                                | isOpen = False
-                                                                            }
-                                                                }
-                                                            )
-                                                        )
-
-                                                else
-                                                    Nothing
-
-                                            _ ->
-                                                Nothing
-                                in
-                                case maybeCloseMsg of
-                                    Just msg ->
-                                        [ E.inFront <|
-                                            E.el
-                                                [ E.width E.fill
-                                                , E.padding 6
-                                                ]
-                                                (EInput.button
-                                                    [ E.alignRight
-                                                    , EBackground.color (E.rgba 1 1 1 0.9)
-                                                    , EBorder.color (E.rgba 0 0 0 0.9)
-                                                    , EBorder.width 1
-                                                    , EBorder.rounded 4
-                                                    , E.width (E.px (1.5 * toFloat options.fontSize |> round))
-                                                    , E.height (E.px (1.5 * toFloat options.fontSize |> round))
-                                                    , Html.Attributes.tabindex (1 + i) |> E.htmlAttribute
-                                                    ]
-                                                    { onPress = Just msg
-                                                    , label =
-                                                        E.el
-                                                            [ E.centerX
-                                                            , E.centerY
-                                                            , E.paddingEach
-                                                                { top = 3
-                                                                , right = 0
-                                                                , bottom = 0
-                                                                , left = 2
-                                                                }
-                                                            ]
-                                                            (E.text "❌")
-                                                    }
-                                                )
-                                        ]
-
-                                    Nothing ->
-                                        []
-
-                            attrs =
-                                defaultAttrs
-                                    ++ (case logic.kind of
-                                            StringLogic getter setter ->
-                                                []
-
-                                            IntLogic getter setter ->
-                                                resizeAttrs
-
-                                            FloatLogic getter setter ->
-                                                resizeAttrs
-
-                                            BoolLogic getter setter ->
-                                                []
-
-                                            ColorLogic getter setter ->
-                                                closeAttrs
-
-                                            SectionLogic ->
-                                                sectionAttrs
-                                       )
-                        in
-                        E.el
-                            attrs
-                            (E.el
-                                [ E.centerY ]
-                                (E.text logic.label)
-                            )
+              , view = columnView
               }
             , { header = E.none
               , width = E.shrink

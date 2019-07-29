@@ -13,13 +13,32 @@ myConfigFields =
     -- boids
     , ( "# of boids", IntKind "numBoids" )
     , ( "Boid radius (px)", FloatKind "boidRad" )
-    , ( "Boid sight (px)", FloatKind "boidSight" )
-    , ( "Boid personal space (px)", FloatKind "boidPersonalSpace" )
-    , ( "Alignment factor", FloatKind "alignmentFactor" )
-    , ( "Center of mass factor", FloatKind "centerOfMassFactor" )
-    , ( "Avoidance factor", FloatKind "avoidanceFactor" )
-    , ( "Momentum factor", FloatKind "momentumFactor" )
     , ( "Max speed", FloatKind "maxSpeed" )
+
+    -- rule 0: Momentum (how quick to change steering)
+    , ( "Rule 0: Momentum", SectionKind )
+    , ( "Factor", FloatKind "momentumFactor" )
+
+    -- rule 1: Cohesion (Friendly gathering at center of mass)
+    , ( "Rule 1: Cohesion", SectionKind )
+    , ( "Show vel", BoolKind "showCohesionVel" )
+    , ( "Factor", FloatKind "cohesionFactor" )
+    , ( "Range", FloatKind "cohesionRange" )
+    , ( "Show range", BoolKind "showCohesionRange" )
+
+    -- rule 2: Alignment (conformity)
+    , ( "Rule 2: Alignment", SectionKind )
+    , ( "Show vel", BoolKind "showAlignmentVel" )
+    , ( "Factor", FloatKind "alignmentFactor" )
+    , ( "Range", FloatKind "alignmentRange" )
+    , ( "Show range", BoolKind "showAlignmentRange" )
+
+    -- rule 3: Separation (personal space)
+    , ( "Rule 3: Separation", SectionKind )
+    , ( "Show vel", BoolKind "showSeparationVel" )
+    , ( "Factor", FloatKind "separationFactor" )
+    , ( "Range", FloatKind "separationRange" )
+    , ( "Show range", BoolKind "showSeparationRange" )
 
     -- visuals
     , ( "Boid Visuals", SectionKind )

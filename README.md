@@ -106,3 +106,9 @@ attributes
 misc
 - isWrapped (for row vs wrappedRow)
 
+
+## DEEPER
+
+painful to slide numbers that are too big (or small)
+easy way to change granularity.
+How about two arrows [^][v] that power by 10. It gets saved in the configForm.

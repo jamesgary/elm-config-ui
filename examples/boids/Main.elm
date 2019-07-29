@@ -18,6 +18,7 @@ import Html.Attributes
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
+import List.Extra
 import Point2d exposing (Point2d)
 import Random
 import Svg exposing (Svg)
@@ -52,8 +53,9 @@ type alias Model =
 type alias Boid =
     { pos : Point2d
     , vel : Vector2d
-    , velForCenterOfMass : Vector2d
-    , velForRepulsion : Vector2d
+    , velForCohesion : Vector2d
+    , velForAlignment : Vector2d
+    , velForSeparation : Vector2d
     , color : Color
     }
 
@@ -148,8 +150,9 @@ boidGenerator config =
         (\x y angle color ->
             { pos = Point2d.fromCoordinates ( x, y )
             , vel = Vector2d.zero
-            , velForCenterOfMass = Vector2d.zero
-            , velForRepulsion = Vector2d.zero
+            , velForCohesion = Vector2d.zero
+            , velForAlignment = Vector2d.zero
+            , velForSeparation = Vector2d.zero
             , color = color
             }
         )
@@ -297,60 +300,78 @@ mapOthers func list =
 moveBoid : Config -> Float -> List Boid -> Boid -> Boid
 moveBoid config delta otherBoids boid =
     let
-        seenBoids =
+        velFromRule : Float -> (List Boid -> Vector2d) -> Vector2d
+        velFromRule range ruleFunc =
             boidsInRange
                 ( config.viewportWidth, config.viewportHeight )
-                config.boidSight
+                range
                 otherBoids
                 boid.pos
+                |> ruleFunc
 
-        -- center of mass
-        centerOfMassOfSeenBoids =
-            seenBoids
-                |> List.map .pos
-                |> Point2d.centroid
+        -- cohesion (center of mass)
+        velForCohesion =
+            velFromRule
+                config.cohesionRange
+                (\nearbyBoids ->
+                    let
+                        centerOfMass =
+                            nearbyBoids
+                                |> List.map .pos
+                                |> Point2d.centroid
+                    in
+                    case centerOfMass of
+                        Just center ->
+                            center
+                                |> Vector2d.from boid.pos
+                                |> Vector2d.normalize
+                                |> Vector2d.scaleBy
+                                    (config.cohesionFactor
+                                        / toFloat (List.length nearbyBoids)
+                                    )
 
-        velForCenterOfMass =
-            case centerOfMassOfSeenBoids of
-                Just center ->
-                    center
-                        |> Vector2d.from boid.pos
-                        |> Vector2d.normalize
-                        |> Vector2d.scaleBy (0.01 * config.centerOfMassFactor / toFloat (List.length seenBoids))
-
-                Nothing ->
-                    Vector2d.zero
-
-        -- repulsion
-        tooCloseBoids =
-            boidsInRange
-                ( config.viewportWidth, config.viewportHeight )
-                config.boidPersonalSpace
-                otherBoids
-                boid.pos
-
-        centerOfMassOfTooCloseBoids =
-            tooCloseBoids
-                |> List.map .pos
-                |> Point2d.centroid
-
-        velForRepulsion =
-            case centerOfMassOfTooCloseBoids of
-                Just center ->
-                    center
-                        |> Vector2d.from boid.pos
-                        |> Vector2d.normalize
-                        |> Vector2d.scaleBy (-0.01 * config.avoidanceFactor / toFloat (List.length tooCloseBoids))
-
-                Nothing ->
-                    Vector2d.zero
+                        Nothing ->
+                            Vector2d.zero
+                )
 
         -- alignment
         velForAlignment =
-            seenBoids
-                |> List.map .vel
-                |> List.foldl Vector2d.sum Vector2d.zero
-                |> Vector2d.scaleBy (config.alignmentFactor / toFloat (List.length seenBoids))
+            velFromRule
+                config.alignmentRange
+                (\nearbyBoids ->
+                    if List.isEmpty nearbyBoids then
+                        Vector2d.zero
+
+                    else
+                        nearbyBoids
+                            |> List.map .vel
+                            |> List.foldl Vector2d.sum Vector2d.zero
+                            |> Vector2d.scaleBy
+                                (config.alignmentFactor / toFloat (List.length nearbyBoids))
+                )
+
+        -- separation
+        velForSeparation =
+            velFromRule
+                config.separationRange
+                (\nearbyBoids ->
+                    let
+                        centerOfMassOfTooCloseBoids =
+                            nearbyBoids
+                                |> List.map .pos
+                                |> Point2d.centroid
+                    in
+                    case centerOfMassOfTooCloseBoids of
+                        Just center ->
+                            center
+                                |> Vector2d.from boid.pos
+                                |> Vector2d.normalize
+                                |> Vector2d.scaleBy
+                                    (-1 * config.separationFactor / toFloat (List.length nearbyBoids))
+
+                        Nothing ->
+                            Vector2d.zero
+                )
 
         -- momentum
         velForMomentum =
@@ -359,19 +380,20 @@ moveBoid config delta otherBoids boid =
 
         -- wrap it all up
         newVel =
-            [ velForCenterOfMass
-            , velForRepulsion
+            [ velForCohesion
+            , velForSeparation
             , velForAlignment
-
-            --, velForMomentum
+            , velForMomentum
             ]
                 |> List.foldl Vector2d.sum Vector2d.zero
+                |> Vector2d.scaleBy (1 / 4)
                 |> (\v ->
                         if Vector2d.length v > config.maxSpeed then
                             v
                                 |> Vector2d.direction
                                 |> Maybe.map Direction2d.toVector
                                 |> Maybe.withDefault Vector2d.zero
+                                |> Vector2d.scaleBy config.maxSpeed
 
                         else
                             v
@@ -379,7 +401,7 @@ moveBoid config delta otherBoids boid =
 
         newPos =
             boid.pos
-                |> Point2d.translateBy (Vector2d.scaleBy delta newVel)
+                |> Point2d.translateBy (Vector2d.scaleBy (delta / 1000) newVel)
                 |> Point2d.coordinates
                 |> (\( x, y ) ->
                         ( if x < 0 then
@@ -405,37 +427,48 @@ moveBoid config delta otherBoids boid =
     { boid
         | pos = newPos
         , vel = newVel
-        , velForCenterOfMass = velForCenterOfMass
-        , velForRepulsion = velForRepulsion
+        , velForCohesion = velForCohesion
+        , velForAlignment = velForAlignment
+        , velForSeparation = velForSeparation
     }
 
 
-boidsInRange : ( Float, Float ) -> Float -> List Boid -> Point2d -> List Boid
-boidsInRange ( width, height ) range boids pos =
+wrappedPoses : ( Float, Float ) -> Point2d -> List Point2d
+wrappedPoses ( width, height ) pos =
     let
-        ( x1, y1 ) =
+        ( x, y ) =
             pos
                 |> Point2d.coordinates
     in
+    [ pos
+    , Point2d.fromCoordinates ( x, y - height )
+    , Point2d.fromCoordinates ( x, y + height )
+    , Point2d.fromCoordinates ( x - width, y )
+    , Point2d.fromCoordinates ( x - width, y - height )
+    , Point2d.fromCoordinates ( x - width, y + height )
+    , Point2d.fromCoordinates ( x + width, y )
+    , Point2d.fromCoordinates ( x + width, y - height )
+    , Point2d.fromCoordinates ( x + width, y + height )
+    ]
+
+
+boidsInRange : ( Float, Float ) -> Float -> List Boid -> Point2d -> List Boid
+boidsInRange viewport range boids pos =
     boids
-        |> List.filter
+        |> List.filterMap
             (\boid ->
                 let
-                    ( x2, y2 ) =
-                        boid.pos
-                            |> Point2d.coordinates
-
-                    xDist =
-                        min
-                            (abs (x1 - x2))
-                            (abs (abs (x1 - x2) - width))
-
-                    yDist =
-                        min
-                            (abs (y1 - y2))
-                            (abs (abs (y1 - y2) - height))
+                    closestPos =
+                        wrappedPoses viewport boid.pos
+                            |> List.Extra.minimumBy
+                                (Point2d.squaredDistanceFrom pos)
+                            |> Maybe.withDefault boid.pos
                 in
-                (xDist ^ 2 + yDist ^ 2) <= range ^ 2
+                if Point2d.squaredDistanceFrom pos closestPos <= range ^ 2 then
+                    Just { boid | pos = closestPos }
+
+                else
+                    Nothing
             )
 
 
@@ -574,7 +607,7 @@ viewBoids ({ config } as model) =
             ]
             []
         , Svg.g []
-            (List.map (viewBoid config) model.boids)
+            (List.map (viewWrappedBoid config) model.boids)
         ]
         |> E.html
         |> E.el
@@ -582,7 +615,36 @@ viewBoids ({ config } as model) =
             , E.height <| E.px <| round config.viewportHeight
             , EBorder.width 1
             , EBorder.color (E.rgb 0 0 0)
+            , E.inFront
+                (E.el
+                    [ E.alignBottom
+                    , E.alignRight
+                    ]
+                    (viewInspector model)
+                )
             ]
+
+
+viewInspector : Model -> Element Msg
+viewInspector model =
+    let
+        boid =
+            model.boids
+
+        rows =
+            [ ( "Cohesion Vel", boid ) ]
+    in
+    E.none
+
+
+viewWrappedBoid : Config -> Boid -> Svg Msg
+viewWrappedBoid config boid =
+    wrappedPoses ( config.viewportWidth, config.viewportHeight ) boid.pos
+        |> List.map
+            (\pos ->
+                viewBoid config { boid | pos = pos }
+            )
+        |> Svg.g []
 
 
 viewBoid : Config -> Boid -> Svg Msg
@@ -600,9 +662,9 @@ viewBoid config boid =
         arrows =
             if config.showVels then
                 Svg.g []
-                    [ viewArrow Color.black boid.pos boid.vel
-                    , viewArrow Color.gray boid.pos boid.velForCenterOfMass
-                    , viewArrow Color.gray boid.pos boid.velForRepulsion
+                    [ viewArrow Color.gray boid.pos boid.velForCohesion
+                    , viewArrow Color.gray boid.pos boid.velForAlignment
+                    , viewArrow Color.gray boid.pos boid.velForSeparation
                     ]
 
             else
@@ -611,20 +673,43 @@ viewBoid config boid =
         poses =
             [ Point2d.coordinates boid.pos
             ]
+
+        --vels =
+        --  [(config.showCohesionVel, boid.velForCohesion, Color.red)
+        --  ,(config.showAlignmentVel, config.velForAlignment, Color.green)
+        --  ,(config.showAlignmentVel, config.velForAlignment, Color.green)
     in
     poses
         |> List.map
             (\( x, y ) ->
                 Svg.g []
                     [ if config.showSight then
-                        Svg.circle
-                            [ Svg.Attributes.cx <| pxFloat x
-                            , Svg.Attributes.cy <| pxFloat y
-                            , Svg.Attributes.r <| pxFloat <| config.boidSight
-                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                            , Svg.Attributes.fill "none"
+                        Svg.g []
+                            [ Svg.circle
+                                [ Svg.Attributes.cx <| pxFloat x
+                                , Svg.Attributes.cy <| pxFloat y
+                                , Svg.Attributes.r <| pxFloat <| config.cohesionRange
+                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                                , Svg.Attributes.fill "none"
+                                ]
+                                []
+                            , Svg.circle
+                                [ Svg.Attributes.cx <| pxFloat x
+                                , Svg.Attributes.cy <| pxFloat y
+                                , Svg.Attributes.r <| pxFloat <| config.alignmentRange
+                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                                , Svg.Attributes.fill "none"
+                                ]
+                                []
+                            , Svg.circle
+                                [ Svg.Attributes.cx <| pxFloat x
+                                , Svg.Attributes.cy <| pxFloat y
+                                , Svg.Attributes.r <| pxFloat <| config.separationRange
+                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                                , Svg.Attributes.fill "none"
+                                ]
+                                []
                             ]
-                            []
 
                       else
                         Svg.g [] []
@@ -658,7 +743,7 @@ viewArrow color origin vec =
 
         ( x2, y2 ) =
             origin
-                |> Point2d.translateBy (Vector2d.scaleBy 1000 vec)
+                |> Point2d.translateBy (Vector2d.scaleBy 10 vec)
                 |> Point2d.coordinates
     in
     Svg.line

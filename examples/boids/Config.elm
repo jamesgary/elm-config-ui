@@ -13,13 +13,20 @@ type alias Config =
     , skyColor : Color
     , numBoids : Int
     , boidRad : Float
-    , boidSight : Float
-    , boidPersonalSpace : Float
-    , alignmentFactor : Float
-    , centerOfMassFactor : Float
-    , avoidanceFactor : Float
-    , momentumFactor : Float
     , maxSpeed : Float
+    , momentumFactor : Float
+    , showCohesionVel : Bool
+    , cohesionFactor : Float
+    , cohesionRange : Float
+    , showCohesionRange : Bool
+    , showAlignmentVel : Bool
+    , alignmentFactor : Float
+    , alignmentRange : Float
+    , showAlignmentRange : Bool
+    , showSeparationVel : Bool
+    , separationFactor : Float
+    , separationRange : Float
+    , showSeparationRange : Bool
     , showSight : Bool
     , showVels : Bool
     , configTableBgColor : Color
@@ -41,13 +48,20 @@ empty defaults =
     , skyColor = defaults.color
     , numBoids = defaults.int
     , boidRad = defaults.float
-    , boidSight = defaults.float
-    , boidPersonalSpace = defaults.float
-    , alignmentFactor = defaults.float
-    , centerOfMassFactor = defaults.float
-    , avoidanceFactor = defaults.float
-    , momentumFactor = defaults.float
     , maxSpeed = defaults.float
+    , momentumFactor = defaults.float
+    , showCohesionVel = defaults.bool
+    , cohesionFactor = defaults.float
+    , cohesionRange = defaults.float
+    , showCohesionRange = defaults.bool
+    , showAlignmentVel = defaults.bool
+    , alignmentFactor = defaults.float
+    , alignmentRange = defaults.float
+    , showAlignmentRange = defaults.bool
+    , showSeparationVel = defaults.bool
+    , separationFactor = defaults.float
+    , separationRange = defaults.float
+    , showSeparationRange = defaults.bool
     , showSight = defaults.bool
     , showVels = defaults.bool
     , configTableBgColor = defaults.color
@@ -90,40 +104,83 @@ logics =
         .boidRad
         (\a c -> { c | boidRad = a })
     , ConfigForm.float
-        "boidSight"
-        "Boid sight (px)"
-        .boidSight
-        (\a c -> { c | boidSight = a })
-    , ConfigForm.float
-        "boidPersonalSpace"
-        "Boid personal space (px)"
-        .boidPersonalSpace
-        (\a c -> { c | boidPersonalSpace = a })
-    , ConfigForm.float
-        "alignmentFactor"
-        "Alignment factor"
-        .alignmentFactor
-        (\a c -> { c | alignmentFactor = a })
-    , ConfigForm.float
-        "centerOfMassFactor"
-        "Center of mass factor"
-        .centerOfMassFactor
-        (\a c -> { c | centerOfMassFactor = a })
-    , ConfigForm.float
-        "avoidanceFactor"
-        "Avoidance factor"
-        .avoidanceFactor
-        (\a c -> { c | avoidanceFactor = a })
-    , ConfigForm.float
-        "momentumFactor"
-        "Momentum factor"
-        .momentumFactor
-        (\a c -> { c | momentumFactor = a })
-    , ConfigForm.float
         "maxSpeed"
         "Max speed"
         .maxSpeed
         (\a c -> { c | maxSpeed = a })
+    , ConfigForm.section
+        "Rule 0: Momentum"
+    , ConfigForm.float
+        "momentumFactor"
+        "Factor"
+        .momentumFactor
+        (\a c -> { c | momentumFactor = a })
+    , ConfigForm.section
+        "Rule 1: Cohesion"
+    , ConfigForm.bool
+        "showCohesionVel"
+        "Show vel"
+        .showCohesionVel
+        (\a c -> { c | showCohesionVel = a })
+    , ConfigForm.float
+        "cohesionFactor"
+        "Factor"
+        .cohesionFactor
+        (\a c -> { c | cohesionFactor = a })
+    , ConfigForm.float
+        "cohesionRange"
+        "Range"
+        .cohesionRange
+        (\a c -> { c | cohesionRange = a })
+    , ConfigForm.bool
+        "showCohesionRange"
+        "Show range"
+        .showCohesionRange
+        (\a c -> { c | showCohesionRange = a })
+    , ConfigForm.section
+        "Rule 2: Alignment"
+    , ConfigForm.bool
+        "showAlignmentVel"
+        "Show vel"
+        .showAlignmentVel
+        (\a c -> { c | showAlignmentVel = a })
+    , ConfigForm.float
+        "alignmentFactor"
+        "Factor"
+        .alignmentFactor
+        (\a c -> { c | alignmentFactor = a })
+    , ConfigForm.float
+        "alignmentRange"
+        "Range"
+        .alignmentRange
+        (\a c -> { c | alignmentRange = a })
+    , ConfigForm.bool
+        "showAlignmentRange"
+        "Show range"
+        .showAlignmentRange
+        (\a c -> { c | showAlignmentRange = a })
+    , ConfigForm.section
+        "Rule 3: Separation"
+    , ConfigForm.bool
+        "showSeparationVel"
+        "Show vel"
+        .showSeparationVel
+        (\a c -> { c | showSeparationVel = a })
+    , ConfigForm.float
+        "separationFactor"
+        "Factor"
+        .separationFactor
+        (\a c -> { c | separationFactor = a })
+    , ConfigForm.float
+        "separationRange"
+        "Range"
+        .separationRange
+        (\a c -> { c | separationRange = a })
+    , ConfigForm.bool
+        "showSeparationRange"
+        "Show range"
+        .showSeparationRange
+        (\a c -> { c | showSeparationRange = a })
     , ConfigForm.section
         "Boid Visuals"
     , ConfigForm.bool
