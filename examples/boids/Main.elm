@@ -93,6 +93,7 @@ type Msg
     | Tick Float
     | MouseMoved Point2d
     | MouseClicked Point2d
+    | MouseLeft
 
 
 
@@ -321,6 +322,11 @@ update msg model =
             , Cmd.none
             )
 
+        MouseLeft ->
+            ( { model | mousePos = Nothing }
+            , Cmd.none
+            )
+
 
 updateBoidCount : Model -> Model
 updateBoidCount model =
@@ -392,7 +398,12 @@ getHoveredBoidIndex model =
 moveBoids : Model -> Float -> Array Boid
 moveBoids model delta =
     model.boids
-        |> mapOthers (moveBoid model.config delta)
+        |> mapOthers
+            (moveBoid
+                model.config
+                model.mousePos
+                delta
+            )
 
 
 mapOthers : (List a -> a -> b) -> Array a -> Array b
@@ -411,21 +422,22 @@ mapOthers func array =
             )
 
 
-moveBoid : Config -> Float -> List Boid -> Boid -> Boid
-moveBoid config delta otherBoids boid =
+moveBoid : Config -> Maybe Point2d -> Float -> List Boid -> Boid -> Boid
+moveBoid config maybeMousePos delta otherBoids boid =
     let
-        velFromRule : Float -> (List Boid -> Vector2d) -> Vector2d
-        velFromRule range ruleFunc =
+        velFromRule : Point2d -> Float -> (List Boid -> Vector2d) -> Vector2d
+        velFromRule pos range ruleFunc =
             boidsInRange
                 ( config.viewportWidth, config.viewportHeight )
                 range
                 otherBoids
-                boid.pos
+                pos
                 |> ruleFunc
 
         -- cohesion (center of mass)
         velForCohesion =
             velFromRule
+                boid.pos
                 config.cohesionRange
                 (\nearbyBoids ->
                     let
@@ -451,6 +463,7 @@ moveBoid config delta otherBoids boid =
         -- alignment
         velForAlignment =
             velFromRule
+                boid.pos
                 config.alignmentRange
                 (\nearbyBoids ->
                     if List.isEmpty nearbyBoids then
@@ -469,6 +482,7 @@ moveBoid config delta otherBoids boid =
         -- separation
         velForSeparation =
             velFromRule
+                boid.pos
                 config.separationRange
                 (\nearbyBoids ->
                     let
@@ -491,20 +505,45 @@ moveBoid config delta otherBoids boid =
                             Vector2d.zero
                 )
 
+        -- mouse
+        velForMouse =
+            case maybeMousePos of
+                Just mousePos ->
+                    let
+                        distSq =
+                            Point2d.squaredDistanceFrom boid.pos mousePos
+                    in
+                    if distSq <= config.mouseRange ^ 2 then
+                        boid.pos
+                            |> Vector2d.from mousePos
+                            |> Vector2d.normalize
+                            --|> Vector2d.scaleBy (config.mouseFactor / logBase config.mouseLogBase (sqrt distSq / config.mouseRange))
+                            |> Vector2d.scaleBy (config.mouseFactor ^ config.mouseExponent)
+
+                    else
+                        Vector2d.zero
+
+                Nothing ->
+                    Vector2d.zero
+
         -- momentum
         velForMomentum =
             boid.vel
                 |> Vector2d.scaleBy config.momentumFactor
 
         -- wrap it all up
-        newVel =
+        allVels =
             [ velForCohesion
             , velForSeparation
             , velForAlignment
+            , velForMouse
             , velForMomentum
             ]
+
+        newVel =
+            allVels
                 |> List.foldl Vector2d.sum Vector2d.zero
-                |> Vector2d.scaleBy (1 / 4)
+                |> Vector2d.scaleBy (1 / toFloat (List.length allVels))
                 |> (\v ->
                         if Vector2d.length v > config.maxSpeed then
                             v
@@ -737,6 +776,7 @@ viewBoids ({ config } as model) =
         , Svg.Attributes.height "100%"
         , Pointer.onMove (relativePos >> MouseMoved)
         , Pointer.onDown (relativePos >> MouseClicked)
+        , Pointer.onLeave (\_ -> MouseLeft)
         ]
         [ -- sky
           Svg.rect

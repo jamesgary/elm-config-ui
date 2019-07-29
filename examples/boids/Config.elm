@@ -15,18 +15,18 @@ type alias Config =
     , boidRad : Float
     , maxSpeed : Float
     , momentumFactor : Float
-    , showCohesionVel : Bool
     , cohesionFactor : Float
     , cohesionRange : Float
     , showCohesionRange : Bool
-    , showAlignmentVel : Bool
     , alignmentFactor : Float
     , alignmentRange : Float
     , showAlignmentRange : Bool
-    , showSeparationVel : Bool
     , separationFactor : Float
     , separationRange : Float
     , showSeparationRange : Bool
+    , mouseFactor : Float
+    , mouseExponent : Float
+    , mouseRange : Float
     , showSight : Bool
     , showVels : Bool
     , configTableBgColor : Color
@@ -50,18 +50,18 @@ empty defaults =
     , boidRad = defaults.float
     , maxSpeed = defaults.float
     , momentumFactor = defaults.float
-    , showCohesionVel = defaults.bool
     , cohesionFactor = defaults.float
     , cohesionRange = defaults.float
     , showCohesionRange = defaults.bool
-    , showAlignmentVel = defaults.bool
     , alignmentFactor = defaults.float
     , alignmentRange = defaults.float
     , showAlignmentRange = defaults.bool
-    , showSeparationVel = defaults.bool
     , separationFactor = defaults.float
     , separationRange = defaults.float
     , showSeparationRange = defaults.bool
+    , mouseFactor = defaults.float
+    , mouseExponent = defaults.float
+    , mouseRange = defaults.float
     , showSight = defaults.bool
     , showVels = defaults.bool
     , configTableBgColor = defaults.color
@@ -117,11 +117,6 @@ logics =
         (\a c -> { c | momentumFactor = a })
     , ConfigForm.section
         "Rule 1: Cohesion"
-    , ConfigForm.bool
-        "showCohesionVel"
-        "Show vel"
-        .showCohesionVel
-        (\a c -> { c | showCohesionVel = a })
     , ConfigForm.float
         "cohesionFactor"
         "Factor"
@@ -139,11 +134,6 @@ logics =
         (\a c -> { c | showCohesionRange = a })
     , ConfigForm.section
         "Rule 2: Alignment"
-    , ConfigForm.bool
-        "showAlignmentVel"
-        "Show vel"
-        .showAlignmentVel
-        (\a c -> { c | showAlignmentVel = a })
     , ConfigForm.float
         "alignmentFactor"
         "Factor"
@@ -161,11 +151,6 @@ logics =
         (\a c -> { c | showAlignmentRange = a })
     , ConfigForm.section
         "Rule 3: Separation"
-    , ConfigForm.bool
-        "showSeparationVel"
-        "Show vel"
-        .showSeparationVel
-        (\a c -> { c | showSeparationVel = a })
     , ConfigForm.float
         "separationFactor"
         "Factor"
@@ -181,6 +166,23 @@ logics =
         "Show range"
         .showSeparationRange
         (\a c -> { c | showSeparationRange = a })
+    , ConfigForm.section
+        "Rule 4: Mouse"
+    , ConfigForm.float
+        "mouseFactor"
+        "Factor"
+        .mouseFactor
+        (\a c -> { c | mouseFactor = a })
+    , ConfigForm.float
+        "mouseExponent"
+        "Exponent"
+        .mouseExponent
+        (\a c -> { c | mouseExponent = a })
+    , ConfigForm.float
+        "mouseRange"
+        "Range"
+        .mouseRange
+        (\a c -> { c | mouseRange = a })
     , ConfigForm.section
         "Boid Visuals"
     , ConfigForm.bool
