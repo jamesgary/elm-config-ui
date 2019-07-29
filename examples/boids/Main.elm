@@ -1,5 +1,7 @@
 port module Main exposing (main)
 
+import Array exposing (Array)
+import Array.Extra
 import Browser
 import Browser.Events
 import Color exposing (Color)
@@ -15,12 +17,15 @@ import Element.Font as EFont
 import Element.Input as EInput
 import Html exposing (Html)
 import Html.Attributes
+import Html.Events.Extra.Pointer as Pointer
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
 import List.Extra
 import Point2d exposing (Point2d)
 import Random
+import Random.Array
+import Round
 import Svg exposing (Svg)
 import Svg.Attributes
 import Vector2d exposing (Vector2d)
@@ -45,8 +50,10 @@ type alias Model =
     { config : Config
     , configForm : ConfigForm Config
     , isConfigOpen : Bool
-    , boids : List Boid
+    , boids : Array Boid
     , seed : Random.Seed
+    , mousePos : Maybe Point2d
+    , selectedBoidIndex : Maybe Int
     }
 
 
@@ -66,6 +73,8 @@ type Msg
     | ClickedOpenConfig
     | ClickedCloseConfig
     | Tick Float
+    | MouseMoved Point2d
+    | MouseClicked Point2d
 
 
 
@@ -128,7 +137,7 @@ init jsonFlags =
 
                 ( boids, seed ) =
                     Random.step
-                        (Random.list config.numBoids (boidGenerator config))
+                        (Random.Array.array config.numBoids (boidGenerator config))
                         (Random.initialSeed flags.timestamp)
             in
             ( { config = config
@@ -136,6 +145,8 @@ init jsonFlags =
               , isConfigOpen = flags.localStorage.isConfigOpen
               , boids = boids
               , seed = seed
+              , mousePos = Nothing
+              , selectedBoidIndex = Nothing
               }
             , Cmd.none
             )
@@ -263,35 +274,72 @@ update msg model =
             , Cmd.none
             )
 
+        MouseMoved pos ->
+            ( { model | mousePos = Just pos }
+            , Cmd.none
+            )
 
-moveBoids : Model -> Float -> List Boid
+        MouseClicked pos ->
+            ( { model
+                | selectedBoidIndex =
+                    getBoidAt pos model
+              }
+            , Cmd.none
+            )
+
+
+getBoidAt : Point2d -> Model -> Maybe Int
+getBoidAt pos model =
+    -- TODO torus
+    model.boids
+        |> Array.toIndexedList
+        |> List.Extra.find
+            (\( i, boid ) ->
+                (boid.pos
+                    |> Point2d.squaredDistanceFrom pos
+                )
+                    <= (model.config.boidRad ^ 2)
+            )
+        |> Maybe.map Tuple.first
+
+
+getHoveredBoidIndex : Model -> Maybe Int
+getHoveredBoidIndex model =
+    -- TODO torus
+    case model.mousePos of
+        Just mousePos ->
+            model.boids
+                |> Array.toIndexedList
+                |> List.Extra.find
+                    (\( i, boid ) ->
+                        (boid.pos
+                            |> Point2d.squaredDistanceFrom mousePos
+                        )
+                            <= (model.config.boidRad ^ 2)
+                    )
+                |> Maybe.map Tuple.first
+
+        Nothing ->
+            Nothing
+
+
+moveBoids : Model -> Float -> Array Boid
 moveBoids model delta =
     model.boids
         |> mapOthers (moveBoid model.config delta)
 
 
-mapOthers : (List a -> a -> b) -> List a -> List b
-mapOthers func list =
+mapOthers : (List a -> a -> b) -> Array a -> Array b
+mapOthers func array =
     -- apply a func to an item and all OTHER items in the list
-    let
-        indexedList : List ( Int, a )
-        indexedList =
-            list
-                |> List.indexedMap Tuple.pair
-
-        dict : Dict Int a
-        dict =
-            indexedList
-                |> Dict.fromList
-    in
-    indexedList
-        |> List.map
-            (\( i, val ) ->
+    array
+        |> Array.indexedMap
+            (\i val ->
                 let
                     otherVals =
-                        dict
-                            |> Dict.remove i
-                            |> Dict.values
+                        array
+                            |> Array.Extra.removeAt i
+                            |> Array.toList
                 in
                 func otherVals val
             )
@@ -347,7 +395,9 @@ moveBoid config delta otherBoids boid =
                             |> List.map .vel
                             |> List.foldl Vector2d.sum Vector2d.zero
                             |> Vector2d.scaleBy
-                                (config.alignmentFactor / toFloat (List.length nearbyBoids))
+                                (config.alignmentFactor
+                                    / toFloat (List.length nearbyBoids)
+                                )
                 )
 
         -- separation
@@ -367,7 +417,9 @@ moveBoid config delta otherBoids boid =
                                 |> Vector2d.from boid.pos
                                 |> Vector2d.normalize
                                 |> Vector2d.scaleBy
-                                    (-1 * config.separationFactor / toFloat (List.length nearbyBoids))
+                                    (-config.separationFactor
+                                        / toFloat (List.length nearbyBoids)
+                                    )
 
                         Nothing ->
                             Vector2d.zero
@@ -470,6 +522,21 @@ boidsInRange viewport range boids pos =
                 else
                     Nothing
             )
+
+
+vector2dToStr : Vector2d -> String
+vector2dToStr v =
+    v
+        |> Vector2d.components
+        |> (\( x, y ) ->
+                [ "("
+                , Round.round 2 x
+                , " , "
+                , Round.round 2 y
+                , ")"
+                ]
+                    |> String.concat
+           )
 
 
 type ReceiveMsg
@@ -596,6 +663,8 @@ viewBoids ({ config } as model) =
     Svg.svg
         [ Svg.Attributes.width "100%"
         , Svg.Attributes.height "100%"
+        , Pointer.onMove (relativePos >> MouseMoved)
+        , Pointer.onDown (relativePos >> MouseClicked)
         ]
         [ -- sky
           Svg.rect
@@ -607,7 +676,13 @@ viewBoids ({ config } as model) =
             ]
             []
         , Svg.g []
-            (List.map (viewWrappedBoid config) model.boids)
+            (model.boids
+                |> Array.toIndexedList
+                |> List.map
+                    (viewWrappedBoid config
+                        [ model.selectedBoidIndex, getHoveredBoidIndex model ]
+                    )
+            )
         ]
         |> E.html
         |> E.el
@@ -625,30 +700,70 @@ viewBoids ({ config } as model) =
             ]
 
 
+relativePos : Pointer.Event -> Point2d
+relativePos event =
+    event.pointer.offsetPos
+        |> Point2d.fromCoordinates
+
+
 viewInspector : Model -> Element Msg
 viewInspector model =
+    case model.selectedBoidIndex of
+        Just index ->
+            case Array.get index model.boids of
+                Just boid ->
+                    let
+                        rows =
+                            [ ( "Cohesion Vel", vector2dToStr boid.velForCohesion |> E.text )
+                            , ( "Alignment Vel", vector2dToStr boid.velForAlignment |> E.text )
+                            , ( "Separation Vel", vector2dToStr boid.velForSeparation |> E.text )
+                            , ( "Vel", vector2dToStr boid.vel |> E.text )
+                            ]
+                    in
+                    E.el
+                        [ EBackground.color (E.rgba 1 1 1 0.85)
+                        , E.padding 15
+                        ]
+                        (E.table
+                            [ E.spacing 5 ]
+                            { data = rows
+                            , columns =
+                                [ { header = E.none
+                                  , width = E.shrink
+                                  , view = Tuple.first >> E.text
+                                  }
+                                , { header = E.none
+                                  , width = E.shrink
+                                  , view = Tuple.second
+                                  }
+                                ]
+                            }
+                        )
+
+                Nothing ->
+                    E.none
+
+        Nothing ->
+            E.none
+
+
+viewWrappedBoid : Config -> List (Maybe Int) -> ( Int, Boid ) -> Svg Msg
+viewWrappedBoid config selectedIndices ( index, boid ) =
     let
-        boid =
-            model.boids
-
-        rows =
-            [ ( "Cohesion Vel", boid ) ]
+        isSelected =
+            selectedIndices
+                |> List.any (\i -> i == Just index)
     in
-    E.none
-
-
-viewWrappedBoid : Config -> Boid -> Svg Msg
-viewWrappedBoid config boid =
     wrappedPoses ( config.viewportWidth, config.viewportHeight ) boid.pos
         |> List.map
             (\pos ->
-                viewBoid config { boid | pos = pos }
+                viewBoid config isSelected { boid | pos = pos }
             )
         |> Svg.g []
 
 
-viewBoid : Config -> Boid -> Svg Msg
-viewBoid config boid =
+viewBoid : Config -> Bool -> Boid -> Svg Msg
+viewBoid config isSelected boid =
     let
         ( beakEndpointX, beakEndpointY ) =
             boid.pos
@@ -720,6 +835,20 @@ viewBoid config boid =
                         , Svg.Attributes.fill <| Color.toCssString <| boid.color
                         ]
                         []
+                    , if isSelected then
+                        Svg.circle
+                            [ Svg.Attributes.cx <| pxFloat x
+                            , Svg.Attributes.cy <| pxFloat y
+                            , Svg.Attributes.r <| pxFloat <| (1.2 * config.boidRad)
+                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                            , Svg.Attributes.strokeDasharray "8 4"
+                            , Svg.Attributes.strokeWidth "2"
+                            , Svg.Attributes.fill "none"
+                            ]
+                            []
+
+                      else
+                        Svg.g [] []
                     , Svg.line
                         [ Svg.Attributes.x1 <| pxFloat x
                         , Svg.Attributes.y1 <| pxFloat y
