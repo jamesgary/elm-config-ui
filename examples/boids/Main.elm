@@ -224,6 +224,7 @@ update msg model =
                     }
             in
             ( newModel
+                |> updateBoidCount
             , Cmd.batch
                 [ saveToLocalStorageCmd newModel
                 , case maybeJsonCmd of
@@ -260,6 +261,7 @@ update msg model =
                                     }
                             in
                             ( newModel
+                                |> updateBoidCount
                             , Cmd.batch
                                 [ saveToLocalStorageCmd newModel
                                 , case maybeJsonCmd of
@@ -318,6 +320,38 @@ update msg model =
               }
             , Cmd.none
             )
+
+
+updateBoidCount : Model -> Model
+updateBoidCount model =
+    let
+        boidDiff =
+            model.config.numBoids - Array.length model.boids
+    in
+    if boidDiff > 0 then
+        -- add more
+        let
+            ( newBoids, seed ) =
+                Random.step
+                    (Random.Array.array boidDiff (boidGenerator model.config))
+                    model.seed
+        in
+        { model
+            | boids =
+                model.boids
+                    |> Array.append newBoids
+            , seed = seed
+        }
+
+    else if boidDiff < 0 then
+        { model
+            | boids =
+                model.boids
+                    |> Array.slice 0 model.config.numBoids
+        }
+
+    else
+        model
 
 
 getBoidAt : Point2d -> Model -> Maybe Int

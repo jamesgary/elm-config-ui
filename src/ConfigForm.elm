@@ -70,10 +70,12 @@ import Element.Input as EInput
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import Html.Events.Extra.Pointer as Pointer
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE
 import OrderedDict exposing (OrderedDict)
+import Round
 
 
 type alias ConfigForm config =
@@ -97,6 +99,7 @@ type Field
 type alias IntFieldData =
     { val : Int
     , str : String
+    , power : Int
     }
 
 
@@ -346,7 +349,9 @@ encodeField : Field -> Maybe JE.Value
 encodeField field =
     case field of
         IntField data ->
-            JE.int data.val
+            -- TODO be able to encode w/o dev data like power
+            ( data.val, data.power )
+                |> tuple2Encoder JE.int JE.int
                 |> Just
 
         FloatField data ->
@@ -442,11 +447,15 @@ updateFromJson logics config configForm json =
                                                     (\maybeField ->
                                                         case maybeField of
                                                             Just (IntField data) ->
+                                                                let
+                                                                    newVal =
+                                                                        data.val + (num * (10 ^ data.power))
+                                                                in
                                                                 Just
                                                                     (IntField
                                                                         { data
-                                                                            | val = data.val + num
-                                                                            , str = String.fromInt (data.val + num)
+                                                                            | val = newVal
+                                                                            , str = formatPoweredInt data.power newVal
                                                                         }
                                                                     )
 
@@ -459,7 +468,7 @@ updateFromJson logics config configForm json =
                                                                     (FloatField
                                                                         { data
                                                                             | val = newVal
-                                                                            , str = String.fromFloat newVal
+                                                                            , str = formatPoweredFloat data.power newVal
                                                                         }
                                                                     )
 
@@ -518,6 +527,26 @@ portDecoder =
             )
 
 
+formatPoweredInt : Int -> Int -> String
+formatPoweredInt power val =
+    Round.round -power (toFloat val)
+
+
+formatPoweredFloat : Int -> Float -> String
+formatPoweredFloat power val =
+    Round.round -power val
+
+
+poweredInt : Int -> Int -> Int
+poweredInt power val =
+    round <| Round.roundNum -power (toFloat val)
+
+
+poweredFloat : Int -> Float -> Float
+poweredFloat power val =
+    Round.roundNum -power val
+
+
 decodeConfigForm : List (Logic config) -> config -> JE.Value -> ConfigForm config
 decodeConfigForm logics config json =
     { file = config
@@ -530,19 +559,32 @@ decodeConfigForm logics config json =
                         IntLogic getter setter ->
                             let
                                 decoder =
-                                    JD.at [ "fields", logic.fieldName ] JD.int
+                                    JD.at [ "fields", logic.fieldName ]
+                                        (JD.oneOf
+                                            [ JD.int
+                                                |> JD.map
+                                                    (\i ->
+                                                        -- got a prod val
+                                                        ( i, 0 )
+                                                    )
+                                            , JD.map2 Tuple.pair
+                                                (JD.index 0 JD.int)
+                                                (JD.index 1 JD.int)
+                                            ]
+                                        )
 
-                                val =
+                                ( val, power ) =
                                     case JD.decodeValue decoder json of
                                         Ok v ->
                                             v
 
                                         Err err ->
-                                            getter config
+                                            ( getter config, 0 )
                             in
                             IntField
                                 { val = val
-                                , str = String.fromInt val
+                                , str = formatPoweredInt power val
+                                , power = power
                                 }
 
                         FloatLogic getter setter ->
@@ -572,7 +614,7 @@ decodeConfigForm logics config json =
                             in
                             FloatField
                                 { val = val
-                                , str = String.fromFloat val
+                                , str = formatPoweredFloat power val
                                 , power = power
                                 }
 
@@ -651,36 +693,6 @@ decodeConfigForm logics config json =
 
 
 -- JSON encode/decoder stuff
-{-
-   floatDecoder : JD.Decoder FloatFieldData
-   floatDecoder =
-       let
-           d =
-               JD.oneOf
-                   [ JD.float
-                       |> JD.map
-                           (\f ->
-                               -- got a prod val
-                               ( f, 0 )
-                           )
-                   , JD.map2 Tuple.pair
-                       (JD.index 0 JD.float)
-                       (JD.index 1 JD.int)
-                   ]
-
-           ( val, power ) =
-               case JD.decodeValue decoder json of
-                   Ok v ->
-                       v
-
-                   Err err ->
-                       ( getter config, 0 )
-       in
-       { val = val
-       , str = String.fromFloat val
-       , power = power
-       }
--}
 
 
 decodeConfig : List (Logic config) -> config -> JE.Value -> config
@@ -767,14 +779,103 @@ viewElement options logics configForm =
             ]
 
         resizeAttrs logic =
+            let
+                makePowerEl power newIncField newDecField isDownDisabled =
+                    E.row
+                        [ E.alignRight
+                        , E.moveDown 6
+                        , E.paddingXY 5 2
+                        , EFont.size 16
+                        , EBackground.color
+                            (colorForE options.labelHighlightBgColor)
+                        ]
+                        [ E.el
+                            [ E.paddingXY 5 0 ]
+                            (E.text ("x" ++ String.fromInt (10 ^ power)))
+                        , E.el
+                            [ EFont.size (0.8 * toFloat options.fontSize |> round)
+                            , E.moveDown 1
+                            , Pointer.onWithOptions "pointerdown"
+                                { stopPropagation = True
+                                , preventDefault = True
+                                }
+                                (\_ -> ChangedConfigForm logic.fieldName newIncField)
+                                |> E.htmlAttribute
+                            , if isDownDisabled then
+                                E.alpha 0.4
+
+                              else
+                                E.pointer
+                            ]
+                            -- down
+                            (E.text "↙️")
+                        , E.el
+                            [ EFont.size (0.8 * toFloat options.fontSize |> round)
+                            , E.moveDown 1
+                            , Pointer.onWithOptions "pointerdown"
+                                { stopPropagation = True
+                                , preventDefault = True
+                                }
+                                (\_ -> ChangedConfigForm logic.fieldName newDecField)
+                                |> E.htmlAttribute
+                            , E.pointer
+                            ]
+                            -- up
+                            (E.text "↗️")
+                        ]
+
+                powerEl =
+                    case OrderedDict.get logic.fieldName configForm.fields of
+                        Just (IntField data) ->
+                            makePowerEl data.power
+                                (IntField
+                                    { data
+                                        | power = data.power - 1 |> max 0
+                                        , str = formatPoweredInt (data.power - 1 |> max 0) data.val
+                                        , val = poweredInt (data.power - 1 |> max 0) data.val
+                                    }
+                                )
+                                (IntField
+                                    { data
+                                        | power = data.power + 1
+                                        , str = formatPoweredInt (data.power + 1) data.val
+                                        , val = poweredInt (data.power + 1) data.val
+                                    }
+                                )
+                                (data.power <= 0)
+
+                        Just (FloatField data) ->
+                            makePowerEl data.power
+                                (FloatField
+                                    { data
+                                        | power = data.power - 1
+                                        , str = formatPoweredFloat (data.power - 1) data.val
+                                        , val = poweredFloat (data.power - 1) data.val
+                                    }
+                                )
+                                (FloatField
+                                    { data
+                                        | power = data.power + 1
+                                        , str = formatPoweredFloat (data.power + 1) data.val
+                                        , val = poweredFloat (data.power + 1) data.val
+                                    }
+                                )
+                                False
+
+                        _ ->
+                            E.none
+            in
             [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
             , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
+            , E.transparent True
             , E.mouseOver
                 [ EBackground.color
                     (colorForE options.labelHighlightBgColor)
+                , E.transparent False
                 ]
             , E.width E.fill
             , E.height E.fill
+            , E.inFront powerEl
             ]
 
         closeAttrs i logic =
@@ -860,68 +961,18 @@ viewElement options logics configForm =
                                 []
 
                             IntLogic getter setter ->
-                                resizeAttrs logic
+                                [ E.inFront
+                                    (E.el
+                                        (defaultAttrs ++ resizeAttrs logic)
+                                        (E.el [ E.moveDown 4 ] (E.text logic.label))
+                                    )
+                                ]
 
                             FloatLogic getter setter ->
-                                let
-                                    powerEl =
-                                        case OrderedDict.get logic.fieldName configForm.fields of
-                                            Just (FloatField data) ->
-                                                E.row
-                                                    [ E.alignRight
-
-                                                    --, E.moveDown 28
-                                                    , E.paddingXY 5 2
-                                                    , EFont.size 16
-                                                    , EBackground.color
-                                                        (colorForE options.labelHighlightBgColor)
-                                                    ]
-                                                    [ E.el
-                                                        [ E.paddingXY 5 0 ]
-                                                        (E.text ("x" ++ String.fromInt (10 ^ data.power)))
-                                                    , EInput.button
-                                                        [ EFont.size (0.8 * toFloat options.fontSize |> round)
-                                                        , E.moveDown 1
-                                                        ]
-                                                        { label = E.text "↙️" -- down
-                                                        , onPress =
-                                                            Just
-                                                                (ChangedConfigForm
-                                                                    logic.fieldName
-                                                                    (FloatField
-                                                                        { data
-                                                                            | power = data.power - 1
-                                                                        }
-                                                                    )
-                                                                )
-                                                        }
-                                                    , EInput.button
-                                                        [ EFont.size (0.8 * toFloat options.fontSize |> round)
-                                                        , E.moveDown 1
-                                                        ]
-                                                        { label = E.text "↗️" -- up
-                                                        , onPress =
-                                                            Just
-                                                                (ChangedConfigForm
-                                                                    logic.fieldName
-                                                                    (FloatField
-                                                                        { data
-                                                                            | power = data.power + 1
-                                                                        }
-                                                                    )
-                                                                )
-                                                        }
-                                                    ]
-
-                                            _ ->
-                                                E.none
-                                in
-                                [ E.width E.fill
-                                , E.inFront
-                                    (E.row [ E.width E.fill, E.height E.fill ]
-                                        [ E.el (resizeAttrs logic) E.none
-                                        , powerEl
-                                        ]
+                                [ E.inFront
+                                    (E.el
+                                        (defaultAttrs ++ resizeAttrs logic)
+                                        (E.el [ E.moveDown 4 ] (E.text logic.label))
                                     )
                                 ]
 
