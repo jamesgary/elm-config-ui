@@ -15,6 +15,7 @@ import Element.Border as EBorder
 import Element.Events as EEvents
 import Element.Font as EFont
 import Element.Input as EInput
+import Fps exposing (Fps)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events.Extra.Pointer as Pointer
@@ -72,6 +73,7 @@ type alias Model =
     , seed : Random.Seed
     , mousePos : Maybe Point2d
     , selectedBoidIndex : Maybe Int
+    , fps : Fps
     }
 
 
@@ -167,6 +169,7 @@ init jsonFlags =
                 , seed = seed
                 , mousePos = Nothing
                 , selectedBoidIndex = Nothing
+                , fps = Fps.init Fps.defaultConfig
                 }
             , Cmd.none
             )
@@ -305,7 +308,10 @@ update msg model =
             )
 
         Tick delta ->
-            ( { model | boids = moveBoids model delta }
+            ( { model
+                | boids = moveBoids model delta
+                , fps = Fps.tick delta model.fps
+              }
             , Cmd.none
             )
 
@@ -495,7 +501,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
                         Just center ->
                             center
                                 |> Vector2d.from boid.pos
-                                |> Vector2d.normalize
+                                --|> Vector2d.normalize
                                 |> Vector2d.scaleBy
                                     (-config.separationFactor
                                         / toFloat (List.length nearbyBoids)
@@ -518,7 +524,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
                             |> Vector2d.from mousePos
                             |> Vector2d.normalize
                             --|> Vector2d.scaleBy (config.mouseFactor / logBase config.mouseLogBase (sqrt distSq / config.mouseRange))
-                            |> Vector2d.scaleBy (config.mouseFactor ^ config.mouseExponent)
+                            |> Vector2d.scaleBy (-1 * config.mouseFactor ^ config.mouseExponent)
 
                     else
                         Vector2d.zero
@@ -689,6 +695,7 @@ view modelResult =
         Ok model ->
             E.layout
                 [ E.inFront <| viewConfig model
+                , E.inFront <| E.html <| Fps.view model.fps
                 , E.width E.fill
                 , E.height E.fill
                 , E.padding 20

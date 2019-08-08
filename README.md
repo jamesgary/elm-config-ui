@@ -1,11 +1,80 @@
 # elm-config-gui
 
-Have a bunch of magic numbers you want to tweak in the browser? Try `elm-config-gui`!
+Have a bunch of magic numbers you want to tweak in the browser? Tired of making a `Msg` for every single field? Try `elm-config-gui`!
 
 ## Install
 
 ```
 npm install -g chokidir
+```
+
+Let's say you want a config record that looks like this:
+
+```
+type alias Config =
+  { headerFontSize : Int
+  , bodyFontSize : Int
+  , backgroundColor : Color
+  }
+```
+
+Update your **Model** to include both `Config` and `ConfigForm Config`:
+
+```
+-- Main.elm
+
+type alias Model =
+    { config : Config
+    , configForm : ConfigForm Config
+    , ...
+    }
+```
+
+Add a new `Msg` value `ConfigFormMsg (ConfigForm.Msg Config)`
+
+```
+-- Main.elm
+
+type Msg
+    = ConfigFormMsg (ConfigForm.Msg Config)
+    | ReceivedFromPort Json.Encode.Value -- if you haven't already, you should have a msg for incoming port messages
+    | ...
+```
+
+When you receive a `ConfigFormMsg` or `ReceivedFromPort` for a `ConfigFormPortMsg`, you can call
+
+Your flags should contain two things: config data stored in localstorage (this gets persisted automatically as you tweak config values), and config data stored in a file (this must be saved manually and is used when a user doesn't have any config values in their localstorage).
+
+```
+-- index.html
+
+<!-- compiled elm code -->
+<script src="./js/compiled/main.js"></script>
+
+<!-- config helper -->
+<script src="./js/config.js"></script>
+
+<script>
+  const node = document.getElementById('elm');
+
+  fetch('./data/config.json')
+    .then(function(resp) { return resp.json() })
+    .then(function(json) { init(json) });
+
+  function init(configFile) {
+    // start main Elm app
+    let app = Elm.Main.init({
+      node: node,
+      flags: {
+        localStorage: JSON.parse(localStorage.getItem("my_cool_app")),
+        configFile: configFile,
+      }
+    });
+
+    // start configForm
+    ConfigForm.init(app.ports.receiveFromPort);
+  }
+</script>
 ```
 
 ## Running
@@ -105,12 +174,3 @@ attributes
 
 misc
 - isWrapped (for row vs wrappedRow)
-
-
-## DEEPER
-
-painful to slide numbers that are too big (or small)
-easy way to change granularity.
-How about two arrows [^][v] that power by 10. It gets saved in the configForm.
-( / 1,000)
-( * 100)

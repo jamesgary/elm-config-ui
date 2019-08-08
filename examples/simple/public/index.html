@@ -13,7 +13,7 @@
     <script src="./js/config.js"></script>
 
     <script>
-      const LOCALSTORAGE_KEY = "config_example";
+      const LOCALSTORAGE_KEY = "config_example_boids";
 
       const node = document.getElementById('elm');
 
@@ -28,10 +28,11 @@
           flags: {
             localStorage: JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY)),
             configFile: configFile,
+            timestamp: Date.now(),
           }
         });
 
-        ConfigForm.init(app.ports.receiveFromPort);
+        ConfigForm.init(app);
         /* -- meta
           shouldShowCopyConfigBtn: field
         */

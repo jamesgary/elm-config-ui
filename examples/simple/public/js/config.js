@@ -3,11 +3,10 @@
 let hasFirstMouseMoveEventPassedDueToWebkitBug = false;
 
 let ConfigForm = {
-  init: function(port) {
+  init: function(app) {
     function updatePosition(e) {
       if (hasFirstMouseMoveEventPassedDueToWebkitBug) {
-        console.log(e);
-        port.send({
+        app.ports.receiveFromPort.send({
           id: "CONFIG",
           val: {
             id: "MOUSE_MOVE",
@@ -22,7 +21,7 @@ let ConfigForm = {
 
     function mouseUp(e) {
       document.exitPointerLock();
-      port.send({
+      app.ports.receiveFromPort.send({
         id: "CONFIG",
         val: {
           id: "MOUSE_UP",

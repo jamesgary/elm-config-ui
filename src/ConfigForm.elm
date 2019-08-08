@@ -497,9 +497,10 @@ updateFromJson logics config configForm json =
         Err err ->
             let
                 _ =
-                    Debug.log
-                        "Could not decode incoming config port msg: "
-                        (JD.errorToString err)
+                    --Debug.log
+                    --    "Could not decode incoming config port msg: "
+                    --    (JD.errorToString err)
+                    0
             in
             ( config, configForm, Nothing )
 

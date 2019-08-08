@@ -1,0 +1,52 @@
+{
+  "viewportWidth": 958,
+  "viewportHeight": 740,
+  "skyColor": {
+    "r": 0.6845333333333334,
+    "g": 0.9687999999999998,
+    "b": 0.9687999999999999,
+    "a": 1
+  },
+  "numBoids": 92,
+  "boidRad": 10.000000000000021,
+  "maxSpeed": 251.6899999999987,
+  "momentumFactor": 5.000000000000011,
+  "cohesionFactor": 117,
+  "cohesionRange": 108,
+  "showCohesionRange": true,
+  "alignmentFactor": 0.75,
+  "alignmentRange": 106,
+  "showAlignmentRange": true,
+  "separationFactor": 500,
+  "separationRange": 27,
+  "showSeparationRange": true,
+  "mouseFactor": 5420,
+  "mouseExponent": 0.6689999999999999,
+  "mouseRange": 197,
+  "showSight": false,
+  "showVels": false,
+  "configTableBgColor": {
+    "r": 0.9347833333333334,
+    "g": 0.9371666666666667,
+    "b": 0.8895,
+    "a": 1
+  },
+  "configTableBorderWidth": 1,
+  "configTableBorderColor": {
+    "r": 0.30160000000000003,
+    "g": 0.25628800000000007,
+    "b": 0.018400000000000027,
+    "a": 1
+  },
+  "configTablePadding": 10,
+  "configRowSpacing": 4,
+  "configLabelHighlightBgColor": {
+    "r": 0.9551186666666667,
+    "g": 0.9986333333333334,
+    "b": 0.4547,
+    "a": 0.945
+  },
+  "configFontSize": 21,
+  "configInputHeight": 33,
+  "configInputWidth": 143
+}
