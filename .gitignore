@@ -1,3 +1,4 @@
 examples/**/main.js
 elm-stuff
 tmp/
+compiled/
