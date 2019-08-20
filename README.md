@@ -482,7 +482,6 @@ Optimizations
 
 # Questions
 
-- Should I make ConfigForm more opaque and pass that around my functions, vs keeping track of Config vals separately?
 - How opinionated should this be?
   - Should I allow users to skip pointerlock or even saving?
   - Should I include the toggleable form container and JSON preview textarea by default, including the toggle functionality? Or is that best left to the dev to control?
