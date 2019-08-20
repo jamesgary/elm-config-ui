@@ -8,42 +8,23 @@ import ConfigForm as ConfigForm
 
 
 type alias Config =
-    { padding : Int
-    , bgColor : Color
-    , fontColor : Color
-    , headerFontSize : Int
+    { headerFontSize : Int
     , bodyFontSize : Int
+    , bgColor : Color
     }
 
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { padding = defaults.int
-    , bgColor = defaults.color
-    , fontColor = defaults.color
-    , headerFontSize = defaults.int
+    { headerFontSize = defaults.int
     , bodyFontSize = defaults.int
+    , bgColor = defaults.color
     }
 
 
 logics : List (ConfigForm.Logic Config)
 logics =
     [ ConfigForm.int
-        "padding"
-        "Padding"
-        .padding
-        (\a c -> { c | padding = a })
-    , ConfigForm.color
-        "bgColor"
-        "Background color"
-        .bgColor
-        (\a c -> { c | bgColor = a })
-    , ConfigForm.color
-        "fontColor"
-        "Font color"
-        .fontColor
-        (\a c -> { c | fontColor = a })
-    , ConfigForm.int
         "headerFontSize"
         "Header Font Size"
         .headerFontSize
@@ -53,6 +34,11 @@ logics =
         "Body Font Size"
         .bodyFontSize
         (\a c -> { c | bodyFontSize = a })
+    , ConfigForm.color
+        "bgColor"
+        "Background Color"
+        .bgColor
+        (\a c -> { c | bgColor = a })
     ]
 
 

@@ -6,11 +6,9 @@ import Html exposing (Html)
 
 myConfigFields : List ( String, Kind )
 myConfigFields =
-    [ ( "Padding", IntKind "padding" )
-    , ( "Background color", ColorKind "bgColor" )
-    , ( "Font color", ColorKind "fontColor" )
-    , ( "Header Font Size", IntKind "headerFontSize" )
+    [ ( "Header Font Size", IntKind "headerFontSize" )
     , ( "Body Font Size", IntKind "bodyFontSize" )
+    , ( "Background Color", ColorKind "bgColor" )
     ]
 
 

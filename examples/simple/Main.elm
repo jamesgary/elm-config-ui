@@ -18,9 +18,9 @@ import Element.Font as EFont
 import Element.Input as EInput
 import Html exposing (Html)
 import Html.Attributes
-import Json.Decode as JD
-import Json.Decode.Pipeline as JDP
-import Json.Encode as JE
+import Json.Decode
+import Json.Decode.Pipeline
+import Json.Encode
 import Point3d exposing (Point3d)
 import Random
 import Svg exposing (Svg)
@@ -33,10 +33,10 @@ import Svg.Attributes
 -}
 
 
-port sendToPort : JD.Value -> Cmd msg
+port sendToPort : Json.Decode.Value -> Cmd msg
 
 
-port receiveFromPort : (JD.Value -> msg) -> Sub msg
+port receiveFromPort : (Json.Decode.Value -> msg) -> Sub msg
 
 
 main =
@@ -70,7 +70,7 @@ type alias Model =
 
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
-    | ReceivedFromPort JE.Value
+    | ReceivedFromPort Json.Encode.Value
 
 
 
@@ -86,35 +86,35 @@ type Msg
 
 type alias Flags =
     { localStorage : LocalStorage
-    , configFile : JE.Value
+    , configFile : Json.Encode.Value
     }
 
 
 type alias LocalStorage =
-    { configForm : JE.Value
+    { configForm : Json.Encode.Value
     }
 
 
-decodeFlags : JD.Decoder Flags
+decodeFlags : Json.Decode.Decoder Flags
 decodeFlags =
-    JD.succeed Flags
-        |> JDP.required "localStorage" decodeLocalStorage
-        |> JDP.required "configFile" JD.value
+    Json.Decode.succeed Flags
+        |> Json.Decode.Pipeline.required "localStorage" decodeLocalStorage
+        |> Json.Decode.Pipeline.required "configFile" Json.Decode.value
 
 
-decodeLocalStorage : JD.Decoder LocalStorage
+decodeLocalStorage : Json.Decode.Decoder LocalStorage
 decodeLocalStorage =
-    JD.succeed LocalStorage
-        |> JDP.optional "configForm" JD.value (JE.object [])
+    Json.Decode.succeed LocalStorage
+        |> Json.Decode.Pipeline.optional "configForm" Json.Decode.value (Json.Encode.object [])
 
 
 
 -- INIT
 
 
-init : JE.Value -> ( Model, Cmd Msg )
+init : Json.Encode.Value -> ( Model, Cmd Msg )
 init jsonFlags =
-    case JD.decodeValue decodeFlags jsonFlags of
+    case Json.Decode.decodeValue decodeFlags jsonFlags of
         Ok flags ->
             let
                 {-
@@ -142,7 +142,7 @@ init jsonFlags =
             )
 
         Err err ->
-            Debug.todo (JD.errorToString err)
+            Debug.todo (Json.Decode.errorToString err)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -157,7 +157,7 @@ update msg model =
                 |> handleConfigMsg model
 
         ReceivedFromPort portJson ->
-            case JD.decodeValue fromPortDecoder portJson of
+            case Json.Decode.decodeValue fromPortDecoder portJson of
                 Ok receiveMsg ->
                     case receiveMsg of
                         ConfigFormPortMsg json ->
@@ -171,12 +171,12 @@ update msg model =
                 Err err ->
                     let
                         _ =
-                            Debug.log "Could not decode incoming port msg: " (JD.errorToString err)
+                            Debug.log "Could not decode incoming port msg: " (Json.Decode.errorToString err)
                     in
                     ( model, Cmd.none )
 
 
-handleConfigMsg : Model -> ( Config, ConfigForm Config, Maybe JE.Value ) -> ( Model, Cmd Msg )
+handleConfigMsg : Model -> ( Config, ConfigForm Config, Maybe Json.Encode.Value ) -> ( Model, Cmd Msg )
 handleConfigMsg model ( newConfig, newConfigForm, maybeJsonCmd ) =
     let
         newModel =
@@ -191,8 +191,8 @@ handleConfigMsg model ( newConfig, newConfigForm, maybeJsonCmd ) =
         , case maybeJsonCmd of
             Just jsonCmd ->
                 sendToPort
-                    (JE.object
-                        [ ( "id", JE.string "CONFIG" )
+                    (Json.Encode.object
+                        [ ( "id", Json.Encode.string "CONFIG" )
                         , ( "val", jsonCmd )
                         ]
                     )
@@ -204,31 +204,31 @@ handleConfigMsg model ( newConfig, newConfigForm, maybeJsonCmd ) =
 
 
 type ReceiveMsg
-    = ConfigFormPortMsg JE.Value
+    = ConfigFormPortMsg Json.Encode.Value
 
 
-fromPortDecoder : JD.Decoder ReceiveMsg
+fromPortDecoder : Json.Decode.Decoder ReceiveMsg
 fromPortDecoder =
-    JD.field "id" JD.string
-        |> JD.andThen
+    Json.Decode.field "id" Json.Decode.string
+        |> Json.Decode.andThen
             (\id ->
                 case id of
                     "CONFIG" ->
-                        JD.field "val" JD.value
-                            |> JD.map ConfigFormPortMsg
+                        Json.Decode.field "val" Json.Decode.value
+                            |> Json.Decode.map ConfigFormPortMsg
 
                     str ->
-                        JD.fail ("Bad id to receiveFromPort: " ++ str)
+                        Json.Decode.fail ("Bad id to receiveFromPort: " ++ str)
             )
 
 
 saveToLocalStorageCmd : Model -> Cmd Msg
 saveToLocalStorageCmd model =
     sendToPort <|
-        JE.object
-            [ ( "id", JE.string "SAVE" )
+        Json.Encode.object
+            [ ( "id", Json.Encode.string "SAVE" )
             , ( "val"
-              , JE.object
+              , Json.Encode.object
                     [ ( "configForm"
                       , ConfigForm.encodeConfigForm
                             model.configForm
@@ -243,8 +243,7 @@ view model =
     E.layout
         [ E.inFront <| viewConfig model
         , EBackground.color <| colorForE model.config.bgColor
-        , EFont.color <| colorForE model.config.fontColor
-        , E.padding <| model.config.padding
+        , E.padding 20
         ]
         (E.column []
             [ E.el [ EFont.size model.config.headerFontSize ] (E.text "Hello")
@@ -286,7 +285,7 @@ viewConfig ({ config } as model) =
                         (ConfigForm.encode
                             Config.logics
                             model.config
-                            |> JE.encode 2
+                            |> Json.Encode.encode 2
                         )
                     ]
                     []
