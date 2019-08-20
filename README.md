@@ -18,7 +18,7 @@ This is meant to be used a dev-facing tool. Hence, there's limited customizabili
 
 Let's say you want a config record that looks like this:
 
-```
+```elm
 type alias Config =
   { headerFontSize : Int
   , bodyFontSize : Int
@@ -40,7 +40,7 @@ When adding a new field, such as `headerFontColor`, what code would you usually 
 
 Turns out there's a lot to do, which can slow down development! For our three fields, we need the following exposed:
 
-```
+```elm
 type alias Config =
     { headerFontSize : Int
     , bodyFontSize : Int
@@ -78,7 +78,7 @@ logics =
 
 Yikes, that's a lot! If you want all this generated for you, you can instead write a schema file:
 
-```
+```elm
 module ConfigSchema exposing (main)
 
 import ConfigFormGenerator exposing (Kind(..))
@@ -108,7 +108,7 @@ main =
 Copy this and save it as `ConfigSchema.elm`. You can now run the following to generate a `Config.elm` file:
 
 
-```
+```elm
 # Compile schema file to tmp js
 elm make ConfigSchema.elm --output=~tmp/tmp.js > /dev/null
 
@@ -120,7 +120,7 @@ node ~tmp/tmp.js > Config.elm 2>/dev/null
 
 Here's the script I use to run this watcher, plus elm-live for other normal elm development.
 
-```
+```sh
 #!/bin/bash
 
 CONFIG_SCHEMA_ELMFILE=ConfigSchema.elm
@@ -159,7 +159,7 @@ wait
 
 This will watch for changes to `ConfigSchema.elm` and generate a `Config.elm` file with all the expanded `Config`, `empty`, and `logics` code. Make sure you have the following installed, too:
 
-```
+```sh
 # (use --save-dev instead of --global if you only need it locally for one project)
 npm install --global elm elm-live@next chokidir
 ```
@@ -171,7 +171,7 @@ When this app is used for the first time, the `config` record should be populate
 
 Therefore, your flags and decoders should look something like this:
 
-```
+```elm
 import Config exposing (Config)
 import ConfigForm exposing (ConfigForm)
 
@@ -203,7 +203,7 @@ decodeLocalStorage =
 
 Note how both `configFile` and `config` are `Json.Encode.Value`, and not `Config` or `ConfigForm`. This is so that you can make changes to the structure of the `Config` record and not break when elm tries to decode flags with outdated config data. The "real" decoding step happens with `ConfigForm.init`, which you'll use in your `init` function:
 
-```
+```elm
 init : Json.Encode.Value -> ( Model, Cmd Msg )
 init jsonFlags =
     case Json.Decode.decodeValue decodeFlags jsonFlags of
@@ -239,7 +239,7 @@ init jsonFlags =
 
 Update your **Model** to include both `Config` and `ConfigForm Config`:
 
-```
+```elm
 type alias Model =
     { config : Config
     , configForm : ConfigForm Config
@@ -251,7 +251,7 @@ type alias Model =
 
 Add a new `Msg` value `ConfigFormMsg (ConfigForm.Msg Config)`
 
-```
+```elm
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
     
@@ -269,8 +269,8 @@ When you receive a `ConfigFormMsg` or `ReceivedFromPort` for a `ConfigFormPortMs
 
 Your flags should contain two things: config data stored in localstorage (this gets persisted automatically as you tweak config values), and config data stored in a file (this must be saved manually and is used when a user doesn't have any config values in their localstorage).
 
-```
--- index.html
+```html
+<!-- index.html -->
 
 <!-- compiled elm code -->
 <script src="./main.js"></script>
@@ -333,7 +333,7 @@ Your flags should contain two things: config data stored in localstorage (this g
 
 Your update function will listen to `ConfigFormMsg` and `ConfigFormPortMsg` from ports, then update the `config` and `configForm` in your `model`, and finally send a request to save to localstorage and any pointerlock commands through the port.
 
-```
+```elm
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -431,7 +431,7 @@ saveToLocalStorageCmd model =
 
 Lastly, lets add the form to the view! Here's an example using elm-ui:
 
-```
+```elm
 import Element as E exposing (Element)
 import Element.Background as EBackground
 import Element.Border as EBorder
