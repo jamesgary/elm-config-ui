@@ -1,12 +1,11 @@
 module ConfigForm exposing
-    ( ConfigForm, init, InitOptions, Defaults, Logic
-    , Field
-    , int, float, string, bool, color, section
+    ( ConfigForm, init, InitOptions, Defaults
     , Msg
     , update, updateFromJson
     , encode, encodeConfigForm
     , viewHtml, viewElement
     , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
+    , int, float, string, bool, color, section
     )
 
 {-|
@@ -14,22 +13,7 @@ module ConfigForm exposing
 
 # Main stuff
 
-@docs ConfigForm, init, InitOptions, Defaults, Logic
-
-
-# Field
-
-@docs Field
-
-
-# Field Types
-
-@docs IntField, FloatField, StringField, ColorField
-
-
-# Field functions
-
-@docs int, float, string, bool, color, section
+@docs ConfigForm, init, InitOptions, Defaults
 
 
 # Msg
@@ -54,7 +38,12 @@ module ConfigForm exposing
 
 # View options
 
-@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize, withScrollbars
+@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
+
+
+# Used by generated Config code
+
+@docs int, float, string, bool, color, section
 
 -}
 
@@ -78,6 +67,8 @@ import OrderedDict exposing (OrderedDict)
 import Round
 
 
+{-| ConfigForm is the state of the config form.
+-}
 type alias ConfigForm config =
     { file : config -- unused for now
     , fields : OrderedDict String Field
@@ -87,6 +78,8 @@ type alias ConfigForm config =
     }
 
 
+{-| Field
+-}
 type Field
     = IntField IntFieldData
     | FloatField FloatFieldData
@@ -140,6 +133,17 @@ type alias Flags =
     }
 
 
+{-| If a particular value isn't found from localStorage or file, then it fallbacks to these values. It might be a good idea to use wild values that are easy to spot so you can quickly replace them with real values.
+
+    defaults =
+        { int = -9999
+        , float = -9999
+        , string = "PLEASE REPLACE ME"
+        , bool = True
+        , color = Color.rgb 1 0 1 -- hot pink
+        }
+
+-}
 type alias Defaults =
     { int : Int
     , float : Float
@@ -149,6 +153,15 @@ type alias Defaults =
     }
 
 
+{-| InitOptions are used to initialize your config and ConfigForm.
+
+    { configJson = flags.configFile
+    , configFormJson = flags.localStorage.json
+    , logics = Config.logics
+    , emptyConfig = Config.empty
+    }
+
+-}
 type alias InitOptions config =
     { configJson : JE.Value
     , configFormJson : JE.Value
@@ -157,6 +170,8 @@ type alias InitOptions config =
     }
 
 
+{-| `init` will create both a valid `Config` and `ConfigForm`.
+-}
 init : InitOptions config -> ( config, ConfigForm config )
 init options =
     let
@@ -178,6 +193,7 @@ init options =
 
 
 
+-- STUFF NEEDED ONLY BY GENERATED CONFIG STUFF
 {- Logic stuff. Never persist Logic in your model! -}
 
 
@@ -197,6 +213,8 @@ type LogicKind config
     | SectionLogic
 
 
+{-| Creates the logic for Int values
+-}
 int : String -> String -> (config -> Int) -> (Int -> config -> config) -> Logic config
 int fieldName label getter setter =
     { fieldName = fieldName
@@ -205,6 +223,8 @@ int fieldName label getter setter =
     }
 
 
+{-| Creates the logic for Float values
+-}
 float : String -> String -> (config -> Float) -> (Float -> config -> config) -> Logic config
 float fieldName label getter setter =
     { fieldName = fieldName
@@ -213,6 +233,8 @@ float fieldName label getter setter =
     }
 
 
+{-| Creates the logic for String values
+-}
 string : String -> String -> (config -> String) -> (String -> config -> config) -> Logic config
 string fieldName label getter setter =
     { fieldName = fieldName
@@ -221,6 +243,8 @@ string fieldName label getter setter =
     }
 
 
+{-| Creates the logic for Bool values
+-}
 bool : String -> String -> (config -> Bool) -> (Bool -> config -> config) -> Logic config
 bool fieldName label getter setter =
     { fieldName = fieldName
@@ -229,6 +253,8 @@ bool fieldName label getter setter =
     }
 
 
+{-| Creates the logic for Color values
+-}
 color : String -> String -> (config -> Color) -> (Color -> config -> config) -> Logic config
 color fieldName label getter setter =
     { fieldName = fieldName
@@ -237,6 +263,8 @@ color fieldName label getter setter =
     }
 
 
+{-| Creates the logic for Section values
+-}
 section : String -> Logic config
 section sectionStr =
     { fieldName = ""
@@ -245,11 +273,15 @@ section sectionStr =
     }
 
 
+{-| A Msg is an opaque type for ConfigForm to communicate with your app through ConfigForm.update.
+-}
 type Msg config
     = ChangedConfigForm String Field
     | ClickedPointerLockLabel String
 
 
+{-| Encodes the current Config in your ConfigForm. This encode just the config itself, so it's usually used to be save to a json file and added to your version control.
+-}
 encode : List (Logic config) -> config -> JE.Value
 encode logics config =
     logics
@@ -307,6 +339,8 @@ encodeColor col =
            )
 
 
+{-| Encodes the current data of your config form to be persisted, including meta-data. This is typically used to save to localStorage.
+-}
 encodeConfigForm : ConfigForm config -> JE.Value
 encodeConfigForm configForm =
     {-
@@ -376,6 +410,44 @@ encodeField field =
             Nothing
 
 
+{-| When you receive a Config.Msg, update your `Config` and `ConfigForm` using this. It returns a new `Config` and `ConfigForm`, plus possible json to pass through ports for pointerlock.
+
+    update : Msg -> Model -> ( Model, Cmd Msg )
+    update msg model =
+        case msg of
+            ConfigFormMsg configFormMsg ->
+                let
+                    ( newConfig, newConfigForm, maybeJsonCmd ) =
+                        ConfigForm.update
+                            Config.logics
+                            model.config
+                            model.configForm
+                            configFormMsg
+
+                    newModel =
+                        { model
+                            | config = newConfig
+                            , configForm = newConfigForm
+                        }
+                in
+                ( newModel
+                , Cmd.batch
+                    [ saveToLocalStorageCmd newModel
+                    , case maybeJsonCmd of
+                        Just jsonCmd ->
+                            sendToPort
+                                (Json.Encode.object
+                                    [ ( "id", Json.Encode.string "CONFIG" )
+                                    , ( "val", jsonCmd )
+                                    ]
+                                )
+
+                        Nothing ->
+                            Cmd.none
+                    ]
+                )
+
+-}
 update : List (Logic config) -> config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
 update logics config configForm msg =
     case msg of
@@ -430,6 +502,50 @@ configFromConfigForm logics configForm config =
             config
 
 
+{-| Similar to `update`, but for port Msgs.
+
+When you receive a Msg through your port from elm-config-gui.js, update your `Config` and `ConfigForm` using this. It returns a new `Config` and `ConfigForm`, plus possible json to pass through ports for pointerlock.
+
+    update : Msg -> Model -> ( Model, Cmd Msg )
+    update msg model =
+        case msg of
+            ReceivedFromPort portJson ->
+                case Json.Decode.decodeValue fromPortDecoder portJson of
+                    Ok receiveMsg ->
+                        case receiveMsg of
+                            ConfigFormPortMsg json ->
+                                let
+                                    ( newConfig, newConfigForm, maybeJsonCmd ) =
+                                        ConfigForm.updateFromJson
+                                            Config.logics
+                                            model.config
+                                            model.configForm
+                                            json
+
+                                    newModel =
+                                        { model
+                                            | config = newConfig
+                                            , configForm = newConfigForm
+                                        }
+                                in
+                                ( newModel
+                                , Cmd.batch
+                                    [ saveToLocalStorageCmd newModel
+                                    , case maybeJsonCmd of
+                                        Just jsonCmd ->
+                                            sendToPort
+                                                (Json.Encode.object
+                                                    [ ( "id", Json.Encode.string "CONFIG" )
+                                                    , ( "val", jsonCmd )
+                                                    ]
+                                                )
+
+                                        Nothing ->
+                                            Cmd.none
+                                    ]
+                                )
+
+-}
 updateFromJson : List (Logic config) -> config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
 updateFromJson logics config configForm json =
     case JD.decodeValue portDecoder json of
@@ -761,6 +877,8 @@ colorValDecoder =
 -- VIEW
 
 
+{-| View the config form. This returns an Element, so use it if you're using elm-ui.
+-}
 viewElement : ViewOptions -> List (Logic config) -> ConfigForm config -> Element (Msg config)
 viewElement options logics configForm =
     let
@@ -1010,6 +1128,8 @@ viewElement options logics configForm =
         }
 
 
+{-| View the config form. This returns Html, so use it if you're using elm/html, not elm-ui.
+-}
 viewHtml : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
 viewHtml options logics configForm =
     viewElement options logics configForm
@@ -1253,6 +1373,8 @@ colorForE col =
 -- VIEW OPTIONS
 
 
+{-| Options for viewing the config form.
+-}
 type alias ViewOptions =
     { fontSize : Int
     , rowSpacing : Int
@@ -1263,6 +1385,8 @@ type alias ViewOptions =
     }
 
 
+{-| Default options for viewing the config form.
+-}
 viewOptions : ViewOptions
 viewOptions =
     { fontSize = 19
@@ -1274,26 +1398,36 @@ viewOptions =
     }
 
 
+{-| Update the row spacing.
+-}
 withRowSpacing : Int -> ViewOptions -> ViewOptions
 withRowSpacing val options =
     { options | rowSpacing = val }
 
 
+{-| Update the row color when hovering field labels that are pointerlock-able.
+-}
 withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
 withLabelHighlightBgColor val options =
     { options | labelHighlightBgColor = val }
 
 
+{-| Update the font size.
+-}
 withFontSize : Int -> ViewOptions -> ViewOptions
 withFontSize val options =
     { options | fontSize = val }
 
 
+{-| Update the width of inputs.
+-}
 withInputWidth : Int -> ViewOptions -> ViewOptions
 withInputWidth val options =
     { options | inputWidth = val }
 
 
+{-| Update the height of inputs.
+-}
 withInputHeight : Int -> ViewOptions -> ViewOptions
 withInputHeight val options =
     { options | inputHeight = val }

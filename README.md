@@ -10,7 +10,7 @@ This package has the following features:
 - Automatically save changes to localStorage
 - Encodes config data to JSON so you can save in a more persistent `.json` file
 
-
+This is meant to be used a dev-facing tool. Hence, there's limited customizability for things like the view. For a fully customizable editor with things like advanced validation and types, you might be better building your own.
 
 ## Install
 
@@ -110,7 +110,7 @@ Copy this and save it as `ConfigSchema.elm`. You can now run the following to ge
 # Compile schema file to tmp js
 elm make ConfigSchema.elm --output=~tmp/tmp.js > /dev/null
 
-# Run compiled js with node, which logs out generated elm code
+# Run compiled js with node, which logs out generated elm code, and save to Config.elm:
 node ~tmp/tmp.js > Config.elm 2>/dev/null
 ```
 
@@ -523,3 +523,14 @@ New features
 Optimizations
 
 - Cleaner run script (remove duplication, tmp file)
+
+## Questions
+
+- Should I make ConfigForm more opaque and pass that around my functions, vs keeping track of Config vals separately?
+- How opinionated should this be? Should I allow users to skip pointerlock or even saving?
+- Is there any way to let users create new vals, like xy or elm-ui attrs?
+  - I could add them myself with only non-breaking minor updates
+- Relatedly, how customizable should the view be?
+  - Might be a good idea to let it be customizable once/if I add elm-ui attrs
+- Is it bad that it relies on elm-ui? Code bloat, less performant, duplicate styles...
+- Is all this port stuff for pointerlock even worth it?
