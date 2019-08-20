@@ -1,4 +1,6 @@
-// stuff to put into some configForm.js file
+// From https://github.com/jamesgary/elm-config-ui/blob/master/elm-config-ui-helper.js
+
+// See pointerlock docs at https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
 
 let hasFirstMouseMoveEventPassedDueToWebkitBug = false;
 

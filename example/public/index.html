@@ -9,11 +9,12 @@
     <!-- compiled elm code -->
     <script src="./js/compiled/main.js"></script>
 
-    <!-- config helper -->
-    <script src="./js/config.js"></script>
+    <!-- elm-config-ui helper js -->
+    <!-- Copy from https://github.com/jamesgary/elm-config-ui/blob/master/elm-config-ui-helper.js -->
+    <script src="https://cdn.jsdelivr.net/gh/jamesgary/elm-config-ui@f5200e/elm-config-ui-helper.js"></script>
 
     <script>
-      const LOCALSTORAGE_KEY = "config_example_boids";
+      const LOCALSTORAGE_KEY = "elm-config-ui-example";
 
       const node = document.getElementById('elm');
 
@@ -33,9 +34,6 @@
         });
 
         ConfigForm.init(app);
-        /* -- meta
-          shouldShowCopyConfigBtn: field
-        */
 
         app.ports.sendToPort.subscribe(function(effect) {
           switch (effect.id) {
