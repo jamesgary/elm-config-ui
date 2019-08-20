@@ -4,7 +4,7 @@
 
 Have a bunch of magic numbers you want to tweak in the browser? Tired of making a `Msg` for every single field? Try `elm-config-gui`!
 
-`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example in ellie!
+`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example in ellie (TODO once package is released)!
 
 This package has the following features:
 
@@ -14,7 +14,7 @@ This package has the following features:
 
 This is meant to be used a dev-facing tool. Hence, there's limited customizability for things like the view. For a fully customizable editor with things like advanced validation and types, you might be better building your own.
 
-## Install
+# Install
 
 Let's say you want a config record that looks like this:
 
@@ -28,55 +28,9 @@ type alias Config =
 
 Here are the steps to wire everything up:
 
-### Step 0: Set up run script and code generation
+## Step 1: Set up run script and code generation
 
-When adding a new field, such as `headerFontColor`, what code would you usually need to write?
-
-- Add `, headerFontColor : Color` to the `type alias Config` definition
-- Set that field when making a new `Config`
-- Add a label, input, and click handler to the `view`
-- Encoders and decoders
-- Update that record when changed
-
-Turns out there's a lot to do, which can slow down development! For our three fields, we need the following exposed:
-
-```elm
-type alias Config =
-    { headerFontSize : Int
-    , bodyFontSize : Int
-    , backgroundColor : Color
-    }
-
-
-empty : ConfigForm.Defaults -> Config
-empty defaults =
-    { headerFontSize = defaults.int
-    , bodyFontSize = defaults.int
-    , backgroundColor = defaults.color
-    }
-
-
-logics : List (ConfigForm.Logic Config)
-logics =
-    [ ConfigForm.int
-        "headerFontSize"
-        "Header Font Size"
-        .headerFontSize
-        (\a c -> { c | headerFontSize = a })
-    , ConfigForm.int
-        "bodyFontSize"
-        "Body Font Size"
-        .bodyFontSize
-        (\a c -> { c | bodyFontSize = a })
-    , ConfigForm.color
-        "backgroundColor"
-        "Background Color"
-        .backgroundColor
-        (\a c -> { c | backgroundColor = a })
-    ]
-```
-
-Yikes, that's a lot! If you want all this generated for you, you can instead write a schema file:
+When adding a new field, such as `headerFontColor`, you'd normally have to update the `type alias Config`, add it to the form in the view, add a `Msg`, encoder, decoder, etc. Turns out there's a lot to do, which can slow down development! If you want all this generated for you, you can instead write a schema file:
 
 ```elm
 module ConfigSchema exposing (main)
@@ -84,14 +38,13 @@ module ConfigSchema exposing (main)
 import ConfigFormGenerator exposing (Kind(..))
 import Html exposing (Html)
 
-
 myConfigFields : List ( String, Kind )
 myConfigFields =
     [ ( "Header Font Size", IntKind "headerFontSize" )
     , ( "Body Font Size", IntKind "bodyFontSize" )
     , ( "Background Color", ColorKind "backgroundColor" )
+    -- add more fields here
     ]
-
 
 main : Html msg
 main =
@@ -107,7 +60,6 @@ main =
 
 Copy this and save it as `ConfigSchema.elm`. You can now run the following to generate a `Config.elm` file:
 
-
 ```sh
 # Compile schema file to tmp js
 elm make ConfigSchema.elm --output=~tmp/tmp.js > /dev/null
@@ -116,9 +68,9 @@ elm make ConfigSchema.elm --output=~tmp/tmp.js > /dev/null
 node ~tmp/tmp.js > Config.elm 2>/dev/null
 ```
 
-#### Watcher scripts
+### Watcher script
 
-Here's the script I use to run this watcher, plus elm-live for other normal elm development.
+Here's the script I use to run both the schema watcher, and `elm-live` for the rest of my elm development.
 
 ```sh
 #!/bin/bash
@@ -165,7 +117,7 @@ npm install --global elm elm-live@next chokidir
 ```
 
 
-### Step 1: App initialization
+## Step 2: App initialization
 
 When this app is used for the first time, the `config` record should be populated with some kind of hardcoded `configFile`, usually from a `.json` file. This is considered the "default" config. As the user makes tweaks through the gui, the new `config` is stored in `localStorage` and is used thereafter.
 
@@ -235,7 +187,7 @@ init jsonFlags =
 ```
 
 
-### Step 1: `Model`
+## Step 3: `Model`
 
 Update your **Model** to include both `Config` and `ConfigForm Config`:
 
@@ -247,7 +199,7 @@ type alias Model =
     }
 ```
 
-### Step 2: `Msg`
+## Step 4: `Msg`
 
 Add a new `Msg` value `ConfigFormMsg (ConfigForm.Msg Config)`
 
@@ -261,7 +213,7 @@ type Msg
     | ...
 ```
 
-### Step 3: `Flags` and `init`
+## Step 5: `Flags` and `init`
 
 When you first load your app, your `Flags` should 
 
@@ -275,8 +227,9 @@ Your flags should contain two things: config data stored in localstorage (this g
 <!-- compiled elm code -->
 <script src="./main.js"></script>
 
-<!-- config helper, loaded via CDN (TODO) -->
-<script src="./config.js"></script>
+<!-- elm-config-ui helper js -->
+<!-- Copy from https://github.com/jamesgary/elm-config-ui/blob/master/elm-config-ui-helper.js or use this CDN -->
+<script src="https://cdn.jsdelivr.net/gh/jamesgary/elm-config-ui@f5200e/elm-config-ui-helper.js"></script>
 
 <script>
   const LOCALSTORAGE_KEY = "my_cool_app";
@@ -329,7 +282,7 @@ Your flags should contain two things: config data stored in localstorage (this g
 </script>
 ```
 
-## Step 4: `update`
+## Step 6: `update`
 
 Your update function will listen to `ConfigFormMsg` and `ConfigFormPortMsg` from ports, then update the `config` and `configForm` in your `model`, and finally send a request to save to localstorage and any pointerlock commands through the port.
 
@@ -427,7 +380,7 @@ saveToLocalStorageCmd model =
             ]
 ```
 
-### Step 5: `view`
+## Step 7: `view`
 
 Lastly, lets add the form to the view! Here's an example using elm-ui:
 
@@ -505,7 +458,7 @@ colorForE color =
            )
 ```
 
-## TODO
+# TODO
 
 New features
 
@@ -517,19 +470,22 @@ New features
     - undo tree?
     - rewind to load or file?
     - technically, we could save the undo stack in the cache...
-- * for vals that differ from file
-- ! for brand new values that haven't been set yet (maybe note that in the field)
+- "*" for vals that differ from file
+- "!" for brand new values that haven't been set yet (maybe note that in the field)
 - save scrolltop
 - fancy (or custom) kinds, like elm-ui attributes
 
 Optimizations
 
 - Cleaner run script (remove duplication, tmp file)
+- Opaque-ify any types that can be opaque
 
-## Questions
+# Questions
 
 - Should I make ConfigForm more opaque and pass that around my functions, vs keeping track of Config vals separately?
-- How opinionated should this be? Should I allow users to skip pointerlock or even saving?
+- How opinionated should this be?
+  - Should I allow users to skip pointerlock or even saving?
+  - Should I include the toggleable form container and JSON preview textarea by default, including the toggle functionality? Or is that best left to the dev to control?
 - Is there any way to let users create new vals, like xy or elm-ui attrs?
   - I could add them myself with only non-breaking minor updates
 - Relatedly, how customizable should the view be?
