@@ -41,7 +41,7 @@ module ConfigForm exposing
 @docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
 
 
-# Used by generated Config code
+# Used only by generated Config code
 
 @docs int, float, string, bool, color, section
 
@@ -67,14 +67,14 @@ import OrderedDict exposing (OrderedDict)
 import Round
 
 
-{-| ConfigForm is the state of the config form.
+{-| ConfigForm is the state of the config form. Keep it in your model along with the regular `config` record. TODO make opaque
 -}
 type alias ConfigForm config =
     { file : config -- unused for now
     , fields : OrderedDict String Field
     , changingField : Maybe String
-    , scrollTop : Int
-    , undoStack : List ( String, Field )
+    , scrollTop : Int -- also unused
+    , undoStack : List ( String, Field ) -- also unused
     }
 
 
