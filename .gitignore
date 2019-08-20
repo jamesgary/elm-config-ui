@@ -1,5 +1,3 @@
-examples/tree/public/js/compiled/main.js
-examples/boids/public/js/compiled/main.js
 examples/**/main.js
 elm-stuff
 tmp/

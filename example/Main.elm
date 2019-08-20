@@ -270,7 +270,6 @@ viewConfig ({ config } as model) =
             (E.column
                 [ E.padding 15
                 , E.spacing 15
-                , E.width <| E.px <| 400
                 ]
                 [ ConfigForm.viewElement
                     ConfigForm.viewOptions
@@ -278,7 +277,7 @@ viewConfig ({ config } as model) =
                     model.configForm
                     |> E.map ConfigFormMsg
                 , E.paragraph
-                    [ EFont.size 16 ]
+                    [ EFont.size 16, E.width (E.px 300) ]
                     [ E.text "Copy json to public/data/config.json once you're happy with the config values." ]
                 , Html.textarea
                     [ Html.Attributes.value

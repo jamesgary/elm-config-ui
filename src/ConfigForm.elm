@@ -884,7 +884,6 @@ viewElement options logics configForm =
     let
         defaultAttrs =
             [ E.height E.fill
-            , E.paddingXY 10 2
             ]
 
         sectionAttrs =
@@ -905,11 +904,10 @@ viewElement options logics configForm =
                         , E.moveDown 6
                         , E.paddingXY 5 2
                         , EFont.size 16
-                        , EBackground.color
-                            (colorForE options.labelHighlightBgColor)
                         ]
                         [ E.el
-                            [ E.paddingXY 5 0 ]
+                            [ E.paddingXY 5 0
+                            ]
                             (E.text ("x" ++ String.fromInt (10 ^ power)))
                         , E.el
                             [ EFont.size (0.8 * toFloat options.fontSize |> round)
@@ -986,15 +984,29 @@ viewElement options logics configForm =
             in
             [ EEvents.onMouseDown (ClickedPointerLockLabel logic.fieldName)
             , E.htmlAttribute (Html.Attributes.style "cursor" "ew-resize")
-            , E.transparent True
             , E.mouseOver
                 [ EBackground.color
                     (colorForE options.labelHighlightBgColor)
-                , E.transparent False
                 ]
             , E.width E.fill
             , E.height E.fill
-            , E.inFront powerEl
+            , E.inFront
+                (E.el
+                    [ E.width E.fill
+                    , E.height E.fill
+                    , E.transparent True
+                    , E.mouseOver
+                        [ E.transparent False
+                        ]
+                    ]
+                    powerEl
+                )
+            , E.paddingEach
+                { top = 0
+                , right = 80
+                , bottom = 0
+                , left = 0
+                }
             ]
 
         closeAttrs i logic =
@@ -1080,12 +1092,7 @@ viewElement options logics configForm =
                                 []
 
                             IntLogic getter setter ->
-                                [ E.inFront
-                                    (E.el
-                                        (defaultAttrs ++ resizeAttrs logic)
-                                        (E.el [ E.moveDown 4 ] (E.text logic.label))
-                                    )
-                                ]
+                                resizeAttrs logic
 
                             FloatLogic getter setter ->
                                 [ E.inFront
@@ -1393,7 +1400,7 @@ viewOptions =
     , rowSpacing = 5
     , inputWidth = 200
     , inputHeight = 34
-    , labelHighlightBgColor = Color.rgba 0.2 0.2 1 0.3
+    , labelHighlightBgColor = Color.rgb 0.8 0.8 1
     , sectionSpacing = 20
     }
 
