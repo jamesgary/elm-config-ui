@@ -108,7 +108,7 @@ main =
 Copy this and save it as `ConfigSchema.elm`. You can now run the following to generate a `Config.elm` file:
 
 
-```elm
+```sh
 # Compile schema file to tmp js
 elm make ConfigSchema.elm --output=~tmp/tmp.js > /dev/null
 
