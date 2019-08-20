@@ -1,5 +1,7 @@
 # elm-config-gui
 
+## Note: Experimental, and likely to change!
+
 Have a bunch of magic numbers you want to tweak in the browser? Tired of making a `Msg` for every single field? Try `elm-config-gui`!
 
 `elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example in ellie!
