@@ -22,7 +22,7 @@ empty defaults =
     }
 
 
-logics : List (ConfigForm.Logic Config)
+--logics : List (ConfigForm.Logic Config)
 logics =
     [ ConfigForm.int
         "headerFontSize"
