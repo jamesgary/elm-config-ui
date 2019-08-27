@@ -713,7 +713,6 @@ viewConfig ({ config } as model) =
             , style "background" (Color.toCssString config.configTableBgColor)
             , style "border" ("1px solid " ++ Color.toCssString config.configTableBorderColor)
             , style "height" "100%"
-            , style "width" "350px"
             ]
             (if model.isConfigOpen then
                 [ Html.button

@@ -66,10 +66,15 @@ import Round
 type alias ConfigForm config =
     { file : config -- unused for now
     , fields : OrderedDict String Field
-    , changingField : Maybe String
+    , activeField : Maybe ( FieldState, String )
     , scrollTop : Int -- also unused
     , undoStack : List ( String, Field ) -- also unused
     }
+
+
+type FieldState
+    = Hovering
+    | Dragging
 
 
 {-| Field
@@ -272,6 +277,7 @@ section sectionStr =
 type Msg config
     = ChangedConfigForm String Field
     | ClickedPointerLockLabel String
+    | HoveredLabel String Bool
 
 
 {-| Encodes the current Config in your ConfigForm. This encode just the config itself, so it's usually used to be save to a json file and added to your version control.
@@ -460,8 +466,21 @@ update logics config configForm msg =
 
         ClickedPointerLockLabel fieldName ->
             ( config
-            , { configForm | changingField = Just fieldName }
+            , { configForm | activeField = Just ( Dragging, fieldName ) }
             , Just (JE.string "LOCK_POINTER")
+            )
+
+        HoveredLabel fieldName didEnter ->
+            ( config
+            , { configForm
+                | activeField =
+                    if didEnter then
+                        Just ( Hovering, fieldName )
+
+                    else
+                        Nothing
+              }
+            , Nothing
             )
 
 
@@ -548,8 +567,8 @@ updateFromJson logics config configForm json =
                 MouseMove num ->
                     let
                         newConfigForm =
-                            case configForm.changingField of
-                                Just fieldName ->
+                            case configForm.activeField of
+                                Just ( state, fieldName ) ->
                                     { configForm
                                         | fields =
                                             configForm.fields
@@ -600,7 +619,15 @@ updateFromJson logics config configForm json =
 
                 MouseUp ->
                     ( config
-                    , { configForm | changingField = Nothing }
+                    , { configForm
+                        | activeField =
+                            case configForm.activeField of
+                                Just ( state, fieldName ) ->
+                                    Just ( Hovering, fieldName )
+
+                                Nothing ->
+                                    Nothing
+                      }
                     , Nothing
                     )
 
@@ -790,7 +817,7 @@ decodeConfigForm logics config json =
                     )
                 )
             |> OrderedDict.fromList
-    , changingField = Nothing
+    , activeField = Nothing
     , scrollTop =
         case JD.decodeValue (JD.field "scrollTop" JD.int) json of
             Ok scrollTop ->
@@ -879,7 +906,21 @@ view options logics configForm =
         (logics
             |> List.indexedMap
                 (\i logic ->
-                    Html.tr []
+                    Html.tr
+                        (case configForm.activeField of
+                            Just ( state, fieldName ) ->
+                                if fieldName == logic.fieldName then
+                                    [ style
+                                        "background"
+                                        (Color.toCssString options.labelHighlightBgColor)
+                                    ]
+
+                                else
+                                    []
+
+                            Nothing ->
+                                []
+                        )
                         [ viewLabel options configForm i logic
                         , viewChanger options configForm i logic
                         ]
@@ -889,41 +930,49 @@ view options logics configForm =
 
 viewLabel : ViewOptions -> ConfigForm config -> Int -> Logic config -> Html (Msg config)
 viewLabel options configForm i logic =
-    let
-        defaultAttrs =
-            --[ style "vertical-align" "center" ]
-            [ style "height" "100%" ]
-    in
-    Html.td
-        (defaultAttrs
-            ++ (case logic.kind of
-                    StringLogic getter setter ->
-                        []
+    case logic.kind of
+        StringLogic getter setter ->
+            Html.td
+                []
+                [ Html.text logic.label ]
 
-                    IntLogic getter setter ->
-                        resizeAttrs options configForm logic
+        IntLogic getter setter ->
+            Html.td
+                (resizeAttrs options configForm logic)
+                [ Html.text logic.label
+                , powerEl options configForm logic
+                ]
 
-                    FloatLogic getter setter ->
-                        resizeAttrs options configForm logic
+        FloatLogic getter setter ->
+            Html.td
+                (resizeAttrs options configForm logic)
+                [ Html.text logic.label
+                , powerEl options configForm logic
+                ]
 
-                    BoolLogic getter setter ->
-                        []
+        BoolLogic getter setter ->
+            Html.td
+                []
+                [ Html.text logic.label ]
 
-                    ColorLogic getter setter ->
-                        closeAttrs options configForm i logic
+        ColorLogic getter setter ->
+            Html.td
+                []
+                [ Html.text logic.label
+                , closeEl options configForm i logic
+                ]
 
-                    SectionLogic ->
-                        [ style "font-weight" "bold"
-                        , style "padding" "20px 0 5px 0"
-                        , Html.Attributes.colspan 2
-                        ]
-               )
-        )
-        [ Html.text logic.label ]
+        SectionLogic ->
+            Html.td
+                [ style "font-weight" "bold"
+                , style "padding" "20px 0 5px 0"
+                , Html.Attributes.colspan 2
+                ]
+                [ Html.text logic.label ]
 
 
-closeAttrs : ViewOptions -> ConfigForm config -> Int -> Logic config -> List (Html.Attribute (Msg config))
-closeAttrs options configForm i logic =
+closeEl : ViewOptions -> ConfigForm config -> Int -> Logic config -> Html (Msg config)
+closeEl options configForm i logic =
     let
         maybeCloseMsg =
             case OrderedDict.get logic.fieldName configForm.fields of
@@ -963,52 +1012,36 @@ closeAttrs options configForm i logic =
     in
     case maybeCloseMsg of
         Just msg ->
-            [-- E.inFront <|
-             --   E.el
-             --       [ E.width E.fill
-             --       , E.padding 6
-             --       ]
-             --       (EInput.button
-             --           [ E.alignRight
-             --           , EBackground.color (E.rgba 1 1 1 0.9)
-             --           , EBorder.color (E.rgba 0 0 0 0.9)
-             --           , EBorder.width 1
-             --           , EBorder.rounded 4
-             --           , E.width (E.px (1.5 * toFloat options.fontSize |> round))
-             --           , E.height (E.px (1.5 * toFloat options.fontSize |> round))
-             --           , Html.Attributes.tabindex (1 + i) |> E.htmlAttribute
-             --           ]
-             --           { onPress = Just msg
-             --           , label =
-             --               E.el
-             --                   [ E.centerX
-             --                   , E.centerY
-             --                   , E.paddingEach
-             --                       { top = 3
-             --                       , right = 0
-             --                       , bottom = 0
-             --                       , left = 2
-             --                       }
-             --                   ]
-             --                   (E.text "❌")
-             --           }
-             --       )
-            ]
+            Html.button
+                [ style "background" "rgba(1,1,1,0.9)"
+                , style "border" "1px solid rgba(0,0,0,0.9)"
+                , style "border-radius" "4px"
+                , style "width" (px (1.5 * toFloat options.fontSize))
+                , style "height" (px (1.5 * toFloat options.fontSize))
+                , Html.Attributes.tabindex (1 + i)
+                , Html.Events.onClick msg
+                ]
+                [ Html.div
+                    [ style "padding" "3px 0 0 2px" ]
+                    [ Html.text "❌" ]
+                ]
 
         Nothing ->
-            []
+            Html.text ""
 
 
-resizeAttrs : ViewOptions -> ConfigForm config -> Logic config -> List (Html.Attribute (Msg config))
-resizeAttrs options configForm logic =
+powerEl : ViewOptions -> ConfigForm config -> Logic config -> Html (Msg config)
+powerEl options configForm logic =
     let
         makePowerEl power newIncField newDecField isDownDisabled =
             Html.div
-                [ style "text-align" "right"
-                , style "top" "-6px" -- E.moveDown 6
-                , style "padding" "5px 2px" --E.paddingXY 5 2
-
-                --, style "font-size" "16px" --EFont.size 16
+                [ style "top" "2px"
+                , style "right" "0"
+                , style "padding" "5px 2px 5px 10px"
+                , style "position" "absolute"
+                , style "font-size" "16px"
+                , style "background"
+                    (Color.toCssString options.labelHighlightBgColor)
                 ]
                 [ Html.span
                     [ style "padding" "5px 0"
@@ -1045,7 +1078,7 @@ resizeAttrs options configForm logic =
                     [ Html.text "↗️" ]
                 ]
 
-        powerEl =
+        el =
             case OrderedDict.get logic.fieldName configForm.fields of
                 Just (IntField data) ->
                     makePowerEl data.power
@@ -1086,30 +1119,26 @@ resizeAttrs options configForm logic =
                 _ ->
                     Html.text ""
     in
+    case configForm.activeField of
+        Just ( state, fieldName ) ->
+            if fieldName == logic.fieldName then
+                el
+
+            else
+                Html.text ""
+
+        Nothing ->
+            Html.text ""
+
+
+resizeAttrs : ViewOptions -> ConfigForm config -> Logic config -> List (Html.Attribute (Msg config))
+resizeAttrs options configForm logic =
     [ Html.Events.onMouseDown (ClickedPointerLockLabel logic.fieldName)
+    , Html.Events.onMouseEnter (HoveredLabel logic.fieldName True)
+    , Html.Events.onMouseLeave (HoveredLabel logic.fieldName False)
     , style "cursor" "ew-resize"
-
-    --, Html.Events.onMouseOver (HoveredLabel logic.fieldName)
-    --[ style "background" (Color.toCssString options.labelHighlightBgColor)
-    --]
-    , style "width" "100%"
     , style "height" "100%"
-
-    -- TODOOOOOOOOOOOOOOOOO ??????????
-    -- TODOOOOOOOOOOOOOOOOO ??????????
-    -- TODOOOOOOOOOOOOOOOOO ??????????
-    --, E.inFront
-    --    (E.el
-    --        [ E.width E.fill
-    --        , E.height E.fill
-    --        , E.transparent True
-    --        , E.mouseOver
-    --            [ E.transparent False
-    --            ]
-    --        ]
-    --        powerEl
-    --    )
-    --, style "padding-right" "80px"
+    , style "position" "relative"
     ]
 
 
@@ -1312,6 +1341,7 @@ viewChanger options configForm i logic =
                                , style "width" "100%"
                                , style "border" "1px solid rgba(0,0,0,0.3)"
                                , style "border-radius" "3px"
+                               , style "box-sizing" "border-box"
                                , Html.Events.onMouseDown
                                     (ChangedConfigForm
                                         logic.fieldName
