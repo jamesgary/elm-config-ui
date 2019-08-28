@@ -13,20 +13,16 @@ type alias Config =
     , timeScale : Float
     , numBoids : Int
     , boidRad : Float
+    , visionRange : Float
+    , showRanges : Bool
     , maxSpeed : Float
     , momentumFactor : Float
     , cohesionFactor : Float
-    , cohesionRange : Float
-    , showCohesionRange : Bool
     , alignmentFactor : Float
-    , alignmentRange : Float
-    , showAlignmentRange : Bool
     , separationFactor : Float
-    , separationRange : Float
-    , showSeparationRange : Bool
+    , separationRangeFactor : Float
     , mouseFactor : Float
     , mouseExponent : Float
-    , mouseRange : Float
     , showVels : Bool
     , arrowScale : Float
     , skyColor : Color
@@ -49,20 +45,16 @@ empty defaults =
     , timeScale = defaults.float
     , numBoids = defaults.int
     , boidRad = defaults.float
+    , visionRange = defaults.float
+    , showRanges = defaults.bool
     , maxSpeed = defaults.float
     , momentumFactor = defaults.float
     , cohesionFactor = defaults.float
-    , cohesionRange = defaults.float
-    , showCohesionRange = defaults.bool
     , alignmentFactor = defaults.float
-    , alignmentRange = defaults.float
-    , showAlignmentRange = defaults.bool
     , separationFactor = defaults.float
-    , separationRange = defaults.float
-    , showSeparationRange = defaults.bool
+    , separationRangeFactor = defaults.float
     , mouseFactor = defaults.float
     , mouseExponent = defaults.float
-    , mouseRange = defaults.float
     , showVels = defaults.bool
     , arrowScale = defaults.float
     , skyColor = defaults.color
@@ -104,9 +96,19 @@ logics =
         (\a c -> { c | numBoids = a })
     , ConfigForm.float
         "boidRad"
-        "Boid radius (px)"
+        "Boid radius"
         .boidRad
         (\a c -> { c | boidRad = a })
+    , ConfigForm.float
+        "visionRange"
+        "Vision range"
+        .visionRange
+        (\a c -> { c | visionRange = a })
+    , ConfigForm.bool
+        "showRanges"
+        "Show Ranges"
+        .showRanges
+        (\a c -> { c | showRanges = a })
     , ConfigForm.float
         "maxSpeed"
         "Max speed"
@@ -126,16 +128,6 @@ logics =
         "Factor"
         .cohesionFactor
         (\a c -> { c | cohesionFactor = a })
-    , ConfigForm.float
-        "cohesionRange"
-        "Range"
-        .cohesionRange
-        (\a c -> { c | cohesionRange = a })
-    , ConfigForm.bool
-        "showCohesionRange"
-        "Show range"
-        .showCohesionRange
-        (\a c -> { c | showCohesionRange = a })
     , ConfigForm.section
         "Rule 2: Alignment"
     , ConfigForm.float
@@ -143,16 +135,6 @@ logics =
         "Factor"
         .alignmentFactor
         (\a c -> { c | alignmentFactor = a })
-    , ConfigForm.float
-        "alignmentRange"
-        "Range"
-        .alignmentRange
-        (\a c -> { c | alignmentRange = a })
-    , ConfigForm.bool
-        "showAlignmentRange"
-        "Show range"
-        .showAlignmentRange
-        (\a c -> { c | showAlignmentRange = a })
     , ConfigForm.section
         "Rule 3: Separation"
     , ConfigForm.float
@@ -161,15 +143,10 @@ logics =
         .separationFactor
         (\a c -> { c | separationFactor = a })
     , ConfigForm.float
-        "separationRange"
-        "Range"
-        .separationRange
-        (\a c -> { c | separationRange = a })
-    , ConfigForm.bool
-        "showSeparationRange"
-        "Show range"
-        .showSeparationRange
-        (\a c -> { c | showSeparationRange = a })
+        "separationRangeFactor"
+        "Personal space factor"
+        .separationRangeFactor
+        (\a c -> { c | separationRangeFactor = a })
     , ConfigForm.section
         "Rule 4: Mouse"
     , ConfigForm.float
@@ -182,11 +159,6 @@ logics =
         "Exponent"
         .mouseExponent
         (\a c -> { c | mouseExponent = a })
-    , ConfigForm.float
-        "mouseRange"
-        "Range"
-        .mouseRange
-        (\a c -> { c | mouseRange = a })
     , ConfigForm.section
         "Boid Visuals"
     , ConfigForm.bool

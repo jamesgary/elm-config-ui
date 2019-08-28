@@ -439,11 +439,14 @@ moveBoid config maybeMousePos delta otherBoids boid =
                 pos
                 |> ruleFunc
 
+        ( a, b, c ) =
+            ( 1, 2, 3 )
+
         -- cohesion (center of mass)
         velForCohesion =
             velFromRule
                 boid.pos
-                config.cohesionRange
+                config.visionRange
                 (\nearbyBoids ->
                     let
                         centerOfMass =
@@ -469,7 +472,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
         velForAlignment =
             velFromRule
                 boid.pos
-                config.alignmentRange
+                config.visionRange
                 (\nearbyBoids ->
                     if List.isEmpty nearbyBoids then
                         Vector2d.zero
@@ -488,7 +491,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
         velForSeparation =
             velFromRule
                 boid.pos
-                config.separationRange
+                config.visionRange
                 (\nearbyBoids ->
                     let
                         centerOfMassOfTooCloseBoids =
@@ -518,11 +521,11 @@ moveBoid config maybeMousePos delta otherBoids boid =
                         distSq =
                             Point2d.squaredDistanceFrom boid.pos mousePos
                     in
-                    if distSq <= config.mouseRange ^ 2 then
+                    if distSq <= config.visionRange ^ 2 then
                         boid.pos
                             |> Vector2d.from mousePos
                             |> Vector2d.normalize
-                            --|> Vector2d.scaleBy (config.mouseFactor / logBase config.mouseLogBase (sqrt distSq / config.mouseRange))
+                            --|> Vector2d.scaleBy (config.mouseFactor / logBase config.mouseLogBase (sqrt distSq / config.visionRange))
                             |> Vector2d.scaleBy (-1 * config.mouseFactor ^ config.mouseExponent)
 
                     else
@@ -615,6 +618,20 @@ wrappedPoses ( width, height ) pos =
     --, Point2d.fromCoordinates ( x + width, y - height )
     --, Point2d.fromCoordinates ( x + width, y + height )
     ]
+
+
+
+{-
+
+   +----------------------+
+   |o                    o|
+   |                      |
+   |                      |
+   |                      |
+   |                   o  |
+   +----------------------+
+
+-}
 
 
 boidsInRange : ( Float, Float ) -> Float -> List Boid -> Point2d -> List Boid
@@ -871,6 +888,11 @@ arrowMapping =
     ]
 
 
+personalSpaceRange : Config -> Float
+personalSpaceRange config =
+    config.boidRad * config.separationRangeFactor
+
+
 viewBoid : Config -> Bool -> Boid -> Svg Msg
 viewBoid config isSelected boid =
     let
@@ -912,18 +934,10 @@ viewBoid config isSelected boid =
         |> List.map
             (\( x, y ) ->
                 Svg.g []
-                    ([ if config.showCohesionRange then
-                        [ circleRange ( x, y ) config.cohesionRange ]
-
-                       else
-                        []
-                     , if config.showAlignmentRange then
-                        [ circleRange ( x, y ) config.alignmentRange ]
-
-                       else
-                        []
-                     , if config.showSeparationRange then
-                        [ circleRange ( x, y ) config.separationRange ]
+                    ([ if config.showRanges then
+                        [ circleRange ( x, y ) config.visionRange
+                        , circleRange ( x, y ) (personalSpaceRange config)
+                        ]
 
                        else
                         []

@@ -13,7 +13,9 @@ myConfigFields =
     -- boids
     , ( "Boids", SectionKind )
     , ( "# of boids", IntKind "numBoids" )
-    , ( "Boid radius (px)", FloatKind "boidRad" )
+    , ( "Boid radius", FloatKind "boidRad" )
+    , ( "Vision range", FloatKind "visionRange" )
+    , ( "Show Ranges", BoolKind "showRanges" )
     , ( "Max speed", FloatKind "maxSpeed" )
 
     -- rule 0: Momentum (how quick to change steering)
@@ -23,26 +25,20 @@ myConfigFields =
     -- rule 1: Cohesion (Friendly gathering at center of mass)
     , ( "Rule 1: Cohesion", SectionKind )
     , ( "Factor", FloatKind "cohesionFactor" )
-    , ( "Range", FloatKind "cohesionRange" )
-    , ( "Show range", BoolKind "showCohesionRange" )
 
     -- rule 2: Alignment (conformity)
     , ( "Rule 2: Alignment", SectionKind )
     , ( "Factor", FloatKind "alignmentFactor" )
-    , ( "Range", FloatKind "alignmentRange" )
-    , ( "Show range", BoolKind "showAlignmentRange" )
 
     -- rule 3: Separation (personal space)
     , ( "Rule 3: Separation", SectionKind )
     , ( "Factor", FloatKind "separationFactor" )
-    , ( "Range", FloatKind "separationRange" )
-    , ( "Show range", BoolKind "showSeparationRange" )
+    , ( "Personal space factor", FloatKind "separationRangeFactor" )
 
     -- rule 4: Mouse
     , ( "Rule 4: Mouse", SectionKind )
     , ( "Factor", FloatKind "mouseFactor" )
     , ( "Exponent", FloatKind "mouseExponent" )
-    , ( "Range", FloatKind "mouseRange" )
 
     -- visuals
     , ( "Boid Visuals", SectionKind )

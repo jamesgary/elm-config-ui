@@ -1038,7 +1038,7 @@ formattedPower power =
                 String.fromInt (10 ^ power)
 
             else
-                "0." ++ String.repeat (1 - power) "0" ++ "1"
+                "0." ++ String.repeat (-1 - power) "0" ++ "1"
     in
     "x" ++ numStr
 
