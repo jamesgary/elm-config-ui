@@ -1030,6 +1030,19 @@ closeEl options configForm i logic =
             Html.text ""
 
 
+formattedPower : Int -> String
+formattedPower power =
+    let
+        numStr =
+            if power >= 0 then
+                String.fromInt (10 ^ power)
+
+            else
+                "0." ++ String.repeat (1 - power) "0" ++ "1"
+    in
+    "x" ++ numStr
+
+
 powerEl : ViewOptions -> ConfigForm config -> Logic config -> Html (Msg config)
 powerEl options configForm logic =
     let
@@ -1047,7 +1060,7 @@ powerEl options configForm logic =
                     [ style "padding" "5px 0"
                     ]
                     -- label
-                    [ Html.text ("x" ++ String.fromInt (10 ^ power)) ]
+                    [ Html.text (formattedPower power) ]
                 , Html.span
                     [ --style "font-size" (0.8 * toFloat options.fontSize |> px)
                       style "top" "1px"

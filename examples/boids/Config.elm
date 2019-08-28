@@ -10,7 +10,7 @@ import ConfigForm as ConfigForm
 type alias Config =
     { viewportWidth : Float
     , viewportHeight : Float
-    , skyColor : Color
+    , timeScale : Float
     , numBoids : Int
     , boidRad : Float
     , maxSpeed : Float
@@ -27,8 +27,9 @@ type alias Config =
     , mouseFactor : Float
     , mouseExponent : Float
     , mouseRange : Float
-    , showSight : Bool
     , showVels : Bool
+    , arrowScale : Float
+    , skyColor : Color
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -45,7 +46,7 @@ empty : ConfigForm.Defaults -> Config
 empty defaults =
     { viewportWidth = defaults.float
     , viewportHeight = defaults.float
-    , skyColor = defaults.color
+    , timeScale = defaults.float
     , numBoids = defaults.int
     , boidRad = defaults.float
     , maxSpeed = defaults.float
@@ -62,8 +63,9 @@ empty defaults =
     , mouseFactor = defaults.float
     , mouseExponent = defaults.float
     , mouseRange = defaults.float
-    , showSight = defaults.bool
     , showVels = defaults.bool
+    , arrowScale = defaults.float
+    , skyColor = defaults.color
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -88,11 +90,13 @@ logics =
         "Viewport height (px)"
         .viewportHeight
         (\a c -> { c | viewportHeight = a })
-    , ConfigForm.color
-        "skyColor"
-        "Sky color"
-        .skyColor
-        (\a c -> { c | skyColor = a })
+    , ConfigForm.float
+        "timeScale"
+        "Time scale"
+        .timeScale
+        (\a c -> { c | timeScale = a })
+    , ConfigForm.section
+        "Boids"
     , ConfigForm.int
         "numBoids"
         "# of boids"
@@ -186,15 +190,20 @@ logics =
     , ConfigForm.section
         "Boid Visuals"
     , ConfigForm.bool
-        "showSight"
-        "Show sight"
-        .showSight
-        (\a c -> { c | showSight = a })
-    , ConfigForm.bool
         "showVels"
-        "Show vels"
+        "Show vel arrows"
         .showVels
         (\a c -> { c | showVels = a })
+    , ConfigForm.float
+        "arrowScale"
+        "Arrow scale"
+        .arrowScale
+        (\a c -> { c | arrowScale = a })
+    , ConfigForm.color
+        "skyColor"
+        "Sky color"
+        .skyColor
+        (\a c -> { c | skyColor = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

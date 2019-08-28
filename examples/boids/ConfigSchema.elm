@@ -8,9 +8,10 @@ myConfigFields : List ( String, Kind )
 myConfigFields =
     [ ( "Viewport width (px)", FloatKind "viewportWidth" )
     , ( "Viewport height (px)", FloatKind "viewportHeight" )
-    , ( "Sky color", ColorKind "skyColor" )
+    , ( "Time scale", FloatKind "timeScale" )
 
     -- boids
+    , ( "Boids", SectionKind )
     , ( "# of boids", IntKind "numBoids" )
     , ( "Boid radius (px)", FloatKind "boidRad" )
     , ( "Max speed", FloatKind "maxSpeed" )
@@ -45,8 +46,9 @@ myConfigFields =
 
     -- visuals
     , ( "Boid Visuals", SectionKind )
-    , ( "Show sight", BoolKind "showSight" )
-    , ( "Show vels", BoolKind "showVels" )
+    , ( "Show vel arrows", BoolKind "showVels" )
+    , ( "Arrow scale", FloatKind "arrowScale" )
+    , ( "Sky color", ColorKind "skyColor" )
 
     -- config table container
     , ( "Config table container", SectionKind )

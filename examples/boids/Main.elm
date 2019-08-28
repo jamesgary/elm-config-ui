@@ -76,6 +76,8 @@ type alias Boid =
     , velForCohesion : Vector2d
     , velForAlignment : Vector2d
     , velForSeparation : Vector2d
+    , velForMouse : Vector2d
+    , velForMomentum : Vector2d
     , color : Color
     }
 
@@ -181,6 +183,8 @@ boidGenerator config =
             , velForCohesion = Vector2d.zero
             , velForAlignment = Vector2d.zero
             , velForSeparation = Vector2d.zero
+            , velForMouse = Vector2d.zero
+            , velForMomentum = Vector2d.zero
             , color = color
             }
         )
@@ -300,8 +304,12 @@ update msg model =
             )
 
         Tick delta ->
+            let
+                scaledDelta =
+                    model.config.timeScale * delta
+            in
             ( { model
-                | boids = moveBoids model delta
+                | boids = moveBoids model scaledDelta
               }
             , Cmd.none
             )
@@ -584,6 +592,8 @@ moveBoid config maybeMousePos delta otherBoids boid =
         , velForCohesion = velForCohesion
         , velForAlignment = velForAlignment
         , velForSeparation = velForSeparation
+        , velForMouse = velForMouse
+        , velForMomentum = velForMomentum
     }
 
 
@@ -689,9 +699,11 @@ view modelResult =
                 , style "height" "100%"
                 , style "padding" "20px"
                 , style "font-family" "sans-serif"
+                , style "box-sizing" "border-box"
                 ]
                 [ viewBoids model
                 , viewConfig model
+                , viewInspector model
                 ]
 
         Err err ->
@@ -704,7 +716,7 @@ viewConfig ({ config } as model) =
         [ style "right" "20px"
         , style "top" "20px"
         , style "position" "absolute"
-        , style "height" "400px"
+        , style "height" "100%"
         , style "font-size" "22px"
         ]
         [ Html.div
@@ -756,13 +768,6 @@ viewConfig ({ config } as model) =
 
 viewBoids : Model -> Html Msg
 viewBoids ({ config } as model) =
-    --, E.inFront
-    --    (E.el
-    --        [ E.alignBottom
-    --        , E.alignRight
-    --        ]
-    --        (viewInspector model)
-    --    )
     Html.div
         [ style "width" (pxFloat config.viewportWidth)
         , style "height" (pxFloat config.viewportHeight)
@@ -817,15 +822,19 @@ viewInspector model =
                             ]
                     in
                     Html.table
-                        [ style "background" "rgba(1,1,1,0.85)"
+                        [ style "background" "rgba(0,0,0,0.25)"
                         , style "padding" "15px"
                         ]
-                        (rows
+                        (arrowMapping
                             |> List.map
-                                (\( label, val ) ->
-                                    Html.tr []
-                                        [ Html.td [] [ Html.text label ]
-                                        , Html.td [] [ Html.text val ]
+                                (\( label, color, velFunc ) ->
+                                    Html.tr [ style "color" (Color.toCssString color) ]
+                                        [ Html.td
+                                            [ style "font-weight" "bold" ]
+                                            [ Html.text label ]
+                                        , Html.td
+                                            []
+                                            [ Html.text (vector2dToStr <| velFunc boid) ]
                                         ]
                                 )
                         )
@@ -852,6 +861,16 @@ viewWrappedBoid config selectedIndices ( index, boid ) =
         |> Svg.g []
 
 
+arrowMapping : List ( String, Color, Boid -> Vector2d )
+arrowMapping =
+    [ ( "Cohesion", Color.green, .velForCohesion )
+    , ( "Alignment", Color.blue, .velForAlignment )
+    , ( "Separation", Color.red, .velForSeparation )
+    , ( "Mouse", Color.black, .velForMouse )
+    , ( "Momentum", Color.gray, .velForMomentum )
+    ]
+
+
 viewBoid : Config -> Bool -> Boid -> Svg Msg
 viewBoid config isSelected boid =
     let
@@ -865,68 +884,51 @@ viewBoid config isSelected boid =
                 |> Point2d.coordinates
 
         arrows =
-            if config.showVels then
-                Svg.g []
-                    [ viewArrow Color.gray boid.pos boid.velForCohesion
-                    , viewArrow Color.gray boid.pos boid.velForAlignment
-                    , viewArrow Color.gray boid.pos boid.velForSeparation
-                    ]
+            if config.showVels && isSelected then
+                arrowMapping
+                    |> List.map
+                        (\( label, color, velFunc ) ->
+                            viewArrow config color boid.pos (velFunc boid)
+                        )
 
             else
-                Svg.g [] []
+                []
 
         poses =
             [ Point2d.coordinates boid.pos
             ]
 
-        --vels =
-        --  [(config.showCohesionVel, boid.velForCohesion, Color.red)
-        --  ,(config.showAlignmentVel, config.velForAlignment, Color.green)
-        --  ,(config.showAlignmentVel, config.velForAlignment, Color.green)
+        circleRange ( x, y ) range =
+            Svg.circle
+                [ Svg.Attributes.cx <| pxFloat x
+                , Svg.Attributes.cy <| pxFloat y
+                , Svg.Attributes.r <| pxFloat <| range
+                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                , Svg.Attributes.fill "none"
+                ]
+                []
     in
     poses
         |> List.map
             (\( x, y ) ->
                 Svg.g []
-                    [ if config.showSight then
-                        Svg.g []
-                            [ Svg.circle
-                                [ Svg.Attributes.cx <| pxFloat x
-                                , Svg.Attributes.cy <| pxFloat y
-                                , Svg.Attributes.r <| pxFloat <| config.cohesionRange
-                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                                , Svg.Attributes.fill "none"
-                                ]
-                                []
-                            , Svg.circle
-                                [ Svg.Attributes.cx <| pxFloat x
-                                , Svg.Attributes.cy <| pxFloat y
-                                , Svg.Attributes.r <| pxFloat <| config.alignmentRange
-                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                                , Svg.Attributes.fill "none"
-                                ]
-                                []
-                            , Svg.circle
-                                [ Svg.Attributes.cx <| pxFloat x
-                                , Svg.Attributes.cy <| pxFloat y
-                                , Svg.Attributes.r <| pxFloat <| config.separationRange
-                                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                                , Svg.Attributes.fill "none"
-                                ]
-                                []
-                            ]
+                    ([ if config.showCohesionRange then
+                        [ circleRange ( x, y ) config.cohesionRange ]
 
-                      else
-                        Svg.g [] []
-                    , Svg.circle
-                        [ Svg.Attributes.cx <| pxFloat x
-                        , Svg.Attributes.cy <| pxFloat y
-                        , Svg.Attributes.r <| pxFloat <| config.boidRad
-                        , Svg.Attributes.fill <| Color.toCssString <| boid.color
-                        ]
+                       else
                         []
-                    , if isSelected then
-                        Svg.circle
+                     , if config.showAlignmentRange then
+                        [ circleRange ( x, y ) config.alignmentRange ]
+
+                       else
+                        []
+                     , if config.showSeparationRange then
+                        [ circleRange ( x, y ) config.separationRange ]
+
+                       else
+                        []
+                     , if isSelected then
+                        [ Svg.circle
                             [ Svg.Attributes.cx <| pxFloat x
                             , Svg.Attributes.cy <| pxFloat y
                             , Svg.Attributes.r <| pxFloat <| (1.2 * config.boidRad)
@@ -936,33 +938,45 @@ viewBoid config isSelected boid =
                             , Svg.Attributes.fill "none"
                             ]
                             []
-
-                      else
-                        Svg.g [] []
-                    , Svg.line
-                        [ Svg.Attributes.x1 <| pxFloat x
-                        , Svg.Attributes.y1 <| pxFloat y
-                        , Svg.Attributes.x2 <| pxFloat beakEndpointX
-                        , Svg.Attributes.y2 <| pxFloat beakEndpointY
-                        , Svg.Attributes.stroke <| Color.toCssString Color.white
-                        , Svg.Attributes.strokeWidth <| pxFloat 2
                         ]
-                        []
-                    , arrows
-                    ]
+
+                       else
+                        [ Svg.g [] [] ]
+                     , [ Svg.circle
+                            [ Svg.Attributes.cx <| pxFloat x
+                            , Svg.Attributes.cy <| pxFloat y
+                            , Svg.Attributes.r <| pxFloat <| config.boidRad
+                            , Svg.Attributes.fill <| Color.toCssString <| boid.color
+                            ]
+                            []
+                       ]
+                     , [--Svg.line
+                        --   [ Svg.Attributes.x1 <| pxFloat x
+                        --   , Svg.Attributes.y1 <| pxFloat y
+                        --   , Svg.Attributes.x2 <| pxFloat beakEndpointX
+                        --   , Svg.Attributes.y2 <| pxFloat beakEndpointY
+                        --   , Svg.Attributes.stroke <| Color.toCssString Color.white
+                        --   , Svg.Attributes.strokeWidth <| pxFloat 2
+                        --   ]
+                        --   []
+                       ]
+                     , arrows
+                     ]
+                        |> List.concat
+                    )
             )
         |> Svg.g []
 
 
-viewArrow : Color -> Point2d -> Vector2d -> Svg Msg
-viewArrow color origin vec =
+viewArrow : Config -> Color -> Point2d -> Vector2d -> Svg Msg
+viewArrow config color origin vec =
     let
         ( x1, y1 ) =
             Point2d.coordinates origin
 
         ( x2, y2 ) =
             origin
-                |> Point2d.translateBy (Vector2d.scaleBy 10 vec)
+                |> Point2d.translateBy (Vector2d.scaleBy config.arrowScale vec)
                 |> Point2d.coordinates
     in
     Svg.line
