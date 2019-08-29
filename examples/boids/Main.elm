@@ -163,7 +163,7 @@ init jsonFlags =
                 , boids = boids
                 , seed = seed
                 , mousePos = Nothing
-                , selectedBoidIndex = Nothing
+                , selectedBoidIndex = Just 0
                 }
             , Cmd.none
             )
@@ -179,7 +179,10 @@ boidGenerator config =
     Random.map4
         (\x y angle color ->
             { pos = Point2d.fromCoordinates ( x, y )
-            , vel = Vector2d.zero
+            , vel =
+                ( config.maxSpeed, angle )
+                    |> fromPolar
+                    |> Vector2d.fromComponents
             , velForCohesion = Vector2d.zero
             , velForAlignment = Vector2d.zero
             , velForSeparation = Vector2d.zero
@@ -348,17 +351,46 @@ updateBoidCount model =
                     model.seed
         in
         { model
-            | boids =
-                model.boids
-                    |> Array.append newBoids
+            | boids = Array.append model.boids newBoids
             , seed = seed
         }
 
     else if boidDiff < 0 then
+        let
+            ( decreasedBoids, newSelectedIndex ) =
+                case model.selectedBoidIndex of
+                    Just index ->
+                        if index <= model.config.numBoids then
+                            case Array.get index model.boids of
+                                Just selectedBoid ->
+                                    ( model.boids
+                                        |> Array.slice 0 (model.config.numBoids - 1)
+                                        |> Array.append (Array.fromList [ selectedBoid ])
+                                    , Just 0
+                                    )
+
+                                Nothing ->
+                                    ( model.boids
+                                        |> Array.slice 0 model.config.numBoids
+                                      -- should never happen, so reset selectedIndex
+                                    , Nothing
+                                    )
+
+                        else
+                            ( model.boids
+                                |> Array.slice 0 model.config.numBoids
+                            , Just index
+                            )
+
+                    Nothing ->
+                        ( model.boids
+                            |> Array.slice 0 model.config.numBoids
+                        , Nothing
+                        )
+        in
         { model
-            | boids =
-                model.boids
-                    |> Array.slice 0 model.config.numBoids
+            | boids = decreasedBoids
+            , selectedBoidIndex = newSelectedIndex
         }
 
     else
@@ -439,9 +471,6 @@ moveBoid config maybeMousePos delta otherBoids boid =
                 pos
                 |> ruleFunc
 
-        ( a, b, c ) =
-            ( 1, 2, 3 )
-
         -- cohesion (center of mass)
         velForCohesion =
             velFromRule
@@ -491,32 +520,44 @@ moveBoid config maybeMousePos delta otherBoids boid =
         velForSeparation =
             velFromRule
                 boid.pos
-                config.visionRange
+                (personalSpaceRange config)
                 (\nearbyBoids ->
+                    -- OLD ALG
+                    --let
+                    --    centerOfMassOfTooCloseBoids =
+                    --        nearbyBoids
+                    --            |> List.map .pos
+                    --            |> Point2d.centroid
+                    --in
+                    --case centerOfMassOfTooCloseBoids of
+                    --    Just center ->
+                    --        center
+                    --            |> Vector2d.from boid.pos
+                    --            --|> Vector2d.normalize
+                    --            |> Vector2d.scaleBy
+                    --                (-config.separationFactor
+                    --                    / toFloat (List.length nearbyBoids)
+                    --                )
+                    --    Nothing ->
+                    --        Vector2d.zero
+                    -- CLASSIC ALG
                     let
-                        centerOfMassOfTooCloseBoids =
-                            nearbyBoids
-                                |> List.map .pos
-                                |> Point2d.centroid
+                        foo =
+                            0
                     in
-                    case centerOfMassOfTooCloseBoids of
-                        Just center ->
-                            center
-                                |> Vector2d.from boid.pos
-                                --|> Vector2d.normalize
-                                |> Vector2d.scaleBy
-                                    (-config.separationFactor
-                                        / toFloat (List.length nearbyBoids)
-                                    )
-
-                        Nothing ->
-                            Vector2d.zero
+                    List.foldl
+                        (\nearbyBoid tmpVec ->
+                            Vector2d.from nearbyBoid.pos boid.pos
+                                |> Vector2d.sum tmpVec
+                        )
+                        Vector2d.zero
+                        nearbyBoids
                 )
 
         -- mouse
         velForMouse =
-            case maybeMousePos of
-                Just mousePos ->
+            case ( maybeMousePos, config.mouseFactor > 0 ) of
+                ( Just mousePos, True ) ->
                     let
                         distSq =
                             Point2d.squaredDistanceFrom boid.pos mousePos
@@ -531,7 +572,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
                     else
                         Vector2d.zero
 
-                Nothing ->
+                _ ->
                     Vector2d.zero
 
         -- momentum
@@ -551,7 +592,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
         newVel =
             allVels
                 |> List.foldl Vector2d.sum Vector2d.zero
-                |> Vector2d.scaleBy (1 / toFloat (List.length allVels))
+                --|> Vector2d.scaleBy (1 / toFloat (List.length allVels))
                 |> (\v ->
                         if Vector2d.length v > config.maxSpeed then
                             v
@@ -606,48 +647,44 @@ wrappedPoses ( width, height ) pos =
         ( x, y ) =
             pos
                 |> Point2d.coordinates
+
+        --wrapped values ought to sometimes be closer than original pos
+        wrappedX =
+            if x > (width / 2) then
+                x - width
+
+            else
+                x + width
+
+        wrappedY =
+            if y > (height / 2) then
+                y - height
+
+            else
+                y + height
     in
     [ pos
-
-    --, Point2d.fromCoordinates ( x, y - height )
-    --, Point2d.fromCoordinates ( x, y + height )
-    --, Point2d.fromCoordinates ( x - width, y )
-    --, Point2d.fromCoordinates ( x - width, y - height )
-    --, Point2d.fromCoordinates ( x - width, y + height )
-    --, Point2d.fromCoordinates ( x + width, y )
-    --, Point2d.fromCoordinates ( x + width, y - height )
-    --, Point2d.fromCoordinates ( x + width, y + height )
+    , Point2d.fromCoordinates ( x, wrappedY )
+    , Point2d.fromCoordinates ( wrappedX, y )
+    , Point2d.fromCoordinates ( wrappedX, wrappedY )
     ]
 
 
-
-{-
-
-   +----------------------+
-   |o                    o|
-   |                      |
-   |                      |
-   |                      |
-   |                   o  |
-   +----------------------+
-
--}
-
-
 boidsInRange : ( Float, Float ) -> Float -> List Boid -> Point2d -> List Boid
-boidsInRange viewport range boids pos =
+boidsInRange viewport range boids boidPos =
     boids
         |> List.filterMap
-            (\boid ->
+            (\otherBoid ->
                 let
+                    -- TODO perf
                     closestPos =
-                        wrappedPoses viewport boid.pos
+                        wrappedPoses viewport otherBoid.pos
                             |> List.Extra.minimumBy
-                                (Point2d.squaredDistanceFrom pos)
-                            |> Maybe.withDefault boid.pos
+                                (Point2d.squaredDistanceFrom boidPos)
+                            |> Maybe.withDefault otherBoid.pos
                 in
-                if Point2d.squaredDistanceFrom pos closestPos <= range ^ 2 then
-                    Just { boid | pos = closestPos }
+                if Point2d.squaredDistanceFrom boidPos closestPos <= range ^ 2 then
+                    Just { otherBoid | pos = closestPos }
 
                 else
                     Nothing
@@ -804,11 +841,13 @@ viewBoids ({ config } as model) =
                 , Svg.Attributes.width "100%"
                 , Svg.Attributes.height "100%"
                 , Svg.Attributes.fill (Color.toCssString config.skyColor)
+                , Svg.Attributes.opacity (toOpacityString config.skyColor)
                 ]
                 []
             , Svg.g []
                 (model.boids
                     |> Array.toIndexedList
+                    |> List.reverse
                     |> List.map
                         (viewWrappedBoid config
                             [ model.selectedBoidIndex, getHoveredBoidIndex model ]
@@ -816,6 +855,21 @@ viewBoids ({ config } as model) =
                 )
             ]
         ]
+
+
+toOpacity : Color -> Float
+toOpacity color =
+    color
+        |> Color.toRgba
+        |> .alpha
+
+
+toOpacityString : Color -> String
+toOpacityString color =
+    color
+        |> Color.toRgba
+        |> .alpha
+        |> String.fromFloat
 
 
 relativePos : Pointer.Event -> Point2d
@@ -839,10 +893,10 @@ viewInspector model =
                             ]
                     in
                     Html.table
-                        [ style "background" "rgba(0,0,0,0.25)"
+                        [ style "background" (Color.toCssString model.config.skyColor)
                         , style "padding" "15px"
                         ]
-                        (arrowMapping
+                        (arrowMapping model.config
                             |> List.map
                                 (\( label, color, velFunc ) ->
                                     Html.tr [ style "color" (Color.toCssString color) ]
@@ -878,13 +932,13 @@ viewWrappedBoid config selectedIndices ( index, boid ) =
         |> Svg.g []
 
 
-arrowMapping : List ( String, Color, Boid -> Vector2d )
-arrowMapping =
-    [ ( "Cohesion", Color.green, .velForCohesion )
-    , ( "Alignment", Color.blue, .velForAlignment )
-    , ( "Separation", Color.red, .velForSeparation )
-    , ( "Mouse", Color.black, .velForMouse )
-    , ( "Momentum", Color.gray, .velForMomentum )
+arrowMapping : Config -> List ( String, Color, Boid -> Vector2d )
+arrowMapping config =
+    [ ( "Momentum", config.momentumColor, .velForMomentum )
+    , ( "Cohesion", config.cohesionColor, .velForCohesion )
+    , ( "Alignment", config.alignmentColor, .velForAlignment )
+    , ( "Separation", config.separationColor, .velForSeparation )
+    , ( "Mouse", config.mouseColor, .velForMouse )
     ]
 
 
@@ -895,76 +949,79 @@ personalSpaceRange config =
 
 viewBoid : Config -> Bool -> Boid -> Svg Msg
 viewBoid config isSelected boid =
-    let
-        ( beakEndpointX, beakEndpointY ) =
-            boid.pos
-                |> Point2d.translateBy
-                    (boid.vel
-                        |> Vector2d.normalize
-                        |> Vector2d.scaleBy config.boidRad
-                    )
-                |> Point2d.coordinates
-
-        arrows =
-            if config.showVels && isSelected then
-                arrowMapping
-                    |> List.map
-                        (\( label, color, velFunc ) ->
-                            viewArrow config color boid.pos (velFunc boid)
-                        )
-
-            else
-                []
-
-        poses =
-            [ Point2d.coordinates boid.pos
-            ]
-
-        circleRange ( x, y ) range =
-            Svg.circle
-                [ Svg.Attributes.cx <| pxFloat x
-                , Svg.Attributes.cy <| pxFloat y
-                , Svg.Attributes.r <| pxFloat <| range
-                , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                , Svg.Attributes.fill "none"
-                ]
-                []
-    in
-    poses
+    wrappedPoses
+        ( config.viewportWidth, config.viewportHeight )
+        boid.pos
         |> List.map
-            (\( x, y ) ->
+            (\pos ->
+                let
+                    ( x, y ) =
+                        Point2d.coordinates pos
+
+                    ( beakEndpointX, beakEndpointY ) =
+                        pos
+                            |> Point2d.translateBy
+                                (boid.vel
+                                    |> Vector2d.normalize
+                                    |> Vector2d.scaleBy config.boidRad
+                                )
+                            |> Point2d.coordinates
+
+                    arrows =
+                        if config.showVels && isSelected then
+                            arrowMapping config
+                                |> List.map
+                                    (\( label, color, velFunc ) ->
+                                        viewArrow config color pos (velFunc boid)
+                                    )
+
+                        else
+                            []
+
+                    circleRange range =
+                        Svg.circle
+                            [ Svg.Attributes.cx <| pxFloat x
+                            , Svg.Attributes.cy <| pxFloat y
+                            , Svg.Attributes.r <| pxFloat <| range
+                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                            , Svg.Attributes.strokeOpacity <| toOpacityString boid.color
+                            , Svg.Attributes.fill "none"
+                            , Svg.Attributes.class "rrrrrrrrrrrrranges"
+                            ]
+                            []
+                in
                 Svg.g []
-                    ([ if config.showRanges then
-                        [ circleRange ( x, y ) config.visionRange
-                        , circleRange ( x, y ) (personalSpaceRange config)
+                    ([ -- ranges
+                       if config.showRanges then
+                        [ circleRange config.visionRange
+                        , circleRange (personalSpaceRange config)
                         ]
 
                        else
                         []
+
+                     -- selected lasso ring
                      , if isSelected then
                         [ Svg.circle
                             [ Svg.Attributes.cx <| pxFloat x
                             , Svg.Attributes.cy <| pxFloat y
                             , Svg.Attributes.r <| pxFloat <| (1.2 * config.boidRad)
                             , Svg.Attributes.stroke <| Color.toCssString <| boid.color
+                            , Svg.Attributes.strokeOpacity <| toOpacityString boid.color
                             , Svg.Attributes.strokeDasharray "8 4"
                             , Svg.Attributes.strokeWidth "2"
                             , Svg.Attributes.fill "none"
+                            , Svg.Attributes.class "sssssssssssssselected"
                             ]
                             []
                         ]
 
                        else
-                        [ Svg.g [] [] ]
-                     , [ Svg.circle
-                            [ Svg.Attributes.cx <| pxFloat x
-                            , Svg.Attributes.cy <| pxFloat y
-                            , Svg.Attributes.r <| pxFloat <| config.boidRad
-                            , Svg.Attributes.fill <| Color.toCssString <| boid.color
-                            ]
-                            []
-                       ]
-                     , [--Svg.line
+                        []
+
+                     --beak
+                     , [-- TODO fix wrapped beaks
+                        --Svg.line
                         --   [ Svg.Attributes.x1 <| pxFloat x
                         --   , Svg.Attributes.y1 <| pxFloat y
                         --   , Svg.Attributes.x2 <| pxFloat beakEndpointX
@@ -974,6 +1031,22 @@ viewBoid config isSelected boid =
                         --   ]
                         --   []
                        ]
+
+                     -- boid body
+                     , [ Svg.circle
+                            [ Svg.Attributes.cx <| pxFloat x
+                            , Svg.Attributes.cy <| pxFloat y
+                            , Svg.Attributes.r <| pxFloat <| config.boidRad
+                            , Svg.Attributes.fill <| Color.toCssString <| boid.color
+                            , Svg.Attributes.opacity <| toOpacityString <| boid.color
+
+                            --, Svg.Attributes.opacity "0.5"
+                            , Svg.Attributes.class "bbbbbbbbbbbboidbody"
+                            ]
+                            []
+                       ]
+
+                     -- arrows
                      , arrows
                      ]
                         |> List.concat
@@ -999,7 +1072,9 @@ viewArrow config color origin vec =
         , Svg.Attributes.x2 <| pxFloat x2
         , Svg.Attributes.y2 <| pxFloat y2
         , Svg.Attributes.stroke <| Color.toCssString color
+        , Svg.Attributes.strokeOpacity <| toOpacityString color
         , Svg.Attributes.strokeWidth <| pxFloat 3
+        , Svg.Attributes.class "aaaaaaaaaaaaarrows"
         ]
         []
 

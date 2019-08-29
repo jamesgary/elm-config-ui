@@ -20,24 +20,29 @@ myConfigFields =
 
     -- rule 0: Momentum (how quick to change steering)
     , ( "Rule 0: Momentum", SectionKind )
+    , ( "Color", ColorKind "momentumColor" )
     , ( "Factor", FloatKind "momentumFactor" )
 
     -- rule 1: Cohesion (Friendly gathering at center of mass)
     , ( "Rule 1: Cohesion", SectionKind )
+    , ( "Color", ColorKind "cohesionColor" )
     , ( "Factor", FloatKind "cohesionFactor" )
 
     -- rule 2: Alignment (conformity)
     , ( "Rule 2: Alignment", SectionKind )
+    , ( "Color", ColorKind "alignmentColor" )
     , ( "Factor", FloatKind "alignmentFactor" )
 
     -- rule 3: Separation (personal space)
     , ( "Rule 3: Separation", SectionKind )
     , ( "Factor", FloatKind "separationFactor" )
+    , ( "Color", ColorKind "separationColor" )
     , ( "Personal space factor", FloatKind "separationRangeFactor" )
 
     -- rule 4: Mouse
     , ( "Rule 4: Mouse", SectionKind )
     , ( "Factor", FloatKind "mouseFactor" )
+    , ( "Color", ColorKind "mouseColor" )
     , ( "Exponent", FloatKind "mouseExponent" )
 
     -- visuals

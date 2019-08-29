@@ -16,12 +16,17 @@ type alias Config =
     , visionRange : Float
     , showRanges : Bool
     , maxSpeed : Float
+    , momentumColor : Color
     , momentumFactor : Float
+    , cohesionColor : Color
     , cohesionFactor : Float
+    , alignmentColor : Color
     , alignmentFactor : Float
     , separationFactor : Float
+    , separationColor : Color
     , separationRangeFactor : Float
     , mouseFactor : Float
+    , mouseColor : Color
     , mouseExponent : Float
     , showVels : Bool
     , arrowScale : Float
@@ -48,12 +53,17 @@ empty defaults =
     , visionRange = defaults.float
     , showRanges = defaults.bool
     , maxSpeed = defaults.float
+    , momentumColor = defaults.color
     , momentumFactor = defaults.float
+    , cohesionColor = defaults.color
     , cohesionFactor = defaults.float
+    , alignmentColor = defaults.color
     , alignmentFactor = defaults.float
     , separationFactor = defaults.float
+    , separationColor = defaults.color
     , separationRangeFactor = defaults.float
     , mouseFactor = defaults.float
+    , mouseColor = defaults.color
     , mouseExponent = defaults.float
     , showVels = defaults.bool
     , arrowScale = defaults.float
@@ -116,6 +126,11 @@ logics =
         (\a c -> { c | maxSpeed = a })
     , ConfigForm.section
         "Rule 0: Momentum"
+    , ConfigForm.color
+        "momentumColor"
+        "Color"
+        .momentumColor
+        (\a c -> { c | momentumColor = a })
     , ConfigForm.float
         "momentumFactor"
         "Factor"
@@ -123,6 +138,11 @@ logics =
         (\a c -> { c | momentumFactor = a })
     , ConfigForm.section
         "Rule 1: Cohesion"
+    , ConfigForm.color
+        "cohesionColor"
+        "Color"
+        .cohesionColor
+        (\a c -> { c | cohesionColor = a })
     , ConfigForm.float
         "cohesionFactor"
         "Factor"
@@ -130,6 +150,11 @@ logics =
         (\a c -> { c | cohesionFactor = a })
     , ConfigForm.section
         "Rule 2: Alignment"
+    , ConfigForm.color
+        "alignmentColor"
+        "Color"
+        .alignmentColor
+        (\a c -> { c | alignmentColor = a })
     , ConfigForm.float
         "alignmentFactor"
         "Factor"
@@ -142,6 +167,11 @@ logics =
         "Factor"
         .separationFactor
         (\a c -> { c | separationFactor = a })
+    , ConfigForm.color
+        "separationColor"
+        "Color"
+        .separationColor
+        (\a c -> { c | separationColor = a })
     , ConfigForm.float
         "separationRangeFactor"
         "Personal space factor"
@@ -154,6 +184,11 @@ logics =
         "Factor"
         .mouseFactor
         (\a c -> { c | mouseFactor = a })
+    , ConfigForm.color
+        "mouseColor"
+        "Color"
+        .mouseColor
+        (\a c -> { c | mouseColor = a })
     , ConfigForm.float
         "mouseExponent"
         "Exponent"

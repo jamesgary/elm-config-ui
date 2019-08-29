@@ -1,30 +1,57 @@
 {
-  "viewportWidth": 958,
-  "viewportHeight": 740,
-  "skyColor": {
-    "r": 0.6845333333333334,
-    "g": 0.9687999999999998,
-    "b": 0.9687999999999999,
+  "viewportWidth": 1060,
+  "viewportHeight": 550,
+  "timeScale": 1.0300000000000011,
+  "numBoids": 31,
+  "boidRad": 16.00000000000003,
+  "visionRange": 181,
+  "showRanges": false,
+  "maxSpeed": 177.39999999999998,
+  "momentumColor": {
+    "r": 0.02659999999999995,
+    "g": 0.00006666666666666626,
+    "b": 0.026599999999999943,
+    "a": 0.1
+  },
+  "momentumFactor": 0.9999999999999949,
+  "cohesionColor": {
+    "r": 0.020100000000000007,
+    "g": 0.48932333333333333,
+    "b": 0.8732333333333333,
     "a": 1
   },
-  "numBoids": 92,
-  "boidRad": 10.000000000000021,
-  "maxSpeed": 251.6899999999987,
-  "momentumFactor": 5.000000000000011,
-  "cohesionFactor": 117,
-  "cohesionRange": 108,
-  "showCohesionRange": true,
-  "alignmentFactor": 0.75,
-  "alignmentRange": 106,
-  "showAlignmentRange": true,
-  "separationFactor": 500,
-  "separationRange": 27,
-  "showSeparationRange": true,
-  "mouseFactor": 5420,
-  "mouseExponent": 0.6689999999999999,
-  "mouseRange": 197,
-  "showSight": false,
+  "cohesionFactor": 40,
+  "alignmentColor": {
+    "r": 0.03849999999999998,
+    "g": 0.6948333333333334,
+    "b": 0.16320333333333337,
+    "a": 1
+  },
+  "alignmentFactor": 0.06400000000000004,
+  "separationFactor": 0.14000000000000679,
+  "separationColor": {
+    "r": 0.96,
+    "g": 0,
+    "b": 0,
+    "a": 1
+  },
+  "separationRangeFactor": 2.300000000000003,
+  "mouseFactor": 0,
+  "mouseColor": {
+    "r": 0.7501333333333334,
+    "g": 0.0232,
+    "b": 0.7501333333333332,
+    "a": 1
+  },
+  "mouseExponent": 0,
   "showVels": false,
+  "arrowScale": 2.439999999999987,
+  "skyColor": {
+    "r": 0.971328,
+    "g": 0.9818,
+    "b": 0.45819999999999994,
+    "a": 1
+  },
   "configTableBgColor": {
     "r": 0.9347833333333334,
     "g": 0.9371666666666667,
@@ -38,7 +65,7 @@
     "b": 0.018400000000000027,
     "a": 1
   },
-  "configTablePadding": 10,
+  "configTablePadding": 14,
   "configRowSpacing": 4,
   "configLabelHighlightBgColor": {
     "r": 0.9551186666666667,
@@ -48,5 +75,5 @@
   },
   "configFontSize": 21,
   "configInputHeight": 33,
-  "configInputWidth": 143
+  "configInputWidth": 101
 }
