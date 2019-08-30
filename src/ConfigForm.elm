@@ -1013,7 +1013,7 @@ closeEl options configForm i logic =
     case maybeCloseMsg of
         Just msg ->
             Html.button
-                [ style "background" "rgba(1,1,1,0.9)"
+                [ style "background" "rgba(255,255,255,0.9)"
                 , style "border" "1px solid rgba(0,0,0,0.9)"
                 , style "border-radius" "4px"
                 , style "width" (px (1.5 * toFloat options.fontSize))
