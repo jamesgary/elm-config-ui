@@ -8,7 +8,6 @@ myConfigFields : List ( String, Kind )
 myConfigFields =
     [ ( "Viewport width (px)", FloatKind "viewportWidth" )
     , ( "Viewport height (px)", FloatKind "viewportHeight" )
-    , ( "Time scale", FloatKind "timeScale" )
 
     -- boids
     , ( "Boids", SectionKind )

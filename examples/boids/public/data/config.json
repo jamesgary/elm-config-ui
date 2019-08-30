@@ -1,12 +1,11 @@
 {
   "viewportWidth": 1060,
   "viewportHeight": 550,
-  "timeScale": 1.0300000000000011,
-  "numBoids": 31,
+  "numBoids": 30,
   "boidRad": 16.00000000000003,
   "visionRange": 181,
   "showRanges": false,
-  "maxSpeed": 177.39999999999998,
+  "maxSpeed": 303.4,
   "momentumColor": {
     "r": 0.02659999999999995,
     "g": 0.00006666666666666626,
@@ -20,36 +19,36 @@
     "b": 0.8732333333333333,
     "a": 1
   },
-  "cohesionFactor": 40,
+  "cohesionFactor": 156,
   "alignmentColor": {
     "r": 0.03849999999999998,
     "g": 0.6948333333333334,
     "b": 0.16320333333333337,
     "a": 1
   },
-  "alignmentFactor": 0.06400000000000004,
-  "separationFactor": 0.14000000000000679,
+  "alignmentFactor": 0.21999999999999864,
+  "separationFactor": 2.650000000000019,
   "separationColor": {
     "r": 0.96,
     "g": 0,
     "b": 0,
     "a": 1
   },
-  "separationRangeFactor": 2.300000000000003,
-  "mouseFactor": 0,
+  "separationRangeFactor": 2.4,
+  "mouseFactor": -336,
   "mouseColor": {
     "r": 0.7501333333333334,
     "g": 0.0232,
     "b": 0.7501333333333332,
     "a": 1
   },
-  "mouseExponent": 0,
+  "mouseExponent": 2,
   "showVels": false,
   "arrowScale": 2.439999999999987,
   "skyColor": {
-    "r": 0.971328,
-    "g": 0.9818,
-    "b": 0.45819999999999994,
+    "r": 0.6090000000000002,
+    "g": 0.9680799999999998,
+    "b": 0.9909999999999999,
     "a": 1
   },
   "configTableBgColor": {

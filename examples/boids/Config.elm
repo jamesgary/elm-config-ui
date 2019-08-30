@@ -10,7 +10,6 @@ import ConfigForm as ConfigForm
 type alias Config =
     { viewportWidth : Float
     , viewportHeight : Float
-    , timeScale : Float
     , numBoids : Int
     , boidRad : Float
     , visionRange : Float
@@ -47,7 +46,6 @@ empty : ConfigForm.Defaults -> Config
 empty defaults =
     { viewportWidth = defaults.float
     , viewportHeight = defaults.float
-    , timeScale = defaults.float
     , numBoids = defaults.int
     , boidRad = defaults.float
     , visionRange = defaults.float
@@ -92,11 +90,6 @@ logics =
         "Viewport height (px)"
         .viewportHeight
         (\a c -> { c | viewportHeight = a })
-    , ConfigForm.float
-        "timeScale"
-        "Time scale"
-        .timeScale
-        (\a c -> { c | timeScale = a })
     , ConfigForm.section
         "Boids"
     , ConfigForm.int

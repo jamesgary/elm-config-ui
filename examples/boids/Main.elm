@@ -306,13 +306,9 @@ update msg model =
             , saveToLocalStorageCmd newModel
             )
 
-        Tick delta ->
-            let
-                scaledDelta =
-                    model.config.timeScale * delta
-            in
+        Tick deltaInMilliseconds ->
             ( { model
-                | boids = moveBoids model scaledDelta
+                | boids = moveBoids model deltaInMilliseconds
               }
             , Cmd.none
             )
@@ -541,10 +537,6 @@ moveBoid config maybeMousePos delta otherBoids boid =
                     --    Nothing ->
                     --        Vector2d.zero
                     -- CLASSIC ALG
-                    let
-                        foo =
-                            0
-                    in
                     List.foldl
                         (\nearbyBoid tmpVec ->
                             Vector2d.from nearbyBoid.pos boid.pos
@@ -552,11 +544,12 @@ moveBoid config maybeMousePos delta otherBoids boid =
                         )
                         Vector2d.zero
                         nearbyBoids
+                        |> Vector2d.scaleBy config.separationFactor
                 )
 
         -- mouse
         velForMouse =
-            case ( maybeMousePos, config.mouseFactor > 0 ) of
+            case ( maybeMousePos, config.mouseFactor /= 0 ) of
                 ( Just mousePos, True ) ->
                     let
                         distSq =
@@ -567,7 +560,8 @@ moveBoid config maybeMousePos delta otherBoids boid =
                             |> Vector2d.from mousePos
                             |> Vector2d.normalize
                             --|> Vector2d.scaleBy (config.mouseFactor / logBase config.mouseLogBase (sqrt distSq / config.visionRange))
-                            |> Vector2d.scaleBy (-1 * config.mouseFactor ^ config.mouseExponent)
+                            --|> Vector2d.scaleBy (-1 * config.mouseFactor ^ config.mouseExponent)
+                            |> Vector2d.scaleBy (-1 * config.mouseFactor)
 
                     else
                         Vector2d.zero
@@ -757,7 +751,8 @@ view modelResult =
                 ]
                 [ viewBoids model
                 , viewConfig model
-                , viewInspector model
+
+                --, viewInspector model
                 ]
 
         Err err ->

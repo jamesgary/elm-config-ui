@@ -29,6 +29,6 @@ chokidar $CONFIG_SCHEMA_ELMFILE --command "generate_config $GENERATE_ARGS" &
 
 # Watch for elm changes
 #elm-live $MAIN_ELMFILE --dir=$SERVER_DIR -- --optimize --output=$MAIN_JS_OUTPUT &
-elm-live $MAIN_ELMFILE --dir=$SERVER_DIR -- --output=$MAIN_JS_OUTPUT &
+elm-live $MAIN_ELMFILE --dir=$SERVER_DIR --port 7999 -- --output=$MAIN_JS_OUTPUT &
 
 wait
