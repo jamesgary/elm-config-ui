@@ -42,7 +42,6 @@ myConfigFields =
     , ( "Rule 4: Mouse", SectionKind )
     , ( "Factor", FloatKind "mouseFactor" )
     , ( "Color", ColorKind "mouseColor" )
-    , ( "Exponent", FloatKind "mouseExponent" )
 
     -- visuals
     , ( "Boid Visuals", SectionKind )

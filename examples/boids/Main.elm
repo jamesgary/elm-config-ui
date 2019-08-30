@@ -61,7 +61,7 @@ type alias ModelResult =
 
 type alias Model =
     { config : Config
-    , configForm : ConfigForm Config
+    , configForm : ConfigForm
     , isConfigOpen : Bool
     , boids : Array Boid
     , seed : Random.Seed
@@ -91,6 +91,7 @@ type Msg
     | MouseMoved Point2d
     | MouseClicked Point2d
     | MouseLeft
+    | ClickedResetToDefault
 
 
 
@@ -287,6 +288,25 @@ update msg model =
                             log "Could not decode incoming port msg: " (JD.errorToString err)
                     in
                     ( model, Cmd.none )
+
+        ClickedResetToDefault ->
+            let
+                ( config, configForm ) =
+                    ConfigForm.resetToDefault
+                        Config.logics
+                        model.config
+                        model.configForm
+
+                newModel =
+                    { model
+                        | config = config
+                        , configForm = configForm
+                    }
+            in
+            ( newModel
+            , Cmd.batch
+                [ saveToLocalStorageCmd newModel ]
+            )
 
         ClickedOpenConfig ->
             let
@@ -802,6 +822,10 @@ viewConfig ({ config } as model) =
                         )
                     ]
                     []
+                , Html.br [] []
+                , Html.button
+                    [ Html.Events.onClick ClickedResetToDefault ]
+                    [ Html.text "Reset to default" ]
                 ]
 
              else

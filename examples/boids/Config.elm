@@ -26,7 +26,6 @@ type alias Config =
     , separationRangeFactor : Float
     , mouseFactor : Float
     , mouseColor : Color
-    , mouseExponent : Float
     , showVels : Bool
     , arrowScale : Float
     , skyColor : Color
@@ -62,7 +61,6 @@ empty defaults =
     , separationRangeFactor = defaults.float
     , mouseFactor = defaults.float
     , mouseColor = defaults.color
-    , mouseExponent = defaults.float
     , showVels = defaults.bool
     , arrowScale = defaults.float
     , skyColor = defaults.color
@@ -182,11 +180,6 @@ logics =
         "Color"
         .mouseColor
         (\a c -> { c | mouseColor = a })
-    , ConfigForm.float
-        "mouseExponent"
-        "Exponent"
-        .mouseExponent
-        (\a c -> { c | mouseExponent = a })
     , ConfigForm.section
         "Boid Visuals"
     , ConfigForm.bool

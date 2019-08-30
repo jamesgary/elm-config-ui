@@ -6,6 +6,7 @@ module ConfigForm exposing
     , view
     , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
     , int, float, string, bool, color, section
+    , resetToDefault
     )
 
 {-|
@@ -63,8 +64,9 @@ import Round
 
 {-| ConfigForm is the state of the config form. Keep it in your model along with the regular `config` record. TODO make opaque
 -}
-type alias ConfigForm config =
-    { file : config -- unused for now
+type alias ConfigForm =
+    { fileJson : JE.Value
+    , formJson : JE.Value
     , fields : OrderedDict String Field
     , activeField : Maybe ( FieldState, String )
     , scrollTop : Int -- also unused
@@ -125,13 +127,6 @@ type ColorFieldMeta
         }
 
 
-type alias Flags =
-    { configJson : JE.Value -- currently unused
-    , configFormJson : JE.Value
-    , defaults : Defaults
-    }
-
-
 {-| If a particular value isn't found from localStorage or file, then it fallbacks to these values. It might be a good idea to use wild values that are easy to spot so you can quickly replace them with real values.
 
     defaults =
@@ -171,7 +166,7 @@ type alias InitOptions config =
 
 {-| `init` will create both a valid `Config` and `ConfigForm`.
 -}
-init : InitOptions config -> ( config, ConfigForm config )
+init : InitOptions config -> ( config, ConfigForm )
 init options =
     let
         config =
@@ -185,6 +180,7 @@ init options =
                 options.logics
                 config
                 options.configFormJson
+                options.configJson
     in
     ( configFromConfigForm options.logics configForm.fields config
     , configForm
@@ -341,7 +337,7 @@ encodeColor col =
 
 {-| Encodes the current data of your config form to be persisted, including meta-data. This is typically used to save to localStorage.
 -}
-encodeConfigForm : ConfigForm config -> JE.Value
+encodeConfigForm : ConfigForm -> JE.Value
 encodeConfigForm configForm =
     {-
        do i even need a config at all?
@@ -448,7 +444,7 @@ encodeField field =
                 )
 
 -}
-update : List (Logic config) -> config -> ConfigForm config -> Msg config -> ( config, ConfigForm config, Maybe JE.Value )
+update : List (Logic config) -> config -> ConfigForm -> Msg config -> ( config, ConfigForm, Maybe JE.Value )
 update logics config configForm msg =
     case msg of
         ChangedConfigForm fieldName field ->
@@ -559,7 +555,7 @@ When you receive a Msg through your port from elm-config-gui.js, update your `Co
                                 )
 
 -}
-updateFromJson : List (Logic config) -> config -> ConfigForm config -> JE.Value -> ( config, ConfigForm config, Maybe JE.Value )
+updateFromJson : List (Logic config) -> config -> ConfigForm -> JE.Value -> ( config, ConfigForm, Maybe JE.Value )
 updateFromJson logics config configForm json =
     case JD.decodeValue portDecoder json of
         Ok portMsg ->
@@ -685,9 +681,10 @@ poweredFloat power val =
     Round.roundNum -power val
 
 
-decodeConfigForm : List (Logic config) -> config -> JE.Value -> ConfigForm config
-decodeConfigForm logics config json =
-    { file = config
+decodeConfigForm : List (Logic config) -> config -> JE.Value -> JE.Value -> ConfigForm
+decodeConfigForm logics config formJson fileJson =
+    { fileJson = fileJson
+    , formJson = formJson
     , fields =
         logics
             |> List.map
@@ -712,7 +709,7 @@ decodeConfigForm logics config json =
                                         )
 
                                 ( val, power ) =
-                                    case JD.decodeValue decoder json of
+                                    case JD.decodeValue decoder formJson of
                                         Ok v ->
                                             v
 
@@ -743,7 +740,7 @@ decodeConfigForm logics config json =
                                         )
 
                                 ( val, power ) =
-                                    case JD.decodeValue decoder json of
+                                    case JD.decodeValue decoder formJson of
                                         Ok v ->
                                             v
 
@@ -762,7 +759,7 @@ decodeConfigForm logics config json =
                                     JD.at [ "fields", logic.fieldName ] JD.string
 
                                 val =
-                                    case JD.decodeValue decoder json of
+                                    case JD.decodeValue decoder formJson of
                                         Ok v ->
                                             v
 
@@ -779,7 +776,7 @@ decodeConfigForm logics config json =
                                     JD.at [ "fields", logic.fieldName ] JD.bool
 
                                 val =
-                                    case JD.decodeValue decoder json of
+                                    case JD.decodeValue decoder formJson of
                                         Ok v ->
                                             v
 
@@ -796,7 +793,7 @@ decodeConfigForm logics config json =
                                     JD.at [ "fields", logic.fieldName ] colorValDecoder
 
                                 val =
-                                    case JD.decodeValue decoder json of
+                                    case JD.decodeValue decoder formJson of
                                         Ok v ->
                                             v
 
@@ -819,7 +816,7 @@ decodeConfigForm logics config json =
             |> OrderedDict.fromList
     , activeField = Nothing
     , scrollTop =
-        case JD.decodeValue (JD.field "scrollTop" JD.int) json of
+        case JD.decodeValue (JD.field "scrollTop" JD.int) formJson of
             Ok scrollTop ->
                 scrollTop
 
@@ -900,7 +897,7 @@ colorValDecoder =
 
 {-| View the config form.
 -}
-view : ViewOptions -> List (Logic config) -> ConfigForm config -> Html (Msg config)
+view : ViewOptions -> List (Logic config) -> ConfigForm -> Html (Msg config)
 view options logics configForm =
     Html.table []
         (logics
@@ -928,7 +925,7 @@ view options logics configForm =
         )
 
 
-viewLabel : ViewOptions -> ConfigForm config -> Int -> Logic config -> Html (Msg config)
+viewLabel : ViewOptions -> ConfigForm -> Int -> Logic config -> Html (Msg config)
 viewLabel options configForm i logic =
     case logic.kind of
         StringLogic getter setter ->
@@ -971,7 +968,7 @@ viewLabel options configForm i logic =
                 [ Html.text logic.label ]
 
 
-closeEl : ViewOptions -> ConfigForm config -> Int -> Logic config -> Html (Msg config)
+closeEl : ViewOptions -> ConfigForm -> Int -> Logic config -> Html (Msg config)
 closeEl options configForm i logic =
     let
         maybeCloseMsg =
@@ -1043,7 +1040,7 @@ formattedPower power =
     "x" ++ numStr
 
 
-powerEl : ViewOptions -> ConfigForm config -> Logic config -> Html (Msg config)
+powerEl : ViewOptions -> ConfigForm -> Logic config -> Html (Msg config)
 powerEl options configForm logic =
     let
         makePowerEl power newIncField newDecField isDownDisabled =
@@ -1144,7 +1141,7 @@ powerEl options configForm logic =
             Html.text ""
 
 
-resizeAttrs : ViewOptions -> ConfigForm config -> Logic config -> List (Html.Attribute (Msg config))
+resizeAttrs : ViewOptions -> ConfigForm -> Logic config -> List (Html.Attribute (Msg config))
 resizeAttrs options configForm logic =
     [ Html.Events.onMouseDown (ClickedPointerLockLabel logic.fieldName)
     , Html.Events.onMouseEnter (HoveredLabel logic.fieldName True)
@@ -1155,7 +1152,7 @@ resizeAttrs options configForm logic =
     ]
 
 
-viewChanger : ViewOptions -> ConfigForm config -> Int -> Logic config -> Html (Msg config)
+viewChanger : ViewOptions -> ConfigForm -> Int -> Logic config -> Html (Msg config)
 viewChanger options configForm i logic =
     let
         defaultAttrs =
@@ -1475,3 +1472,23 @@ px num =
 pxInt : Int -> String
 pxInt num =
     String.fromInt num ++ "px"
+
+
+
+-- NEW
+{- reset to the original json file -}
+
+
+resetToDefault : List (Logic config) -> config -> ConfigForm -> ( config, ConfigForm )
+resetToDefault logics config configForm =
+    let
+        newConfig =
+            decodeConfig logics config configForm.fileJson
+    in
+    ( newConfig
+    , decodeConfigForm
+        logics
+        newConfig
+        (JE.object [])
+        configForm.fileJson
+    )
