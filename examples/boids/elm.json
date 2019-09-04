@@ -8,6 +8,7 @@
     "dependencies": {
         "direct": {
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
+            "Zinggi/elm-2d-game": "4.0.0",
             "avh4/elm-color": "1.0.0",
             "elm/browser": "1.0.1",
             "elm/core": "1.0.2",
@@ -33,6 +34,7 @@
             "elm/url": "1.0.0",
             "elm/virtual-dom": "1.0.2",
             "elm-explorations/test": "1.2.1",
+            "elm-explorations/webgl": "1.1.1",
             "ianmackenzie/elm-float-extra": "1.1.0",
             "ianmackenzie/elm-interval": "1.0.1",
             "ianmackenzie/elm-triangular-mesh": "1.0.2",

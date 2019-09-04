@@ -1,9 +1,10 @@
 {
-  "viewportWidth": 1060,
-  "viewportHeight": 550,
-  "numBoids": 30,
-  "boidRad": 16.00000000000003,
-  "visionRange": 181,
+  "viewportWidth": 1017,
+  "viewportHeight": 533,
+  "timeScale": 1.0000000000000042,
+  "numBoids": 93,
+  "boidRad": 24.00000000000003,
+  "visionRange": 100,
   "showRanges": false,
   "maxSpeed": 303.4,
   "momentumColor": {
@@ -12,43 +13,42 @@
     "b": 0.026599999999999943,
     "a": 0.1
   },
-  "momentumFactor": 0.9999999999999949,
+  "momentumFactor": 1.0099999999999985,
   "cohesionColor": {
     "r": 0.020100000000000007,
     "g": 0.48932333333333333,
     "b": 0.8732333333333333,
     "a": 1
   },
-  "cohesionFactor": 156,
+  "cohesionFactor": 128,
   "alignmentColor": {
     "r": 0.03849999999999998,
     "g": 0.6948333333333334,
     "b": 0.16320333333333337,
     "a": 1
   },
-  "alignmentFactor": 0.21999999999999864,
-  "separationFactor": 2.650000000000019,
+  "alignmentFactor": 0.11979999999999981,
+  "separationFactor": 42.05000000000001,
   "separationColor": {
     "r": 0.96,
     "g": 0,
     "b": 0,
     "a": 1
   },
-  "separationRangeFactor": 2.4,
-  "mouseFactor": -336,
+  "separationRangeFactor": 1.3500000000000003,
+  "mouseFactor": -134,
   "mouseColor": {
     "r": 0.7501333333333334,
     "g": 0.0232,
     "b": 0.7501333333333332,
     "a": 1
   },
-  "mouseExponent": 2,
-  "showVels": false,
-  "arrowScale": 2.439999999999987,
+  "showVels": true,
+  "arrowScale": 0.31999999999999595,
   "skyColor": {
-    "r": 0.6090000000000002,
-    "g": 0.9680799999999998,
-    "b": 0.9909999999999999,
+    "r": 0.5659333333333332,
+    "g": 0.8562933333333331,
+    "b": 0.9807333333333335,
     "a": 1
   },
   "configTableBgColor": {

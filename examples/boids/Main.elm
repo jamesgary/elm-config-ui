@@ -9,6 +9,9 @@ import Config exposing (Config)
 import ConfigForm as ConfigForm exposing (ConfigForm)
 import Dict exposing (Dict)
 import Direction2d exposing (Direction2d)
+import Game.TwoD
+import Game.TwoD.Camera
+import Game.TwoD.Render
 import Html exposing (Html)
 import Html.Attributes exposing (style)
 import Html.Events
@@ -327,14 +330,25 @@ update msg model =
             )
 
         Tick deltaInMilliseconds ->
+            let
+                scaledDelta =
+                    deltaInMilliseconds * model.config.timeScale
+            in
             ( { model
-                | boids = moveBoids model deltaInMilliseconds
+                | boids = moveBoids model scaledDelta
               }
             , Cmd.none
             )
 
         MouseMoved pos ->
-            ( { model | mousePos = Just pos }
+            ( { model
+                | mousePos =
+                    pos
+                        |> Point2d.coordinates
+                        |> (\( x, y ) -> ( x, model.config.viewportHeight - y ))
+                        |> Point2d.fromCoordinates
+                        |> Just
+              }
             , Cmd.none
             )
 
@@ -559,7 +573,20 @@ moveBoid config maybeMousePos delta otherBoids boid =
                     -- CLASSIC ALG
                     List.foldl
                         (\nearbyBoid tmpVec ->
-                            Vector2d.from nearbyBoid.pos boid.pos
+                            let
+                                dist =
+                                    Vector2d.from nearbyBoid.pos boid.pos
+
+                                scale =
+                                    -- 1 to Inf
+                                    -- 1 : furthest away
+                                    -- Inf : right on top
+                                    personalSpaceRange config / Vector2d.length dist
+                            in
+                            --Vector2d.from nearbyBoid.pos boid.pos
+                            dist
+                                |> Vector2d.normalize
+                                |> Vector2d.scaleBy scale
                                 |> Vector2d.sum tmpVec
                         )
                         Vector2d.zero
@@ -769,7 +796,8 @@ view modelResult =
                 , style "font-family" "sans-serif"
                 , style "box-sizing" "border-box"
                 ]
-                [ viewBoids model
+                [ --viewBoids model
+                  viewBoidsWebGL model
                 , viewConfig model
 
                 --, viewInspector model
@@ -837,6 +865,45 @@ viewConfig ({ config } as model) =
                 ]
             )
         ]
+
+
+viewBoidsWebGL : Model -> Html Msg
+viewBoidsWebGL model =
+    let
+        ( w, h ) =
+            ( model.config.viewportWidth
+            , model.config.viewportHeight
+            )
+    in
+    Game.TwoD.renderWithOptions
+        [ style "width" (pxFloat w)
+        , style "height" (pxFloat h)
+        , style "background" (Color.toCssString model.config.skyColor)
+        , style "border" "1px solid black"
+        , Pointer.onMove (relativePos >> MouseMoved)
+        , Pointer.onDown (relativePos >> MouseClicked)
+        , Pointer.onLeave (\_ -> MouseLeft)
+        ]
+        { time = 0
+        , size = ( round w, round h )
+        , camera =
+            Game.TwoD.Camera.fixedArea (w * h) ( w, h )
+                |> Game.TwoD.Camera.moveTo ( w / 2, h / 2 )
+        }
+        (model.boids
+            |> Array.map (viewBoidWebGL model.config)
+            |> Array.toList
+        )
+
+
+viewBoidWebGL : Config -> Boid -> Game.TwoD.Render.Renderable
+viewBoidWebGL config boid =
+    Game.TwoD.Render.shape
+        Game.TwoD.Render.circle
+        { color = boid.color
+        , position = Point2d.coordinates boid.pos
+        , size = ( config.boidRad, config.boidRad )
+        }
 
 
 viewBoids : Model -> Html Msg
