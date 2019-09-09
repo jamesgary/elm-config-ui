@@ -470,11 +470,18 @@ update logics config configForm msg =
             ( config
             , { configForm
                 | activeField =
-                    if didEnter then
-                        Just ( Hovering, fieldName )
+                    -- chrome triggers a mouseleave when entering pointerlock,
+                    -- so check if you're dragging first, and don't change anything if so
+                    case configForm.activeField of
+                        Just ( Dragging, _ ) ->
+                            configForm.activeField
 
-                    else
-                        Nothing
+                        _ ->
+                            if didEnter then
+                                Just ( Hovering, fieldName )
+
+                            else
+                                Nothing
               }
             , Nothing
             )
@@ -574,7 +581,8 @@ updateFromJson logics config configForm json =
                                                             Just (IntField data) ->
                                                                 let
                                                                     newVal =
-                                                                        data.val + (num * (10 ^ data.power))
+                                                                        data.val
+                                                                            + (num * (10 ^ data.power))
                                                                 in
                                                                 Just
                                                                     (IntField
@@ -587,7 +595,8 @@ updateFromJson logics config configForm json =
                                                             Just (FloatField data) ->
                                                                 let
                                                                     newVal =
-                                                                        data.val + toFloat (num * (10 ^ data.power))
+                                                                        data.val
+                                                                            + toFloat (num * (10 ^ data.power))
                                                                 in
                                                                 Just
                                                                     (FloatField
