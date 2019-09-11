@@ -458,27 +458,21 @@ colorForE color =
            )
 ```
 
-# TODO
+# Todo
 
 New features
 
-- undo/redo
-  - each individual field:
-    - undo (go to state just before first action in sequence)
-    - rewind (go to original file... or to original load? may be different!)
-  - whole form:
-    - undo tree?
-    - rewind to load or file?
-    - technically, we could save the undo stack in the cache...
-- "*" for vals that differ from file
-- "!" for brand new values that haven't been set yet (maybe note that in the field)
-- save scrolltop
-- fancy (or custom) kinds, like elm-ui attributes
+- Undo/redo
+- Indicator for vals that differ from file
+- Save scrolltop
+- Fancy (or custom) kinds, like css or elm-ui attributes?
 
 Optimizations
 
 - Cleaner run script (remove duplication, tmp file)
 - Opaque-ify any types that can be opaque
+
+Tests!
 
 # Questions
 
@@ -487,7 +481,5 @@ Optimizations
   - Should I include the toggleable form container and JSON preview textarea by default, including the toggle functionality? Or is that best left to the dev to control?
 - Is there any way to let users create new vals, like xy or elm-ui attrs?
   - I could add them myself with only non-breaking minor updates
-- Relatedly, how customizable should the view be?
-  - Might be a good idea to let it be customizable once/if I add elm-ui attrs
-- Is it bad that it relies on elm-ui? Code bloat, less performant, duplicate styles...
-- Is all this port stuff for pointerlock even worth it?
+- How customizable should the view be?
+- Is all this port stuff for pointerlock even worth it? Should I also lump together localStorage as long as we're using ports?
