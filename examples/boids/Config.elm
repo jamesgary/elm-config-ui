@@ -10,26 +10,26 @@ import ConfigForm as ConfigForm
 type alias Config =
     { viewportWidth : Float
     , viewportHeight : Float
-    , timeScale : Float
+    , scaledTime : Float
     , numBoids : Int
     , boidRad : Float
     , visionRange : Float
     , showRanges : Bool
     , maxSpeed : Float
-    , momentumColor : Color
     , momentumFactor : Float
-    , cohesionColor : Color
     , cohesionFactor : Float
-    , alignmentColor : Color
     , alignmentFactor : Float
     , separationFactor : Float
-    , separationColor : Color
     , separationRangeFactor : Float
     , mouseFactor : Float
-    , mouseColor : Color
+    , skyColor : Color
     , showVels : Bool
     , arrowScale : Float
-    , skyColor : Color
+    , momentumColor : Color
+    , cohesionColor : Color
+    , alignmentColor : Color
+    , separationColor : Color
+    , mouseColor : Color
     , configTableBgColor : Color
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
@@ -46,26 +46,26 @@ empty : ConfigForm.Defaults -> Config
 empty defaults =
     { viewportWidth = defaults.float
     , viewportHeight = defaults.float
-    , timeScale = defaults.float
+    , scaledTime = defaults.float
     , numBoids = defaults.int
     , boidRad = defaults.float
     , visionRange = defaults.float
     , showRanges = defaults.bool
     , maxSpeed = defaults.float
-    , momentumColor = defaults.color
     , momentumFactor = defaults.float
-    , cohesionColor = defaults.color
     , cohesionFactor = defaults.float
-    , alignmentColor = defaults.color
     , alignmentFactor = defaults.float
     , separationFactor = defaults.float
-    , separationColor = defaults.color
     , separationRangeFactor = defaults.float
     , mouseFactor = defaults.float
-    , mouseColor = defaults.color
+    , skyColor = defaults.color
     , showVels = defaults.bool
     , arrowScale = defaults.float
-    , skyColor = defaults.color
+    , momentumColor = defaults.color
+    , cohesionColor = defaults.color
+    , alignmentColor = defaults.color
+    , separationColor = defaults.color
+    , mouseColor = defaults.color
     , configTableBgColor = defaults.color
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
@@ -91,10 +91,10 @@ logics =
         .viewportHeight
         (\a c -> { c | viewportHeight = a })
     , ConfigForm.float
-        "timeScale"
-        "Time Scale"
-        .timeScale
-        (\a c -> { c | timeScale = a })
+        "scaledTime"
+        "Time scale"
+        .scaledTime
+        (\a c -> { c | scaledTime = a })
     , ConfigForm.section
         "Boids"
     , ConfigForm.int
@@ -124,11 +124,6 @@ logics =
         (\a c -> { c | maxSpeed = a })
     , ConfigForm.section
         "Rule 0: Momentum"
-    , ConfigForm.color
-        "momentumColor"
-        "Color"
-        .momentumColor
-        (\a c -> { c | momentumColor = a })
     , ConfigForm.float
         "momentumFactor"
         "Factor"
@@ -136,11 +131,6 @@ logics =
         (\a c -> { c | momentumFactor = a })
     , ConfigForm.section
         "Rule 1: Cohesion"
-    , ConfigForm.color
-        "cohesionColor"
-        "Color"
-        .cohesionColor
-        (\a c -> { c | cohesionColor = a })
     , ConfigForm.float
         "cohesionFactor"
         "Factor"
@@ -148,11 +138,6 @@ logics =
         (\a c -> { c | cohesionFactor = a })
     , ConfigForm.section
         "Rule 2: Alignment"
-    , ConfigForm.color
-        "alignmentColor"
-        "Color"
-        .alignmentColor
-        (\a c -> { c | alignmentColor = a })
     , ConfigForm.float
         "alignmentFactor"
         "Factor"
@@ -165,11 +150,6 @@ logics =
         "Factor"
         .separationFactor
         (\a c -> { c | separationFactor = a })
-    , ConfigForm.color
-        "separationColor"
-        "Color"
-        .separationColor
-        (\a c -> { c | separationColor = a })
     , ConfigForm.float
         "separationRangeFactor"
         "Personal space factor"
@@ -182,16 +162,16 @@ logics =
         "Factor"
         .mouseFactor
         (\a c -> { c | mouseFactor = a })
-    , ConfigForm.color
-        "mouseColor"
-        "Color"
-        .mouseColor
-        (\a c -> { c | mouseColor = a })
     , ConfigForm.section
         "Boid Visuals"
+    , ConfigForm.color
+        "skyColor"
+        "Sky color"
+        .skyColor
+        (\a c -> { c | skyColor = a })
     , ConfigForm.bool
         "showVels"
-        "Show vel arrows"
+        "Show debug vel arrows"
         .showVels
         (\a c -> { c | showVels = a })
     , ConfigForm.float
@@ -200,10 +180,30 @@ logics =
         .arrowScale
         (\a c -> { c | arrowScale = a })
     , ConfigForm.color
-        "skyColor"
-        "Sky color"
-        .skyColor
-        (\a c -> { c | skyColor = a })
+        "momentumColor"
+        "Momentum Color"
+        .momentumColor
+        (\a c -> { c | momentumColor = a })
+    , ConfigForm.color
+        "cohesionColor"
+        "Cohesion Color"
+        .cohesionColor
+        (\a c -> { c | cohesionColor = a })
+    , ConfigForm.color
+        "alignmentColor"
+        "Alignment Color"
+        .alignmentColor
+        (\a c -> { c | alignmentColor = a })
+    , ConfigForm.color
+        "separationColor"
+        "Separation Color"
+        .separationColor
+        (\a c -> { c | separationColor = a })
+    , ConfigForm.color
+        "mouseColor"
+        "Mouse Color"
+        .mouseColor
+        (\a c -> { c | mouseColor = a })
     , ConfigForm.section
         "Config table container"
     , ConfigForm.color

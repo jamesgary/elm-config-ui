@@ -215,6 +215,13 @@ updateResult msg modelResult =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Tick deltaInMilliseconds ->
+            ( { model
+                | boids = moveBoids model deltaInMilliseconds
+              }
+            , Cmd.none
+            )
+
         ConfigFormMsg configFormMsg ->
             let
                 ( newConfig, newConfigForm, maybeJsonCmd ) =
@@ -327,17 +334,6 @@ update msg model =
             in
             ( newModel
             , saveToLocalStorageCmd newModel
-            )
-
-        Tick deltaInMilliseconds ->
-            let
-                scaledDelta =
-                    deltaInMilliseconds * model.config.timeScale
-            in
-            ( { model
-                | boids = moveBoids model scaledDelta
-              }
-            , Cmd.none
             )
 
         MouseMoved pos ->
@@ -870,6 +866,9 @@ viewConfig ({ config } as model) =
 viewBoidsWebGL : Model -> Html Msg
 viewBoidsWebGL model =
     let
+        boidDiameter =
+            2 * model.config.boidRad
+
         ( w, h ) =
             ( model.config.viewportWidth
             , model.config.viewportHeight
@@ -887,7 +886,7 @@ viewBoidsWebGL model =
         { time = 0
         , size = ( round w, round h )
         , camera =
-            Game.TwoD.Camera.fixedArea (w * h) ( w, h )
+            Game.TwoD.Camera.fixedArea ((w - boidDiameter) * (h - boidDiameter)) ( w, h )
                 |> Game.TwoD.Camera.moveTo ( w / 2, h / 2 )
         }
         (model.boids
