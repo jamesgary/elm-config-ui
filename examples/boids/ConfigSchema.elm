@@ -32,7 +32,8 @@ myConfigFields =
     -- rule 3: Separation (personal space)
     , ( "Rule 3: Separation", SectionKind )
     , ( "Factor", FloatKind "separationFactor" )
-    , ( "Personal space factor", FloatKind "separationRangeFactor" )
+    , ( "Power", FloatKind "separationPower" )
+    , ( "Personal space", FloatKind "separationRangeFactor" )
 
     -- rule 4: Mouse
     , ( "Rule 4: Mouse", SectionKind )
@@ -41,13 +42,6 @@ myConfigFields =
     -- visuals
     , ( "Boid Visuals", SectionKind )
     , ( "Sky color", ColorKind "skyColor" )
-    , ( "Show debug vel arrows", BoolKind "showVels" )
-    , ( "Arrow scale", FloatKind "arrowScale" )
-    , ( "Momentum Color", ColorKind "momentumColor" )
-    , ( "Cohesion Color", ColorKind "cohesionColor" )
-    , ( "Alignment Color", ColorKind "alignmentColor" )
-    , ( "Separation Color", ColorKind "separationColor" )
-    , ( "Mouse Color", ColorKind "mouseColor" )
 
     -- config table container
     , ( "Config table container", SectionKind )

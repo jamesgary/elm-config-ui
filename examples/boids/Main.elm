@@ -577,7 +577,7 @@ moveBoid config maybeMousePos delta otherBoids boid =
                                     -- 1 to Inf
                                     -- 1 : furthest away
                                     -- Inf : right on top
-                                    personalSpaceRange config / Vector2d.length dist
+                                    (personalSpaceRange config / Vector2d.length dist) ^ config.separationPower
                             in
                             --Vector2d.from nearbyBoid.pos boid.pos
                             dist
@@ -873,6 +873,20 @@ viewBoidsWebGL model =
             ( model.config.viewportWidth
             , model.config.viewportHeight
             )
+
+        boidRenderables =
+            model.boids
+                |> Array.map (viewBoidWebGL model.config)
+                |> Array.toList
+
+        rangeRenderables =
+            if model.config.showRanges then
+                model.boids
+                    |> Array.map (viewRangeWebGL model.config)
+                    |> Array.toList
+
+            else
+                []
     in
     Game.TwoD.renderWithOptions
         [ style "width" (pxFloat w)
@@ -889,10 +903,7 @@ viewBoidsWebGL model =
             Game.TwoD.Camera.fixedArea ((w - boidDiameter) * (h - boidDiameter)) ( w, h )
                 |> Game.TwoD.Camera.moveTo ( w / 2, h / 2 )
         }
-        (model.boids
-            |> Array.map (viewBoidWebGL model.config)
-            |> Array.toList
-        )
+        (boidRenderables ++ rangeRenderables)
 
 
 viewBoidWebGL : Config -> Boid -> Game.TwoD.Render.Renderable
@@ -905,41 +916,24 @@ viewBoidWebGL config boid =
         }
 
 
-viewBoids : Model -> Html Msg
-viewBoids ({ config } as model) =
-    Html.div
-        [ style "width" (pxFloat config.viewportWidth)
-        , style "height" (pxFloat config.viewportHeight)
-        , style "border" "1px solid black"
-        ]
-        [ Svg.svg
-            [ Svg.Attributes.width "100%"
-            , Svg.Attributes.height "100%"
-            , Pointer.onMove (relativePos >> MouseMoved)
-            , Pointer.onDown (relativePos >> MouseClicked)
-            , Pointer.onLeave (\_ -> MouseLeft)
-            ]
-            [ -- sky
-              Svg.rect
-                [ Svg.Attributes.x "0"
-                , Svg.Attributes.y "0"
-                , Svg.Attributes.width "100%"
-                , Svg.Attributes.height "100%"
-                , Svg.Attributes.fill (Color.toCssString config.skyColor)
-                , Svg.Attributes.opacity (toOpacityString config.skyColor)
-                ]
-                []
-            , Svg.g []
-                (model.boids
-                    |> Array.toIndexedList
-                    |> List.reverse
-                    |> List.map
-                        (viewWrappedBoid config
-                            [ model.selectedBoidIndex, getHoveredBoidIndex model ]
+viewRangeWebGL : Config -> Boid -> Game.TwoD.Render.Renderable
+viewRangeWebGL config boid =
+    let
+        rad =
+            config.visionRange
+    in
+    Game.TwoD.Render.shape
+        Game.TwoD.Render.ring
+        { color = boid.color
+        , position =
+            Point2d.coordinates boid.pos
+                |> (\( x, y ) ->
+                        ( x - rad + (config.boidRad / 2)
+                        , y - rad + (config.boidRad / 2)
                         )
-                )
-            ]
-        ]
+                   )
+        , size = ( 2 * rad, 2 * rad )
+        }
 
 
 toOpacity : Color -> Float
@@ -963,205 +957,9 @@ relativePos event =
         |> Point2d.fromCoordinates
 
 
-viewInspector : Model -> Html Msg
-viewInspector model =
-    case model.selectedBoidIndex of
-        Just index ->
-            case Array.get index model.boids of
-                Just boid ->
-                    let
-                        rows =
-                            [ ( "Cohesion Vel", vector2dToStr boid.velForCohesion )
-                            , ( "Alignment Vel", vector2dToStr boid.velForAlignment )
-                            , ( "Separation Vel", vector2dToStr boid.velForSeparation )
-                            , ( "Vel", vector2dToStr boid.vel )
-                            ]
-                    in
-                    Html.table
-                        [ style "background" (Color.toCssString model.config.skyColor)
-                        , style "padding" "15px"
-                        ]
-                        (arrowMapping model.config
-                            |> List.map
-                                (\( label, color, velFunc ) ->
-                                    Html.tr [ style "color" (Color.toCssString color) ]
-                                        [ Html.td
-                                            [ style "font-weight" "bold" ]
-                                            [ Html.text label ]
-                                        , Html.td
-                                            []
-                                            [ Html.text (vector2dToStr <| velFunc boid) ]
-                                        ]
-                                )
-                        )
-
-                Nothing ->
-                    Html.text ""
-
-        Nothing ->
-            Html.text ""
-
-
-viewWrappedBoid : Config -> List (Maybe Int) -> ( Int, Boid ) -> Svg Msg
-viewWrappedBoid config selectedIndices ( index, boid ) =
-    let
-        isSelected =
-            selectedIndices
-                |> List.any (\i -> i == Just index)
-    in
-    wrappedPoses ( config.viewportWidth, config.viewportHeight ) boid.pos
-        |> List.map
-            (\pos ->
-                viewBoid config isSelected { boid | pos = pos }
-            )
-        |> Svg.g []
-
-
-arrowMapping : Config -> List ( String, Color, Boid -> Vector2d )
-arrowMapping config =
-    [ ( "Momentum", config.momentumColor, .velForMomentum )
-    , ( "Cohesion", config.cohesionColor, .velForCohesion )
-    , ( "Alignment", config.alignmentColor, .velForAlignment )
-    , ( "Separation", config.separationColor, .velForSeparation )
-    , ( "Mouse", config.mouseColor, .velForMouse )
-    ]
-
-
 personalSpaceRange : Config -> Float
 personalSpaceRange config =
     config.boidRad * config.separationRangeFactor
-
-
-viewBoid : Config -> Bool -> Boid -> Svg Msg
-viewBoid config isSelected boid =
-    wrappedPoses
-        ( config.viewportWidth, config.viewportHeight )
-        boid.pos
-        |> List.map
-            (\pos ->
-                let
-                    ( x, y ) =
-                        Point2d.coordinates pos
-
-                    ( beakEndpointX, beakEndpointY ) =
-                        pos
-                            |> Point2d.translateBy
-                                (boid.vel
-                                    |> Vector2d.normalize
-                                    |> Vector2d.scaleBy config.boidRad
-                                )
-                            |> Point2d.coordinates
-
-                    arrows =
-                        if config.showVels && isSelected then
-                            arrowMapping config
-                                |> List.map
-                                    (\( label, color, velFunc ) ->
-                                        viewArrow config color pos (velFunc boid)
-                                    )
-
-                        else
-                            []
-
-                    circleRange range =
-                        Svg.circle
-                            [ Svg.Attributes.cx <| pxFloat x
-                            , Svg.Attributes.cy <| pxFloat y
-                            , Svg.Attributes.r <| pxFloat <| range
-                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                            , Svg.Attributes.strokeOpacity <| toOpacityString boid.color
-                            , Svg.Attributes.fill "none"
-                            , Svg.Attributes.class "rrrrrrrrrrrrranges"
-                            ]
-                            []
-                in
-                Svg.g []
-                    ([ -- ranges
-                       if config.showRanges then
-                        [ circleRange config.visionRange
-                        , circleRange (personalSpaceRange config)
-                        ]
-
-                       else
-                        []
-
-                     -- selected lasso ring
-                     , if isSelected then
-                        [ Svg.circle
-                            [ Svg.Attributes.cx <| pxFloat x
-                            , Svg.Attributes.cy <| pxFloat y
-                            , Svg.Attributes.r <| pxFloat <| (1.2 * config.boidRad)
-                            , Svg.Attributes.stroke <| Color.toCssString <| boid.color
-                            , Svg.Attributes.strokeOpacity <| toOpacityString boid.color
-                            , Svg.Attributes.strokeDasharray "8 4"
-                            , Svg.Attributes.strokeWidth "2"
-                            , Svg.Attributes.fill "none"
-                            , Svg.Attributes.class "sssssssssssssselected"
-                            ]
-                            []
-                        ]
-
-                       else
-                        []
-
-                     --beak
-                     , [-- TODO fix wrapped beaks
-                        --Svg.line
-                        --   [ Svg.Attributes.x1 <| pxFloat x
-                        --   , Svg.Attributes.y1 <| pxFloat y
-                        --   , Svg.Attributes.x2 <| pxFloat beakEndpointX
-                        --   , Svg.Attributes.y2 <| pxFloat beakEndpointY
-                        --   , Svg.Attributes.stroke <| Color.toCssString Color.white
-                        --   , Svg.Attributes.strokeWidth <| pxFloat 2
-                        --   ]
-                        --   []
-                       ]
-
-                     -- boid body
-                     , [ Svg.circle
-                            [ Svg.Attributes.cx <| pxFloat x
-                            , Svg.Attributes.cy <| pxFloat y
-                            , Svg.Attributes.r <| pxFloat <| config.boidRad
-                            , Svg.Attributes.fill <| Color.toCssString <| boid.color
-                            , Svg.Attributes.opacity <| toOpacityString <| boid.color
-
-                            --, Svg.Attributes.opacity "0.5"
-                            , Svg.Attributes.class "bbbbbbbbbbbboidbody"
-                            ]
-                            []
-                       ]
-
-                     -- arrows
-                     , arrows
-                     ]
-                        |> List.concat
-                    )
-            )
-        |> Svg.g []
-
-
-viewArrow : Config -> Color -> Point2d -> Vector2d -> Svg Msg
-viewArrow config color origin vec =
-    let
-        ( x1, y1 ) =
-            Point2d.coordinates origin
-
-        ( x2, y2 ) =
-            origin
-                |> Point2d.translateBy (Vector2d.scaleBy config.arrowScale vec)
-                |> Point2d.coordinates
-    in
-    Svg.line
-        [ Svg.Attributes.x1 <| pxFloat x1
-        , Svg.Attributes.y1 <| pxFloat y1
-        , Svg.Attributes.x2 <| pxFloat x2
-        , Svg.Attributes.y2 <| pxFloat y2
-        , Svg.Attributes.stroke <| Color.toCssString color
-        , Svg.Attributes.strokeOpacity <| toOpacityString color
-        , Svg.Attributes.strokeWidth <| pxFloat 3
-        , Svg.Attributes.class "aaaaaaaaaaaaarrows"
-        ]
-        []
 
 
 percFloat : Float -> String
