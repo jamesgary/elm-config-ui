@@ -58,7 +58,7 @@ main =
 
 type alias Model =
     { config : Config
-    , configForm : ConfigForm Config
+    , configForm : ConfigForm
     }
 
 
@@ -176,7 +176,7 @@ update msg model =
                     ( model, Cmd.none )
 
 
-handleConfigMsg : Model -> ( Config, ConfigForm Config, Maybe Json.Encode.Value ) -> ( Model, Cmd Msg )
+handleConfigMsg : Model -> ( Config, ConfigForm, Maybe Json.Encode.Value ) -> ( Model, Cmd Msg )
 handleConfigMsg model ( newConfig, newConfigForm, maybeJsonCmd ) =
     let
         newModel =
@@ -271,10 +271,11 @@ viewConfig ({ config } as model) =
                 [ E.padding 15
                 , E.spacing 15
                 ]
-                [ ConfigForm.viewElement
+                [ ConfigForm.view
                     ConfigForm.viewOptions
                     Config.logics
                     model.configForm
+                    |> E.html
                     |> E.map ConfigFormMsg
                 , E.paragraph
                     [ EFont.size 16, E.width (E.px 300) ]
