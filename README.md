@@ -1,10 +1,11 @@
 # elm-config-gui
 
 ## ⚠️ Note: Experimental, and likely to change! ⚠️
+### ⚠️ (Planning on publishing the elm package by the end of Sept 2019!) ⚠️
 
 Have a bunch of magic numbers you want to tweak in the browser? Tired of making a `Msg` for every single field? Try `elm-config-gui`!
 
-`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example here! (TODO)
+`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example [here](https://elm-boids-demo.s3-us-west-1.amazonaws.com/index.html)!
 
 ![Screenshot of boids with elm-config-ui](https://user-images.githubusercontent.com/386075/64661773-dcba6a80-d3fa-11e9-96fa-d5013e0ae9e3.png)
 
