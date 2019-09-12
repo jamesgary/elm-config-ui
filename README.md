@@ -1,10 +1,12 @@
 # elm-config-gui
 
-## Note: Experimental, and likely to change!
+## ⚠️ Note: Experimental, and likely to change! ⚠️
 
 Have a bunch of magic numbers you want to tweak in the browser? Tired of making a `Msg` for every single field? Try `elm-config-gui`!
 
-`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example in ellie (TODO once package is released)!
+`elm-config-gui` adds a mini-editor into the browser to let you update values (`Int`s, `Float`s, `String`s, and `Color`s) on the fly without refreshing. Check out a live example here! (TODO)
+
+![Screenshot of boids with elm-config-ui](https://user-images.githubusercontent.com/386075/64661773-dcba6a80-d3fa-11e9-96fa-d5013e0ae9e3.png)
 
 This package has the following features:
 
@@ -12,7 +14,7 @@ This package has the following features:
 - Automatically save changes to localStorage
 - Encodes config data to JSON so you can save in a more persistent `.json` file
 
-This is meant to be used a dev-facing tool. Hence, there's limited customizability for things like the view. For a fully customizable editor with things like advanced validation and types, you might be better building your own.
+This is meant to be used a dev-facing tool. Hence, there's limited customizability for things like the view. For a fully customizable editor with things like advanced validation and types, feel free to fork and modify!
 
 # Install
 
