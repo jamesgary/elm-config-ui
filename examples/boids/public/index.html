@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Config Example</title>
+    <title>Boids Example</title>
 
     <style>
       html, body {
@@ -14,56 +14,45 @@
     <div id="elm"></div>
 
     <!-- compiled elm code -->
-    <script src="./js/compiled/main.js"></script>
+    <script src="./main.js"></script>
 
     <!-- config helper -->
-    <script src="./js/config.js"></script>
+    <script src="./config.js"></script>
 
     <script>
-      const LOCALSTORAGE_KEY = "config_example_boids";
-
-      const node = document.getElementById('elm');
-
-      fetch('./data/config.json')
-        .then(function(resp) { return resp.json() })
-        .then(function(json) { init(json) });
-
-      function init(configFile) {
+      ElmConfigUi.loadJsonFile("./config.json", function(configFileJson) {
         // start main Elm app
         let app = Elm.Main.init({
-          node: node,
+          node: document.getElementById("elm"),
           flags: {
-            localStorage: JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY)),
-            configFile: configFile,
+            localStorage: ElmConfigUi.loadJsonFromLocalStorage("config_example_boids"),
+            configFile: configFileJson,
             timestamp: Date.now(),
           }
         });
 
-        ConfigForm.init(app);
-        /* -- meta
-          shouldShowCopyConfigBtn: field
-        */
+        //ElmConfigUi.init();
+      });
 
-        app.ports.sendToPort.subscribe(function(effect) {
-          switch (effect.id) {
-            case "SAVE":
-              localStorage.setItem(
-                LOCALSTORAGE_KEY,
-                JSON.stringify(effect.val),
-              );
-              break;
-            case "CONFIG":
-              ConfigForm.receivePortMsg(effect.val, node);
-              break;
-            case "COPY_CONFIG":
-              let configJson = JSON.stringify(effect.val);
-              window.prompt("Copy and paste to your config.json.", configJson);
-              break;
-            default:
-              console.error("Unknown Effect", effect);
-          }
-        });
-      }
+      //app.ports.sendToPort.subscribe(function(effect) {
+      //  switch (effect.id) {
+      //    case "SAVE":
+      //      localStorage.setItem(
+      //        LOCALSTORAGE_KEY,
+      //        JSON.stringify(effect.val),
+      //      );
+      //      break;
+      //    case "CONFIG":
+      //      ConfigForm.receivePortMsg(effect.val, node);
+      //      break;
+      //    case "COPY_CONFIG":
+      //      let configJson = JSON.stringify(effect.val);
+      //      window.prompt("Copy and paste to your config.json.", configJson);
+      //      break;
+      //    default:
+      //      console.error("Unknown Effect", effect);
+      //  }
+      //});
     </script>
 
     <script>

@@ -1,7 +1,7 @@
 module ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults
     , Msg
-    , update, updateFromJson, resetToDefault
+    , update, resetToDefault
     , encode, encodeConfigForm
     , view
     , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
@@ -28,7 +28,7 @@ Also, `Value` is shorthand for `Json.Encode.Value`.
 
 # Update
 
-@docs update, updateFromJson, resetToDefault
+@docs update, resetToDefault
 
 
 # Encoding
@@ -285,6 +285,8 @@ type Msg config
     = ChangedConfigForm String Field
     | ClickedPointerLockLabel String
     | HoveredLabel String Bool
+    | MouseMove Int
+    | MouseUp
 
 
 {-| Encodes the current Config in your ConfigForm. This encode just the config itself, so it's usually used to be save to a json file and added to your version control.
@@ -499,6 +501,76 @@ update logics config (ConfigForm configForm) msg =
             , Nothing
             )
 
+        MouseMove num ->
+            let
+                newConfigForm =
+                    case configForm.activeField of
+                        Just ( state, fieldName ) ->
+                            { configForm
+                                | fields =
+                                    configForm.fields
+                                        |> OrderedDict.update fieldName
+                                            (\maybeField ->
+                                                case maybeField of
+                                                    Just (IntField data) ->
+                                                        let
+                                                            newVal =
+                                                                data.val
+                                                                    + (num * (10 ^ data.power))
+                                                        in
+                                                        Just
+                                                            (IntField
+                                                                { data
+                                                                    | val = newVal
+                                                                    , str = formatPoweredInt data.power newVal
+                                                                }
+                                                            )
+
+                                                    Just (FloatField data) ->
+                                                        let
+                                                            newVal =
+                                                                data.val
+                                                                    + toFloat (num * (10 ^ data.power))
+                                                        in
+                                                        Just
+                                                            (FloatField
+                                                                { data
+                                                                    | val = newVal
+                                                                    , str = formatPoweredFloat data.power newVal
+                                                                }
+                                                            )
+
+                                                    _ ->
+                                                        Nothing
+                                            )
+                            }
+
+                        Nothing ->
+                            configForm
+            in
+            ( configFromConfigForm
+                logics
+                newConfigForm.fields
+                config
+            , ConfigForm newConfigForm
+            , Nothing
+            )
+
+        MouseUp ->
+            ( config
+            , ConfigForm
+                { configForm
+                    | activeField =
+                        case configForm.activeField of
+                            Just ( state, fieldName ) ->
+                                Just ( Hovering, fieldName )
+
+                            Nothing ->
+                                Nothing
+                }
+            , Nothing
+            )
+
 
 configFromConfigForm : List (Logic config) -> OrderedDict String Field -> config -> config
 configFromConfigForm logics configForm config =
@@ -531,157 +603,76 @@ configFromConfigForm logics configForm config =
             config
 
 
-{-| Similar to `update`, but for port Msgs.
 
-When you receive a Msg through your port from elm-config-gui.js, update your `Config` and `ConfigForm` using this. It returns a new `Config` and `ConfigForm`, plus possible json to pass through ports for pointerlock.
-
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            ReceivedFromPort portJson ->
-                case Json.Decode.decodeValue fromPortDecoder portJson of
-                    Ok receiveMsg ->
-                        case receiveMsg of
-                            ConfigFormPortMsg json ->
-                                let
-                                    ( newConfig, newConfigForm, maybeJsonCmd ) =
-                                        ConfigForm.updateFromJson
-                                            Config.logics
-                                            model.config
-                                            model.configForm
-                                            json
-
-                                    newModel =
-                                        { model
-                                            | config = newConfig
-                                            , configForm = newConfigForm
-                                        }
-                                in
-                                ( newModel
-                                , Cmd.batch
-                                    [ saveToLocalStorageCmd newModel
-                                    , case maybeJsonCmd of
-                                        Just jsonCmd ->
-                                            sendToPort
-                                                (Json.Encode.object
-                                                    [ ( "id", Json.Encode.string "CONFIG" )
-                                                    , ( "val", jsonCmd )
-                                                    ]
-                                                )
-
-                                        Nothing ->
-                                            Cmd.none
-                                    ]
-                                )
-
--}
-updateFromJson : List (Logic config) -> config -> ConfigForm -> JE.Value -> ( config, ConfigForm, Maybe JE.Value )
-updateFromJson logics config (ConfigForm configForm) json =
-    case JD.decodeValue portDecoder json of
-        Ok portMsg ->
-            case portMsg of
-                MouseMove num ->
-                    let
-                        newConfigForm =
-                            case configForm.activeField of
-                                Just ( state, fieldName ) ->
-                                    { configForm
-                                        | fields =
-                                            configForm.fields
-                                                |> OrderedDict.update fieldName
-                                                    (\maybeField ->
-                                                        case maybeField of
-                                                            Just (IntField data) ->
-                                                                let
-                                                                    newVal =
-                                                                        data.val
-                                                                            + (num * (10 ^ data.power))
-                                                                in
-                                                                Just
-                                                                    (IntField
-                                                                        { data
-                                                                            | val = newVal
-                                                                            , str = formatPoweredInt data.power newVal
-                                                                        }
-                                                                    )
-
-                                                            Just (FloatField data) ->
-                                                                let
-                                                                    newVal =
-                                                                        data.val
-                                                                            + toFloat (num * (10 ^ data.power))
-                                                                in
-                                                                Just
-                                                                    (FloatField
-                                                                        { data
-                                                                            | val = newVal
-                                                                            , str = formatPoweredFloat data.power newVal
-                                                                        }
-                                                                    )
-
-                                                            _ ->
-                                                                Nothing
-                                                    )
-                                    }
-
-                                Nothing ->
-                                    configForm
-                    in
-                    ( configFromConfigForm
-                        logics
-                        newConfigForm.fields
-                        config
-                    , ConfigForm newConfigForm
-                    , Nothing
-                    )
-
-                MouseUp ->
-                    ( config
-                    , ConfigForm
-                        { configForm
-                            | activeField =
-                                case configForm.activeField of
-                                    Just ( state, fieldName ) ->
-                                        Just ( Hovering, fieldName )
-
-                                    Nothing ->
-                                        Nothing
-                        }
-                    , Nothing
-                    )
-
-        Err err ->
-            let
-                _ =
-                    --Debug.log
-                    --    "Could not decode incoming config port msg: "
-                    --    (JD.errorToString err)
-                    0
-            in
-            ( config, ConfigForm configForm, Nothing )
-
-
-type PortMsg
-    = MouseMove Int
-    | MouseUp
-
-
-portDecoder : JD.Decoder PortMsg
-portDecoder =
-    JD.field "id" JD.string
-        |> JD.andThen
-            (\id ->
-                case id of
-                    "MOUSE_MOVE" ->
-                        JD.field "x" JD.int
-                            |> JD.map MouseMove
-
-                    "MOUSE_UP" ->
-                        JD.succeed MouseUp
-
-                    _ ->
-                        JD.fail ("Could not decode ConfigForm port msg id: " ++ id)
-            )
+--                MouseMove num ->
+--                    let
+--                        newConfigForm =
+--                            case configForm.activeField of
+--                                Just ( state, fieldName ) ->
+--                                    { configForm
+--                                        | fields =
+--                                            configForm.fields
+--                                                |> OrderedDict.update fieldName
+--                                                    (\maybeField ->
+--                                                        case maybeField of
+--                                                            Just (IntField data) ->
+--                                                                let
+--                                                                    newVal =
+--                                                                        data.val
+--                                                                            + (num * (10 ^ data.power))
+--                                                                in
+--                                                                Just
+--                                                                    (IntField
+--                                                                        { data
+--                                                                            | val = newVal
+--                                                                            , str = formatPoweredInt data.power newVal
+--                                                                        }
+--                                                                    )
+--
+--                                                            Just (FloatField data) ->
+--                                                                let
+--                                                                    newVal =
+--                                                                        data.val
+--                                                                            + toFloat (num * (10 ^ data.power))
+--                                                                in
+--                                                                Just
+--                                                                    (FloatField
+--                                                                        { data
+--                                                                            | val = newVal
+--                                                                            , str = formatPoweredFloat data.power newVal
+--                                                                        }
+--                                                                    )
+--
+--                                                            _ ->
+--                                                                Nothing
+--                                                    )
+--                                    }
+--
+--                                Nothing ->
+--                                    configForm
+--                    in
+--                    ( configFromConfigForm
+--                        logics
+--                        newConfigForm.fields
+--                        config
+--                    , ConfigForm newConfigForm
+--                    , Nothing
+--                    )
+--
+--                MouseUp ->
+--                    ( config
+--                    , ConfigForm
+--                        { configForm
+--                            | activeField =
+--                                case configForm.activeField of
+--                                    Just ( state, fieldName ) ->
+--                                        Just ( Hovering, fieldName )
+--
+--                                    Nothing ->
+--                                        Nothing
+--                        }
+--                    , Nothing
+--                    )
 
 
 formatPoweredInt : Int -> Int -> String
@@ -923,30 +914,44 @@ colorValDecoder =
 -}
 view : ViewOptions -> List (Logic config) -> ConfigForm -> Html (Msg config)
 view options logics ((ConfigForm configForm) as configFormType) =
-    Html.table []
-        (logics
-            |> List.indexedMap
-                (\i logic ->
-                    Html.tr
-                        (case configForm.activeField of
-                            Just ( state, fieldName ) ->
-                                if fieldName == logic.fieldName then
-                                    [ style
-                                        "background"
-                                        (Color.toCssString options.labelHighlightBgColor)
-                                    ]
+    Html.div []
+        [ Html.table []
+            (logics
+                |> List.indexedMap
+                    (\i logic ->
+                        Html.tr
+                            (case configForm.activeField of
+                                Just ( state, fieldName ) ->
+                                    if fieldName == logic.fieldName then
+                                        [ style
+                                            "background"
+                                            (Color.toCssString options.labelHighlightBgColor)
+                                        ]
 
-                                else
+                                    else
+                                        []
+
+                                Nothing ->
                                     []
+                            )
+                            [ viewLabel options configFormType i logic
+                            , viewChanger options configFormType i logic
+                            ]
+                    )
+            )
+        , Html.div [ Html.Attributes.id "elm-config-ui-pointerlock" ] []
+        ]
 
-                            Nothing ->
-                                []
-                        )
-                        [ viewLabel options configFormType i logic
-                        , viewChanger options configFormType i logic
-                        ]
-                )
-        )
+
+slider : List (Html (Msg config)) -> Html (Msg config)
+slider children =
+    Html.node "elm-config-ui-slider"
+        [ Html.Events.on "pl"
+            (JD.at [ "detail", "x" ] JD.int
+                |> JD.map MouseMove
+            )
+        ]
+        children
 
 
 viewLabel : ViewOptions -> ConfigForm -> Int -> Logic config -> Html (Msg config)
@@ -960,14 +965,14 @@ viewLabel options configForm i logic =
         IntLogic getter setter ->
             Html.td
                 (resizeAttrs options configForm logic)
-                [ Html.text logic.label
+                [ slider [ Html.text logic.label ]
                 , powerEl options configForm logic
                 ]
 
         FloatLogic getter setter ->
             Html.td
                 (resizeAttrs options configForm logic)
-                [ Html.text logic.label
+                [ slider [ Html.text logic.label ]
                 , powerEl options configForm logic
                 ]
 
@@ -1167,9 +1172,10 @@ powerEl options (ConfigForm configForm) logic =
 
 resizeAttrs : ViewOptions -> ConfigForm -> Logic config -> List (Html.Attribute (Msg config))
 resizeAttrs options configForm logic =
-    [ Html.Events.onMouseDown (ClickedPointerLockLabel logic.fieldName)
-    , Html.Events.onMouseEnter (HoveredLabel logic.fieldName True)
+    [ Html.Events.onMouseEnter (HoveredLabel logic.fieldName True)
     , Html.Events.onMouseLeave (HoveredLabel logic.fieldName False)
+
+    --, Html.Events.onMouseDown (ClickedPointerLockLabel logic.fieldName)
     , style "cursor" "ew-resize"
     , style "height" "100%"
     , style "position" "relative"

@@ -8,8 +8,8 @@ import ConfigForm as ConfigForm
 
 
 type alias Config =
-    { viewportWidth : Float
-    , viewportHeight : Float
+    { viewportWidth : Int
+    , viewportHeight : Int
     , timeScale : Float
     , numBoids : Int
     , boidRad : Float
@@ -44,8 +44,8 @@ type alias Config =
 
 empty : ConfigForm.Defaults -> Config
 empty defaults =
-    { viewportWidth = defaults.float
-    , viewportHeight = defaults.float
+    { viewportWidth = defaults.int
+    , viewportHeight = defaults.int
     , timeScale = defaults.float
     , numBoids = defaults.int
     , boidRad = defaults.float
@@ -80,12 +80,12 @@ empty defaults =
 
 --logics : List (ConfigForm.Logic Config)
 logics =
-    [ ConfigForm.float
+    [ ConfigForm.int
         "viewportWidth"
         "Viewport width (px)"
         .viewportWidth
         (\a c -> { c | viewportWidth = a })
-    , ConfigForm.float
+    , ConfigForm.int
         "viewportHeight"
         "Viewport height (px)"
         .viewportHeight

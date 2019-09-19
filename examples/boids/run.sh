@@ -5,7 +5,7 @@ CONFIG_ELMFILE=Config.elm
 TMP_JS=~/tmp/gen-config.js
 MAIN_ELMFILE=Main.elm
 SERVER_DIR=public/
-MAIN_JS_OUTPUT=public/js/compiled/main.js
+MAIN_JS_OUTPUT=public/main.js
 
 GENERATE_ARGS="$CONFIG_SCHEMA_ELMFILE $TMP_JS $CONFIG_ELMFILE"
 
@@ -29,6 +29,6 @@ chokidar $CONFIG_SCHEMA_ELMFILE --command "generate_config $GENERATE_ARGS" &
 
 # Watch for elm changes
 #elm-live $MAIN_ELMFILE --dir=$SERVER_DIR -- --optimize --output=$MAIN_JS_OUTPUT &
-elm-live $MAIN_ELMFILE --dir=$SERVER_DIR --port 7999 -- --output=$MAIN_JS_OUTPUT &
+elm-live $MAIN_ELMFILE --dir=$SERVER_DIR --port 8000 -- --output=$MAIN_JS_OUTPUT &
 
 wait
