@@ -1,10 +1,28 @@
+window.ElmConfigUi = {
+  init: function({filepath, localStorageKey, callback}) {
+    this.localStorageKey = localStorageKey;
+
+    fetch(filepath)
+      .then(function(resp) { return resp.json() })
+      .then(function(fileJson) {
+        callback({
+          file: fileJson,
+          localStorage: JSON.parse(localStorage.getItem(localStorageKey)),
+        });
+      });
+
+    window.customElements.define('elm-config-ui-slider', ElmConfigUiSlider);
+    window.customElements.define('elm-config-ui-json', ElmConfigUiJson);
+  },
+};
+
 class ElmConfigUiSlider extends HTMLElement {
   constructor() {
     return super();
   }
 
   connectedCallback() {
-    let self = this; //document.getElementById("elm-config-ui-pointerlock");
+    let self = this;
 
     function updatePosition(e) {
       self.dispatchEvent(new CustomEvent('pl', {
@@ -33,21 +51,24 @@ class ElmConfigUiSlider extends HTMLElement {
   }
 }
 
-window.customElements.define('elm-config-ui-slider', ElmConfigUiSlider);
+class ElmConfigUiJson extends HTMLElement {
+  constructor() {
+    return super();
+  }
 
-window.ElmConfigUi = {
-  // helper functions
+  connectedCallback() {
+    let self = this;
+  }
 
-  loadJsonFromLocalStorage: function(key) {
-    JSON.parse(localStorage.getItem(key));
-  },
+  static get observedAttributes() {
+    return ['data-encoded-config'];
+  }
 
-  loadJsonFile: function(filepath, callback) {
-    fetch(filepath)
-      .then(function(resp) { return resp.json() })
-      .then(callback);
-  },
-};
+  attributeChangedCallback(name, oldValue, newValue) {
+    console.log("localStorageKey", window.ElmConfigUi.localStorageKey);
+    localStorage.setItem(window.ElmConfigUi.localStorageKey, newValue);
+  }
+}
 
 /*
   init: function(app) {

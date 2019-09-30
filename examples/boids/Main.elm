@@ -81,29 +81,16 @@ type Msg
 
 
 type alias Flags =
-    { localStorage : LocalStorage
-    , configFile : JE.Value
+    { elmConfigUiData : JE.Value
     , timestamp : Int
-    }
-
-
-type alias LocalStorage =
-    { configForm : JE.Value
     }
 
 
 decodeFlags : JD.Decoder Flags
 decodeFlags =
     JD.succeed Flags
-        |> JDP.required "localStorage" decodeLocalStorage
-        |> JDP.required "configFile" JD.value
+        |> JDP.required "elmConfigUiData" JD.value
         |> JDP.required "timestamp" JD.int
-
-
-decodeLocalStorage : JD.Decoder LocalStorage
-decodeLocalStorage =
-    JD.succeed LocalStorage
-        |> JDP.optional "configForm" JD.value (JE.object [])
 
 
 
@@ -117,8 +104,7 @@ init jsonFlags =
             let
                 ( config, configForm ) =
                     ConfigForm.init
-                        { configJson = flags.configFile
-                        , configFormJson = flags.localStorage.configForm
+                        { flags = flags.elmConfigUiData
                         , logics = Config.logics
                         , emptyConfig =
                             Config.empty
@@ -750,15 +736,16 @@ viewConfig ({ config } as model) =
                 Config.logics
                 model.configForm
                 |> Html.map ConfigFormMsg
-            , Html.textarea
-                [ Html.Attributes.value
-                    (ConfigForm.encode
-                        Config.logics
-                        model.config
-                        |> JE.encode 2
-                    )
-                ]
-                []
+
+            --, Html.textarea
+            --    [ Html.Attributes.value
+            --        (ConfigForm.encode
+            --            Config.logics
+            --            model.config
+            --            |> JE.encode 2
+            --        )
+            --    ]
+            --    []
             , Html.br [] []
             , Html.button
                 [ Html.Events.onClick ClickedResetToDefault ]

@@ -465,7 +465,7 @@ colorForE color =
 
 New features
 
-- Undo/redo
+- Undo/redo (maybe just one? for easy toggling of before/after)
 - Indicator for vals that differ from file
 - Save scrolltop
 - Fancy (or custom) kinds, like css or elm-ui attributes?

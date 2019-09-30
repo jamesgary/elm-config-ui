@@ -71,6 +71,7 @@ type ConfigForm
     = ConfigForm
         { fileJson : JE.Value
         , formJson : JE.Value
+        , currentJson : JE.Value
         , fields : OrderedDict String Field
         , activeField : Maybe ( FieldState, String )
         , scrollTop : Int -- also unused
@@ -163,10 +164,15 @@ type alias Defaults =
 
 -}
 type alias InitOptions config =
-    { configJson : JE.Value
-    , configFormJson : JE.Value
+    { flags : JE.Value
     , logics : List (Logic config)
     , emptyConfig : config
+    }
+
+
+type alias Flags =
+    { file : JE.Value
+    , localStorage : JE.Value
     }
 
 
@@ -175,18 +181,23 @@ type alias InitOptions config =
 init : InitOptions config -> ( config, ConfigForm )
 init options =
     let
+        flags =
+            decodeFlags
+                options.flags
+
         config =
             decodeConfig
                 options.logics
                 options.emptyConfig
-                options.configJson
+                flags
+                |> Debug.log "WOW"
 
         configForm =
             decodeConfigForm
                 options.logics
                 config
-                options.configFormJson
-                options.configJson
+                flags.localStorage
+                flags.file
 
         configFormRecord =
             case configForm of
@@ -465,11 +476,15 @@ update logics config (ConfigForm configForm) msg =
                 newConfigForm =
                     configForm.fields
                         |> OrderedDict.insert fieldName field
+
+                newConfig =
+                    configFromConfigForm logics newConfigForm config
             in
-            ( configFromConfigForm logics newConfigForm config
+            ( newConfig
             , ConfigForm
                 { configForm
                     | fields = newConfigForm
+                    , currentJson = encode logics newConfig
                 }
             , Nothing
             )
@@ -547,12 +562,18 @@ update logics config (ConfigForm configForm) msg =
 
                         Nothing ->
                             configForm
+
+                newConfig =
+                    configFromConfigForm
+                        logics
+                        newConfigForm.fields
+                        config
             in
-            ( configFromConfigForm
-                logics
-                newConfigForm.fields
-                config
-            , ConfigForm newConfigForm
+            ( newConfig
+            , ConfigForm
+                { newConfigForm
+                    | currentJson = encode logics newConfig
+                }
             , Nothing
             )
 
@@ -699,6 +720,7 @@ decodeConfigForm : List (Logic config) -> config -> JE.Value -> JE.Value -> Conf
 decodeConfigForm logics config formJson fileJson =
     { fileJson = fileJson
     , formJson = formJson
+    , currentJson = encode logics config
     , fields =
         logics
             |> List.map
@@ -845,56 +867,77 @@ decodeConfigForm logics config formJson fileJson =
 -- JSON encode/decoder stuff
 
 
-decodeConfig : List (Logic config) -> config -> JE.Value -> config
-decodeConfig logics emptyConfig configJson =
-    logics
-        |> List.foldl
-            (\logic config ->
-                case logic.kind of
-                    IntLogic getter setter ->
-                        case JD.decodeValue (JD.field logic.fieldName JD.int) configJson of
-                            Ok intVal ->
-                                setter intVal config
+decodeFlags : JE.Value -> Flags
+decodeFlags json =
+    let
+        decoder =
+            JD.map2 Flags
+                (JD.field "file" JD.value)
+                (JD.field "localStorage" JD.value)
+    in
+    JD.decodeValue decoder json
+        |> Result.withDefault
+            { file = JE.object []
+            , localStorage = JE.object []
+            }
 
-                            Err err ->
+
+decodeConfig : List (Logic config) -> config -> Flags -> config
+decodeConfig logics emptyConfig { file, localStorage } =
+    let
+        buildConfig json tmpConfig =
+            logics
+                |> List.foldl
+                    (\logic config ->
+                        case logic.kind of
+                            IntLogic getter setter ->
+                                case JD.decodeValue (JD.field logic.fieldName JD.int) json of
+                                    Ok intVal ->
+                                        setter intVal config
+
+                                    Err err ->
+                                        config
+
+                            FloatLogic getter setter ->
+                                case JD.decodeValue (JD.field logic.fieldName JD.float) json of
+                                    Ok floatVal ->
+                                        setter floatVal config
+
+                                    Err err ->
+                                        config
+
+                            StringLogic getter setter ->
+                                case JD.decodeValue (JD.field logic.fieldName JD.string) json of
+                                    Ok str ->
+                                        setter str config
+
+                                    Err err ->
+                                        config
+
+                            BoolLogic getter setter ->
+                                case JD.decodeValue (JD.field logic.fieldName JD.bool) json of
+                                    Ok str ->
+                                        setter str config
+
+                                    Err err ->
+                                        config
+
+                            ColorLogic getter setter ->
+                                case JD.decodeValue (JD.field logic.fieldName colorValDecoder) json of
+                                    Ok col ->
+                                        setter col config
+
+                                    Err err ->
+                                        config
+
+                            SectionLogic ->
                                 config
-
-                    FloatLogic getter setter ->
-                        case JD.decodeValue (JD.field logic.fieldName JD.float) configJson of
-                            Ok floatVal ->
-                                setter floatVal config
-
-                            Err err ->
-                                config
-
-                    StringLogic getter setter ->
-                        case JD.decodeValue (JD.field logic.fieldName JD.string) configJson of
-                            Ok str ->
-                                setter str config
-
-                            Err err ->
-                                config
-
-                    BoolLogic getter setter ->
-                        case JD.decodeValue (JD.field logic.fieldName JD.bool) configJson of
-                            Ok str ->
-                                setter str config
-
-                            Err err ->
-                                config
-
-                    ColorLogic getter setter ->
-                        case JD.decodeValue (JD.field logic.fieldName colorValDecoder) configJson of
-                            Ok col ->
-                                setter col config
-
-                            Err err ->
-                                config
-
-                    SectionLogic ->
-                        config
-            )
-            emptyConfig
+                    )
+                    tmpConfig
+    in
+    emptyConfig
+        |> buildConfig file
+        |> buildConfig localStorage
 
 
 colorValDecoder : JD.Decoder Color
@@ -914,7 +957,7 @@ colorValDecoder =
 -}
 view : ViewOptions -> List (Logic config) -> ConfigForm -> Html (Msg config)
 view options logics ((ConfigForm configForm) as configFormType) =
-    Html.div []
+    Html.div [ style "font-size" (pxInt options.fontSize) ]
         [ Html.table []
             (logics
                 |> List.indexedMap
@@ -940,6 +983,12 @@ view options logics ((ConfigForm configForm) as configFormType) =
                     )
             )
         , Html.div [ Html.Attributes.id "elm-config-ui-pointerlock" ] []
+        , Html.node "elm-config-ui-json"
+            [ Html.Attributes.attribute
+                "data-encoded-config"
+                (JE.encode 2 configForm.currentJson)
+            ]
+            []
         ]
 
 
@@ -1088,8 +1137,8 @@ powerEl options (ConfigForm configForm) logic =
                     -- label
                     [ Html.text (formattedPower power) ]
                 , Html.span
-                    [ --style "font-size" (0.8 * toFloat options.fontSize |> px)
-                      style "top" "1px"
+                    [ style "font-size" (0.8 * toFloat options.fontSize |> px)
+                    , style "top" "1px"
                     , Pointer.onWithOptions "pointerdown"
                         { stopPropagation = True
                         , preventDefault = True
@@ -1104,8 +1153,8 @@ powerEl options (ConfigForm configForm) logic =
                     -- down btn
                     [ Html.text "↙️" ]
                 , Html.span
-                    [ --style "font-size" (0.8 * toFloat options.fontSize |> px)
-                      style "top" "1px"
+                    [ style "font-size" (0.8 * toFloat options.fontSize |> px)
+                    , style "top" "1px"
                     , Pointer.onWithOptions "pointerdown"
                         { stopPropagation = True
                         , preventDefault = True
@@ -1512,14 +1561,15 @@ pxInt num =
 -}
 resetToDefault : List (Logic config) -> config -> ConfigForm -> ( config, ConfigForm )
 resetToDefault logics config (ConfigForm configForm) =
-    let
-        newConfig =
-            decodeConfig logics config configForm.fileJson
-    in
-    ( newConfig
-    , decodeConfigForm
-        logics
-        newConfig
-        (JE.object [])
-        configForm.fileJson
-    )
+    --let
+    --    newConfig =
+    --        decodeConfig logics config configForm.fileJson
+    --in
+    --( newConfig
+    --, decodeConfigForm
+    --    logics
+    --    newConfig
+    --    (JE.object [])
+    --    configForm.fileJson
+    --)
+    ( config, ConfigForm configForm )

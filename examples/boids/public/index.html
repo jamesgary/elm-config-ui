@@ -20,18 +20,20 @@
     <script src="./config.js"></script>
 
     <script>
-      ElmConfigUi.loadJsonFile("./config.json", function(configFileJson) {
-        // start main Elm app
-        let app = Elm.Main.init({
-          node: document.getElementById("elm"),
-          flags: {
-            localStorage: ElmConfigUi.loadJsonFromLocalStorage("config_example_boids"),
-            configFile: configFileJson,
-            timestamp: Date.now(),
-          }
-        });
-
-        //ElmConfigUi.init();
+      ElmConfigUi.init({
+        filepath: "./config.json",
+        localStorageKey: "config_example_boids",
+        callback: function(elmConfigUiData) {
+          // start main Elm app
+          console.log("FLAGGIES", elmConfigUiData);
+          let app = Elm.Main.init({
+            node: document.getElementById("elm"),
+            flags: {
+              elmConfigUiData: elmConfigUiData,
+              timestamp: Date.now(),
+            },
+          });
+        }
       });
 
       //app.ports.sendToPort.subscribe(function(effect) {
