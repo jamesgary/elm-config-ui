@@ -193,8 +193,7 @@ update msg model =
             ( newModel
                 |> updateBoidCount
             , Cmd.batch
-                [ saveToLocalStorageCmd newModel
-                , case maybeJsonCmd of
+                [ case maybeJsonCmd of
                     Just jsonCmd ->
                         sendToPort
                             (JE.object
@@ -209,23 +208,23 @@ update msg model =
             )
 
         ClickedResetToDefault ->
-            let
-                ( config, configForm ) =
-                    ConfigForm.resetToDefault
-                        Config.logics
-                        model.config
-                        model.configForm
-
-                newModel =
-                    { model
-                        | config = config
-                        , configForm = configForm
-                    }
-            in
-            ( newModel
-            , Cmd.batch
-                [ saveToLocalStorageCmd newModel ]
-            )
+            --let
+            --    ( config, configForm ) =
+            --        ConfigForm.resetToDefault
+            --            Config.logics
+            --            model.config
+            --            model.configForm
+            --    newModel =
+            --        { model
+            --            | config = config
+            --            , configForm = configForm
+            --        }
+            --in
+            --( newModel
+            --, Cmd.batch
+            --    [ saveToLocalStorageCmd newModel ]
+            --)
+            ( model, Cmd.none )
 
         Tick deltaInMilliseconds ->
             let
@@ -671,22 +670,6 @@ fromPortDecoder =
             )
 
 
-saveToLocalStorageCmd : Model -> Cmd Msg
-saveToLocalStorageCmd model =
-    sendToPort <|
-        JE.object
-            [ ( "id", JE.string "SAVE" )
-            , ( "val"
-              , JE.object
-                    [ ( "configForm"
-                      , ConfigForm.encodeConfigForm
-                            model.configForm
-                      )
-                    ]
-              )
-            ]
-
-
 view : ModelResult -> Html Msg
 view modelResult =
     case modelResult of
@@ -715,7 +698,7 @@ viewConfig ({ config } as model) =
         [ style "right" "20px"
         , style "top" "20px"
         , style "position" "absolute"
-        , style "height" "100%"
+        , style "height" "calc(100% - 80px)"
         , style "font-size" "22px"
         ]
         [ Html.div

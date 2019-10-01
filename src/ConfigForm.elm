@@ -2,7 +2,7 @@ module ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults
     , Msg
     , update, resetToDefault
-    , encode, encodeConfigForm
+    , encode
     , view
     , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
     , int, float, string, bool, color, section
@@ -33,7 +33,7 @@ Also, `Value` is shorthand for `Json.Encode.Value`.
 
 # Encoding
 
-@docs encode, encodeConfigForm
+@docs encode
 
 
 # View
@@ -70,12 +70,9 @@ import Round
 type ConfigForm
     = ConfigForm
         { fileJson : JE.Value
-        , formJson : JE.Value
         , currentJson : JE.Value
         , fields : OrderedDict String Field
         , activeField : Maybe ( FieldState, String )
-        , scrollTop : Int -- also unused
-        , undoStack : List ( String, Field ) -- also unused
         }
 
 
@@ -190,14 +187,12 @@ init options =
                 options.logics
                 options.emptyConfig
                 flags
-                |> Debug.log "WOW"
 
         configForm =
             decodeConfigForm
                 options.logics
                 config
-                flags.localStorage
-                flags.file
+                flags
 
         configFormRecord =
             case configForm of
@@ -300,49 +295,54 @@ type Msg config
     | MouseUp
 
 
-{-| Encodes the current Config in your ConfigForm. This encode just the config itself, so it's usually used to be save to a json file and added to your version control.
+{-| Encodes the current Config (with some metadata) in your ConfigForm. Usually used for both localStorage and as a .json file.
 -}
-encode : List (Logic config) -> config -> JE.Value
-encode logics config =
-    logics
-        |> List.filterMap
-            (\logic ->
-                case logic.kind of
-                    IntLogic getter _ ->
-                        Just
-                            ( logic.fieldName
-                            , JE.int (getter config)
-                            )
 
-                    FloatLogic getter _ ->
-                        Just
-                            ( logic.fieldName
-                            , JE.float (getter config)
-                            )
 
-                    StringLogic getter _ ->
-                        Just
-                            ( logic.fieldName
-                            , JE.string (getter config)
-                            )
 
-                    BoolLogic getter _ ->
-                        Just
-                            ( logic.fieldName
-                            , JE.bool (getter config)
-                            )
+--encode : List (Logic config) -> config -> ConfigForm -> JE.Value
+--encode logics config (ConfigForm configForm) =
 
-                    ColorLogic getter _ ->
-                        Just
-                            ( logic.fieldName
-                            , getter config
-                                |> encodeColor
-                            )
 
-                    SectionLogic ->
-                        Nothing
-            )
-        |> JE.object
+encode : ConfigForm -> JE.Value
+encode (ConfigForm configForm) =
+    --logics
+    --    |> List.filterMap
+    --        (\logic ->
+    --            case logic.kind of
+    --                IntLogic getter _ ->
+    --                    Just
+    --                        ( logic.fieldName
+    --                        , JE.int (getter config)
+    --                        )
+    --                FloatLogic getter _ ->
+    --                    Just
+    --                        ( logic.fieldName
+    --                        , JE.float (getter config)
+    --                        )
+    --                StringLogic getter _ ->
+    --                    Just
+    --                        ( logic.fieldName
+    --                        , JE.string (getter config)
+    --                        )
+    --                BoolLogic getter _ ->
+    --                    Just
+    --                        ( logic.fieldName
+    --                        , JE.bool (getter config)
+    --                        )
+    --                ColorLogic getter _ ->
+    --                    Just
+    --                        ( logic.fieldName
+    --                        , getter config
+    --                            |> encodeColor
+    --                        )
+    --                SectionLogic ->
+    --                    Nothing
+    --        )
+    --    |> JE.object
+    JE.object
+        [ ( "fields", encodeFields configForm.fields )
+        ]
 
 
 encodeColor : Color -> JE.Value
@@ -361,17 +361,19 @@ encodeColor col =
 
 {-| Encodes the current data of your config form to be persisted, including meta-data. This is typically used to save to localStorage.
 -}
-encodeConfigForm : ConfigForm -> JE.Value
-encodeConfigForm (ConfigForm configForm) =
-    {-
-       do i even need a config at all?
-       does configform even need config?
-       only need it for view...
-    -}
-    JE.object
-        [ ( "fields", encodeFields configForm.fields )
-        , ( "scrollTop", JE.int configForm.scrollTop )
-        ]
+
+
+
+--encodeConfigForm : ConfigForm -> JE.Value
+--encodeConfigForm (ConfigForm configForm) =
+--    {-
+--       do i even need a config at all?
+--       does configform even need config?
+--       only need it for view...
+--    -}
+--    JE.object
+--        [ ( "fields", encodeFields configForm.fields )
+--        ]
 
 
 encodeFields : OrderedDict String Field -> JE.Value
@@ -484,7 +486,9 @@ update logics config (ConfigForm configForm) msg =
             , ConfigForm
                 { configForm
                     | fields = newConfigForm
-                    , currentJson = encode logics newConfig
+                    , currentJson =
+                        encode
+                            (ConfigForm configForm)
                 }
             , Nothing
             )
@@ -572,7 +576,7 @@ update logics config (ConfigForm configForm) msg =
             ( newConfig
             , ConfigForm
                 { newConfigForm
-                    | currentJson = encode logics newConfig
+                    | currentJson = encode (ConfigForm configForm)
                 }
             , Nothing
             )
@@ -716,149 +720,137 @@ poweredFloat power val =
     Round.roundNum -power val
 
 
-decodeConfigForm : List (Logic config) -> config -> JE.Value -> JE.Value -> ConfigForm
-decodeConfigForm logics config formJson fileJson =
-    { fileJson = fileJson
-    , formJson = formJson
-    , currentJson = encode logics config
-    , fields =
-        logics
-            |> List.map
-                (\logic ->
-                    ( logic.fieldName
-                    , case logic.kind of
-                        IntLogic getter setter ->
-                            let
-                                decoder =
-                                    JD.at [ "fields", logic.fieldName ]
-                                        (JD.oneOf
-                                            [ JD.int
-                                                |> JD.map
-                                                    (\i ->
-                                                        -- got a prod val
-                                                        ( i, 0 )
-                                                    )
-                                            , JD.map2 Tuple.pair
+decodeConfigForm : List (Logic config) -> config -> Flags -> ConfigForm
+decodeConfigForm logics emptyConfig ({ file, localStorage } as flags) =
+    let
+        config =
+            decodeConfig
+                logics
+                emptyConfig
+                flags
+
+        buildFields json tmpLogics =
+            logics
+                |> List.map
+                    (\logic ->
+                        ( logic.fieldName
+                        , case logic.kind of
+                            IntLogic getter setter ->
+                                let
+                                    decoder =
+                                        JD.at [ "fields", logic.fieldName ]
+                                            (JD.map2
+                                                Tuple.pair
                                                 (JD.index 0 JD.int)
                                                 (JD.index 1 JD.int)
-                                            ]
-                                        )
+                                            )
 
-                                ( val, power ) =
-                                    case JD.decodeValue decoder formJson of
-                                        Ok v ->
-                                            v
+                                    ( val, power ) =
+                                        case JD.decodeValue decoder json of
+                                            Ok v ->
+                                                v
 
-                                        Err err ->
-                                            ( getter config, 0 )
-                            in
-                            IntField
-                                { val = val
-                                , str = formatPoweredInt power val
-                                , power = power
-                                }
+                                            Err err ->
+                                                ( getter config, 0 )
+                                in
+                                IntField
+                                    { val = val
+                                    , str = formatPoweredInt power val
+                                    , power = power
+                                    }
 
-                        FloatLogic getter setter ->
-                            let
-                                decoder =
-                                    JD.at [ "fields", logic.fieldName ]
-                                        (JD.oneOf
-                                            [ JD.float
-                                                |> JD.map
-                                                    (\f ->
-                                                        -- got a prod val
-                                                        ( f, 0 )
-                                                    )
-                                            , JD.map2 Tuple.pair
+                            FloatLogic getter setter ->
+                                let
+                                    decoder =
+                                        JD.at [ "fields", logic.fieldName ]
+                                            (JD.map2 Tuple.pair
                                                 (JD.index 0 JD.float)
                                                 (JD.index 1 JD.int)
-                                            ]
-                                        )
+                                            )
 
-                                ( val, power ) =
-                                    case JD.decodeValue decoder formJson of
-                                        Ok v ->
-                                            v
+                                    ( val, power ) =
+                                        case JD.decodeValue decoder json of
+                                            Ok v ->
+                                                v
 
-                                        Err err ->
-                                            ( getter config, 0 )
-                            in
-                            FloatField
-                                { val = val
-                                , str = formatPoweredFloat power val
-                                , power = power
-                                }
+                                            Err err ->
+                                                ( getter config, 0 )
+                                in
+                                FloatField
+                                    { val = val
+                                    , str = formatPoweredFloat power val
+                                    , power = power
+                                    }
 
-                        StringLogic getter setter ->
-                            let
-                                decoder =
-                                    JD.at [ "fields", logic.fieldName ] JD.string
+                            StringLogic getter setter ->
+                                let
+                                    decoder =
+                                        JD.at [ "fields", logic.fieldName ] JD.string
 
-                                val =
-                                    case JD.decodeValue decoder formJson of
-                                        Ok v ->
-                                            v
+                                    val =
+                                        case JD.decodeValue decoder json of
+                                            Ok v ->
+                                                v
 
-                                        Err err ->
-                                            getter config
-                            in
-                            StringField
-                                { val = val
-                                }
+                                            Err err ->
+                                                getter config
+                                in
+                                StringField
+                                    { val = val
+                                    }
 
-                        BoolLogic getter setter ->
-                            let
-                                decoder =
-                                    JD.at [ "fields", logic.fieldName ] JD.bool
+                            BoolLogic getter setter ->
+                                let
+                                    decoder =
+                                        JD.at [ "fields", logic.fieldName ] JD.bool
 
-                                val =
-                                    case JD.decodeValue decoder formJson of
-                                        Ok v ->
-                                            v
+                                    val =
+                                        case JD.decodeValue decoder json of
+                                            Ok v ->
+                                                v
 
-                                        Err err ->
-                                            getter config
-                            in
-                            BoolField
-                                { val = val
-                                }
+                                            Err err ->
+                                                getter config
+                                in
+                                BoolField
+                                    { val = val
+                                    }
 
-                        ColorLogic getter setter ->
-                            let
-                                decoder =
-                                    JD.at [ "fields", logic.fieldName ] colorValDecoder
+                            ColorLogic getter setter ->
+                                let
+                                    decoder =
+                                        JD.at [ "fields", logic.fieldName ] colorValDecoder
 
-                                val =
-                                    case JD.decodeValue decoder formJson of
-                                        Ok v ->
-                                            v
+                                    val =
+                                        case JD.decodeValue decoder json of
+                                            Ok v ->
+                                                v
 
-                                        Err err ->
-                                            getter config
-                            in
-                            ColorField
-                                { val = val
-                                , meta =
-                                    ColorFieldMeta
-                                        { state = ColorPicker.empty
-                                        , isOpen = False
-                                        }
-                                }
+                                            Err err ->
+                                                getter config
+                                in
+                                ColorField
+                                    { val = val
+                                    , meta =
+                                        ColorFieldMeta
+                                            { state = ColorPicker.empty
+                                            , isOpen = False
+                                            }
+                                    }
 
-                        SectionLogic ->
-                            SectionField logic.fieldName
+                            SectionLogic ->
+                                SectionField logic.fieldName
+                        )
                     )
-                )
-            |> OrderedDict.fromList
+                |> OrderedDict.fromList
+    in
+    { fileJson = file
+    , currentJson = localStorage
+    , fields =
+        []
+            |> buildFields file
+            |> buildFields localStorage
     , activeField = Nothing
-    , scrollTop =
-        case JD.decodeValue (JD.field "scrollTop" JD.int) formJson of
-            Ok scrollTop ->
-                scrollTop
-
-            Err _ ->
-                0
-    , undoStack = []
     }
         |> ConfigForm
 
@@ -1566,7 +1558,7 @@ resetToDefault logics config (ConfigForm configForm) =
     --        decodeConfig logics config configForm.fileJson
     --in
     --( newConfig
-    --, decodeConfigForm
+    --, dzzecodeConfigForm
     --    logics
     --    newConfig
     --    (JE.object [])
