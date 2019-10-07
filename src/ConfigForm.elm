@@ -470,7 +470,7 @@ encodeField field =
                 )
 
 -}
-update : List (Logic config) -> config -> ConfigForm -> Msg config -> ( config, ConfigForm, Maybe JE.Value )
+update : List (Logic config) -> config -> ConfigForm -> Msg config -> ( config, ConfigForm )
 update logics config (ConfigForm configForm) msg =
     case msg of
         ChangedConfigForm fieldName field ->
@@ -490,13 +490,11 @@ update logics config (ConfigForm configForm) msg =
                         encode
                             (ConfigForm configForm)
                 }
-            , Nothing
             )
 
         ClickedPointerLockLabel fieldName ->
             ( config
             , ConfigForm { configForm | activeField = Just ( Dragging, fieldName ) }
-            , Just (JE.string "LOCK_POINTER")
             )
 
         HoveredLabel fieldName didEnter ->
@@ -517,7 +515,6 @@ update logics config (ConfigForm configForm) msg =
                                 else
                                     Nothing
                 }
-            , Nothing
             )
 
         MouseMove num ->
@@ -578,7 +575,6 @@ update logics config (ConfigForm configForm) msg =
                 { newConfigForm
                     | currentJson = encode (ConfigForm configForm)
                 }
-            , Nothing
             )
 
         MouseUp ->
@@ -593,7 +589,6 @@ update logics config (ConfigForm configForm) msg =
                             Nothing ->
                                 Nothing
                 }
-            , Nothing
             )
 
 

@@ -1,60 +1,39 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Config Example</title>
+    <meta charset="utf-8">
+    <title>Simple Config Example</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+    </style>
   </head>
   <body>
     <div id="elm"></div>
 
     <!-- compiled elm code -->
-    <script src="./js/compiled/main.js"></script>
+    <script src="./main.js"></script>
 
     <!-- elm-config-ui helper js -->
     <!-- Copy from https://github.com/jamesgary/elm-config-ui/blob/master/elm-config-ui-helper.js -->
-    <script src="https://cdn.jsdelivr.net/gh/jamesgary/elm-config-ui@f5200e/elm-config-ui-helper.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/jamesgary/elm-config-ui@f5200e/elm-config-ui-helper.js"></script> -->
+    <script src="config.js"></script>
 
     <script>
-      const LOCALSTORAGE_KEY = "elm-config-ui-example";
-
-      const node = document.getElementById('elm');
-
-      fetch('./data/config.json')
-        .then(function(resp) { return resp.json() })
-        .then(function(json) { init(json) });
-
-      function init(configFile) {
-        // start main Elm app
-        let app = Elm.Main.init({
-          node: node,
-          flags: {
-            localStorage: JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY)),
-            configFile: configFile,
-            timestamp: Date.now(),
-          }
-        });
-
-        ConfigForm.init(app);
-
-        app.ports.sendToPort.subscribe(function(effect) {
-          switch (effect.id) {
-            case "SAVE":
-              localStorage.setItem(
-                LOCALSTORAGE_KEY,
-                JSON.stringify(effect.val),
-              );
-              break;
-            case "CONFIG":
-              ConfigForm.receivePortMsg(effect.val, node);
-              break;
-            case "COPY_CONFIG":
-              let configJson = JSON.stringify(effect.val);
-              window.prompt("Copy and paste to your config.json.", configJson);
-              break;
-            default:
-              console.error("Unknown Effect", effect);
-          }
-        });
-      }
+      ElmConfigUi.init({
+        filepath: "./config.json",
+        localStorageKey: "config_example_simple",
+        callback: function(elmConfigUiData) {
+          // start main Elm app
+          let app = Elm.Main.init({
+            node: document.getElementById("elm"),
+            flags: elmConfigUiData,
+          });
+        }
+      });
     </script>
   </body>
 </html>

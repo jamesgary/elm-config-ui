@@ -5,7 +5,7 @@ CONFIG_ELMFILE=Config.elm
 TMP_JS=~/tmp/gen-config.js
 MAIN_ELMFILE=Main.elm
 SERVER_DIR=public/
-MAIN_JS_OUTPUT=public/js/compiled/main.js
+MAIN_JS_OUTPUT=public/main.js
 
 GENERATE_ARGS="$CONFIG_SCHEMA_ELMFILE $TMP_JS $CONFIG_ELMFILE"
 
