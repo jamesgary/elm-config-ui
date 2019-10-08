@@ -119,8 +119,10 @@ view model =
         , style "font-family" "sans-serif"
         ]
         [ Html.h1
-            [ style "font-size" (String.fromInt model.config.headerFontSize ++ "px") ]
-            [ Html.text "Hello" ]
+            [ style "font-size" (String.fromInt model.config.headerFontSize ++ "px")
+            , style "line-height" "0"
+            ]
+            [ Html.text "Some Header Text" ]
         , Html.p
             [ style "font-size" (String.fromInt model.config.bodyFontSize ++ "px") ]
             [ Html.text "I am the body text!" ]
@@ -138,6 +140,11 @@ view model =
                 Config.logics
                 model.configForm
                 |> Html.map ConfigFormMsg
+            , Html.textarea []
+                [ ConfigForm.encode model.configForm
+                    |> Json.Encode.encode 2
+                    |> Html.text
+                ]
             ]
         ]
 
