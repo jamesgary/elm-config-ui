@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Requires elm, elm-live, and chokidir, so run the following install command:
+# npm install --global elm elm-live@next chokidir
+# (use --save-dev instead of --global if you only need it locally for one project)
+
 CONFIG_SCHEMA_ELMFILE=ConfigSchema.elm
 CONFIG_ELMFILE=Config.elm
 TMP_JS=~/tmp/gen-config.js

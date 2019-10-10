@@ -140,7 +140,14 @@ view model =
                 Config.logics
                 model.configForm
                 |> Html.map ConfigFormMsg
-            , Html.textarea []
+            , Html.hr [] []
+            , Html.text "Copy this json to config.json:"
+            , Html.br [] []
+            , Html.textarea
+                [ style "width" "100%"
+                , style "height" "100px"
+                , Html.Attributes.readonly True
+                ]
                 [ ConfigForm.encode model.configForm
                     |> Json.Encode.encode 2
                     |> Html.text
