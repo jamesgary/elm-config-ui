@@ -4,7 +4,7 @@ module ConfigForm exposing
     , update, resetToDefault
     , encode
     , view
-    , viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
+    , viewOptions, withFontSize, withRowSpacing, withInputWidth, withInputSpacing, withLabelHighlightBgColor, withSectionSpacing
     , int, float, string, bool, color, section
     )
 
@@ -43,7 +43,7 @@ Also, `Value` is shorthand for `Json.Encode.Value`.
 
 # View options
 
-@docs viewOptions, withRowSpacing, withLabelHighlightBgColor, withInputWidth, withInputHeight, withFontSize
+@docs viewOptions, withFontSize, withRowSpacing, withInputWidth, withInputSpacing, withLabelHighlightBgColor, withSectionSpacing
 
 
 # Used only by generated Config code
@@ -239,14 +239,14 @@ emptyField logic emptyConfig =
             IntField
                 { val = getter emptyConfig
                 , str = getter emptyConfig |> String.fromInt
-                , power = 1
+                , power = 0
                 }
 
         FloatLogic getter setter ->
             FloatField
                 { val = getter emptyConfig
                 , str = getter emptyConfig |> String.fromFloat
-                , power = 1
+                , power = 0
                 }
 
         StringLogic getter setter ->
@@ -681,78 +681,6 @@ configFromFields logics configForm config =
             config
 
 
-
---                MouseMove num ->
---                    let
---                        newConfigForm =
---                            case configForm.activeField of
---                                Just ( state, fieldName ) ->
---                                    { configForm
---                                        | fields =
---                                            configForm.fields
---                                                |> OrderedDict.update fieldName
---                                                    (\maybeField ->
---                                                        case maybeField of
---                                                            Just (IntField data) ->
---                                                                let
---                                                                    newVal =
---                                                                        data.val
---                                                                            + (num * (10 ^ data.power))
---                                                                in
---                                                                Just
---                                                                    (IntField
---                                                                        { data
---                                                                            | val = newVal
---                                                                            , str = formatPoweredInt data.power newVal
---                                                                        }
---                                                                    )
---
---                                                            Just (FloatField data) ->
---                                                                let
---                                                                    newVal =
---                                                                        data.val
---                                                                            + toFloat (num * (10 ^ data.power))
---                                                                in
---                                                                Just
---                                                                    (FloatField
---                                                                        { data
---                                                                            | val = newVal
---                                                                            , str = formatPoweredFloat data.power newVal
---                                                                        }
---                                                                    )
---
---                                                            _ ->
---                                                                Nothing
---                                                    )
---                                    }
---
---                                Nothing ->
---                                    configForm
---                    in
---                    ( configFromConfigForm
---                        logics
---                        newConfigForm.fields
---                        config
---                    , ConfigForm newConfigForm
---                    , Nothing
---                    )
---
---                MouseUp ->
---                    ( config
---                    , ConfigForm
---                        { configForm
---                            | activeField =
---                                case configForm.activeField of
---                                    Just ( state, fieldName ) ->
---                                        Just ( Hovering, fieldName )
---
---                                    Nothing ->
---                                        Nothing
---                        }
---                    , Nothing
---                    )
-
-
 formatPoweredInt : Int -> Int -> String
 formatPoweredInt power val =
     Round.round -power (toFloat val)
@@ -989,7 +917,9 @@ colorValDecoder =
 view : ViewOptions -> List (Logic config) -> ConfigForm -> Html (Msg config)
 view options logics ((ConfigForm configForm) as configFormType) =
     Html.div [ style "font-size" (pxInt options.fontSize) ]
-        [ Html.table []
+        [ Html.table
+            [ style "border-spacing" ("0 " ++ pxInt options.rowSpacing)
+            ]
             (logics
                 |> List.indexedMap
                     (\i logic ->
@@ -1075,7 +1005,7 @@ viewLabel options configForm i logic =
         SectionLogic ->
             Html.td
                 [ style "font-weight" "bold"
-                , style "padding" "20px 0 5px 0"
+                , style "padding" (pxInt options.sectionSpacing ++ " 0 5px 0")
                 , Html.Attributes.colspan 2
                 ]
                 [ Html.text logic.label ]
@@ -1158,13 +1088,24 @@ powerEl options (ConfigForm configForm) logic =
     let
         makePowerEl power newIncField newDecField isDownDisabled =
             Html.div
-                [ style "top" "2px"
+                [ style "position" "absolute"
+                , style "top" "0px"
                 , style "right" "0"
-                , style "padding" "5px 2px 5px 10px"
-                , style "position" "absolute"
-                , style "font-size" "16px"
+                , style "height" "100%"
+                , style "box-sizing" "border-box"
+                , style "display" "flex"
+                , style "align-items" "center"
+                , style "padding-left" (px (0.45 * inputFieldVertPadding options))
+                , style "font-size" (px (0.8 * toFloat options.fontSize))
+                , style "background" (Color.toCssString options.labelHighlightBgColor)
                 , style "background"
-                    (Color.toCssString options.labelHighlightBgColor)
+                    ([ "linear-gradient(to right,"
+                     , "transparent,"
+                     , Color.toCssString options.labelHighlightBgColor ++ " 10%,"
+                     , Color.toCssString options.labelHighlightBgColor
+                     ]
+                        |> String.join " "
+                    )
                 ]
                 [ Html.span
                     [ style "padding" "5px 0"
@@ -1266,12 +1207,20 @@ resizeAttrs options configForm logic =
     ]
 
 
+inputFieldVertPadding : ViewOptions -> Float
+inputFieldVertPadding options =
+    --3
+    toFloat options.fontSize * options.inputSpacing
+
+
 viewChanger : ViewOptions -> ConfigForm -> Int -> Logic config -> Html (Msg config)
 viewChanger options (ConfigForm configForm) i logic =
     let
         defaultAttrs =
             [ style "width" (pxInt options.inputWidth)
-            , style "height" (pxInt options.inputHeight)
+
+            --, style "height" (pxInt (options.fontSize + (4 + inputFieldVertPadding * 2)))
+            , style "height" (px (inputFieldVertPadding options))
             ]
 
         tabAttrs =
@@ -1310,6 +1259,7 @@ viewChanger options (ConfigForm configForm) i logic =
                     )
                     Html.Events.keyCode
                 )
+            , style "font-variant-numeric" "tabular-nums"
             ]
 
         maybeField =
@@ -1327,6 +1277,7 @@ viewChanger options (ConfigForm configForm) i logic =
         Just (StringField data) ->
             Html.td []
                 [ textInputHelper
+                    options
                     { label = logic.label
                     , valStr = data.val
                     , attrs = defaultAttrs ++ tabAttrs
@@ -1359,6 +1310,7 @@ viewChanger options (ConfigForm configForm) i logic =
         Just (IntField data) ->
             Html.td []
                 [ textInputHelper
+                    options
                     { label = logic.label
                     , valStr = data.str
                     , attrs =
@@ -1393,6 +1345,7 @@ viewChanger options (ConfigForm configForm) i logic =
         Just (FloatField data) ->
             Html.td []
                 [ textInputHelper
+                    options
                     { label = logic.label
                     , valStr = data.str
                     , attrs =
@@ -1466,6 +1419,9 @@ viewChanger options (ConfigForm configForm) i logic =
                                , style "border" "1px solid rgba(0,0,0,0.3)"
                                , style "border-radius" "3px"
                                , style "box-sizing" "border-box"
+
+                               --, style "height" (pxInt (19 + options.fontSize))
+                               --, style "height" (px (toFloat options.fontSize + inputFieldVertPadding options))
                                , Html.Events.onMouseDown
                                     (ChangedConfigForm
                                         logic.fieldName
@@ -1492,18 +1448,22 @@ viewChanger options (ConfigForm configForm) i logic =
 
 
 textInputHelper :
-    { label : String
-    , valStr : String
-    , attrs : List (Html.Attribute (Msg config))
-    , setterMsg : String -> Msg config
-    }
+    ViewOptions
+    ->
+        { label : String
+        , valStr : String
+        , attrs : List (Html.Attribute (Msg config))
+        , setterMsg : String -> Msg config
+        }
     -> Html (Msg config)
-textInputHelper { label, valStr, attrs, setterMsg } =
+textInputHelper options { label, valStr, attrs, setterMsg } =
     Html.input
         ([ Html.Attributes.value valStr
          , Html.Events.onInput setterMsg
          , style "font-size" "inherit"
-         , style "padding" "0px 8px"
+
+         --, style "padding" ("3px " ++ px (0.25 * inputFieldVertPadding options))
+         , style "height" "200px"
          ]
             ++ attrs
         )
@@ -1520,7 +1480,7 @@ type alias ViewOptions =
     { fontSize : Int
     , rowSpacing : Int
     , inputWidth : Int
-    , inputHeight : Int
+    , inputSpacing : Float
     , labelHighlightBgColor : Color
     , sectionSpacing : Int
     }
@@ -1530,48 +1490,55 @@ type alias ViewOptions =
 -}
 viewOptions : ViewOptions
 viewOptions =
-    { fontSize = 24
-    , rowSpacing = 5
-    , inputWidth = 200
-    , inputHeight = 34
+    { fontSize = 18
+    , rowSpacing = 2
+    , inputWidth = 80
+    , inputSpacing = 1.4
     , labelHighlightBgColor = Color.rgb 0.8 0.8 1
-    , sectionSpacing = 20
+    , sectionSpacing = 10
     }
 
 
-{-| Update the row spacing.
--}
-withRowSpacing : Int -> ViewOptions -> ViewOptions
-withRowSpacing val options =
-    { options | rowSpacing = val }
-
-
-{-| Update the row color when hovering field labels that are pointerlock-able.
--}
-withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
-withLabelHighlightBgColor val options =
-    { options | labelHighlightBgColor = val }
-
-
-{-| Update the font size.
+{-| Update the font size in px. Default is 18.
 -}
 withFontSize : Int -> ViewOptions -> ViewOptions
 withFontSize val options =
     { options | fontSize = val }
 
 
-{-| Update the width of inputs.
+{-| Update the row spacing in px. Default is 2.
+-}
+withRowSpacing : Int -> ViewOptions -> ViewOptions
+withRowSpacing val options =
+    { options | rowSpacing = val }
+
+
+{-| Update the width of inputs in px. Default is 80.
 -}
 withInputWidth : Int -> ViewOptions -> ViewOptions
 withInputWidth val options =
     { options | inputWidth = val }
 
 
-{-| Update the height of inputs.
+{-| Update the inner spacing of inputs by a ratio of its font size. Default is 1.40.
 -}
-withInputHeight : Int -> ViewOptions -> ViewOptions
-withInputHeight val options =
-    { options | inputHeight = val }
+withInputSpacing : Float -> ViewOptions -> ViewOptions
+withInputSpacing val options =
+    { options | inputSpacing = val }
+
+
+{-| Update the row color when hovering field labels that are pointerlock-able. Default is yellow: (0.8, 0.8, 1).
+-}
+withLabelHighlightBgColor : Color -> ViewOptions -> ViewOptions
+withLabelHighlightBgColor val options =
+    { options | labelHighlightBgColor = val }
+
+
+{-| Update the extra top spacing for sections in px. Default is 20.
+-}
+withSectionSpacing : Int -> ViewOptions -> ViewOptions
+withSectionSpacing val options =
+    { options | sectionSpacing = val }
 
 
 
