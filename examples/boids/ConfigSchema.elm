@@ -44,20 +44,12 @@ myConfigFields =
     , ( "Boid Visuals", SectionKind )
     , ( "Sky color", ColorKind "skyColor" )
 
-    -- config table container
-    , ( "Config table container", SectionKind )
+    -- config container
+    , ( "Config container", SectionKind )
     , ( "BG color", ColorKind "configTableBgColor" )
     , ( "Border width", IntKind "configTableBorderWidth" )
     , ( "Border color", ColorKind "configTableBorderColor" )
     , ( "Padding", IntKind "configTablePadding" )
-
-    -- config table
-    , ( "Config table", SectionKind )
-    , ( "Row spacing", IntKind "configRowSpacing" )
-    , ( "Label highlight BG color", ColorKind "configLabelHighlightBgColor" )
-    , ( "Font size", IntKind "configFontSize" )
-    , ( "Input height", IntKind "configInputHeight" )
-    , ( "Input width", IntKind "configInputWidth" )
     ]
 
 

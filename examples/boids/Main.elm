@@ -73,7 +73,6 @@ type Msg
     | MouseMoved Point2d
     | MouseClicked Point2d
     | MouseLeft
-    | ClickedResetToDefault
 
 
 
@@ -201,25 +200,6 @@ update msg model =
                 |> updateBoidCount
             , Cmd.none
             )
-
-        ClickedResetToDefault ->
-            --let
-            --    ( config, configForm ) =
-            --        ConfigForm.resetToDefault
-            --            Config.logics
-            --            model.config
-            --            model.configForm
-            --    newModel =
-            --        { model
-            --            | config = config
-            --            , configForm = configForm
-            --        }
-            --in
-            --( newModel
-            --, Cmd.batch
-            --    [ saveToLocalStorageCmd newModel ]
-            --)
-            ( model, Cmd.none )
 
         MouseMoved pos ->
             ( { model
@@ -694,20 +674,14 @@ viewConfig ({ config } as model) =
                 Config.logics
                 model.configForm
                 |> Html.map ConfigFormMsg
-
-            --, Html.textarea
-            --    [ Html.Attributes.value
-            --        (ConfigForm.encode
-            --            Config.logics
-            --            model.config
-            --            |> JE.encode 2
-            --        )
-            --    ]
-            --    []
-            , Html.br [] []
-            , Html.button
-                [ Html.Events.onClick ClickedResetToDefault ]
-                [ Html.text "Reset to default" ]
+            , Html.textarea
+                [ Html.Attributes.value
+                    (ConfigForm.encode
+                        model.configForm
+                        |> JE.encode 2
+                    )
+                ]
+                []
             ]
         ]
 

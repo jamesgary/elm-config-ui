@@ -28,11 +28,6 @@ type alias Config =
     , configTableBorderWidth : Int
     , configTableBorderColor : Color
     , configTablePadding : Int
-    , configRowSpacing : Int
-    , configLabelHighlightBgColor : Color
-    , configFontSize : Int
-    , configInputHeight : Int
-    , configInputWidth : Int
     }
 
 
@@ -58,11 +53,6 @@ empty defaults =
     , configTableBorderWidth = defaults.int
     , configTableBorderColor = defaults.color
     , configTablePadding = defaults.int
-    , configRowSpacing = defaults.int
-    , configLabelHighlightBgColor = defaults.color
-    , configFontSize = defaults.int
-    , configInputHeight = defaults.int
-    , configInputWidth = defaults.int
     }
 
 
@@ -163,7 +153,7 @@ logics =
         .skyColor
         (\a c -> { c | skyColor = a })
     , ConfigForm.section
-        "Config table container"
+        "Config container"
     , ConfigForm.color
         "configTableBgColor"
         "BG color"
@@ -184,33 +174,6 @@ logics =
         "Padding"
         .configTablePadding
         (\a c -> { c | configTablePadding = a })
-    , ConfigForm.section
-        "Config table"
-    , ConfigForm.int
-        "configRowSpacing"
-        "Row spacing"
-        .configRowSpacing
-        (\a c -> { c | configRowSpacing = a })
-    , ConfigForm.color
-        "configLabelHighlightBgColor"
-        "Label highlight BG color"
-        .configLabelHighlightBgColor
-        (\a c -> { c | configLabelHighlightBgColor = a })
-    , ConfigForm.int
-        "configFontSize"
-        "Font size"
-        .configFontSize
-        (\a c -> { c | configFontSize = a })
-    , ConfigForm.int
-        "configInputHeight"
-        "Input height"
-        .configInputHeight
-        (\a c -> { c | configInputHeight = a })
-    , ConfigForm.int
-        "configInputWidth"
-        "Input width"
-        .configInputWidth
-        (\a c -> { c | configInputWidth = a })
     ]
 
 
