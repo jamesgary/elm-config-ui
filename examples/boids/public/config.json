@@ -1,78 +1,87 @@
 {
-  "viewportWidth": 1017,
-  "viewportHeight": 533,
-  "timeScale": 1.0000000000000042,
-  "numBoids": 93,
-  "boidRad": 24.00000000000003,
-  "visionRange": 100,
-  "showRanges": false,
-  "maxSpeed": 303.4,
-  "momentumColor": {
-    "r": 0.02659999999999995,
-    "g": 0.00006666666666666626,
-    "b": 0.026599999999999943,
-    "a": 0.1
-  },
-  "momentumFactor": 1.0099999999999985,
-  "cohesionColor": {
-    "r": 0.020100000000000007,
-    "g": 0.48932333333333333,
-    "b": 0.8732333333333333,
-    "a": 1
-  },
-  "cohesionFactor": 128,
-  "alignmentColor": {
-    "r": 0.03849999999999998,
-    "g": 0.6948333333333334,
-    "b": 0.16320333333333337,
-    "a": 1
-  },
-  "alignmentFactor": 0.11979999999999981,
-  "separationFactor": 42.05000000000001,
-  "separationColor": {
-    "r": 0.96,
-    "g": 0,
-    "b": 0,
-    "a": 1
-  },
-  "separationRangeFactor": 1.3500000000000003,
-  "mouseFactor": -134,
-  "mouseColor": {
-    "r": 0.7501333333333334,
-    "g": 0.0232,
-    "b": 0.7501333333333332,
-    "a": 1
-  },
-  "showVels": true,
-  "arrowScale": 0.31999999999999595,
-  "skyColor": {
-    "r": 0.5659333333333332,
-    "g": 0.8562933333333331,
-    "b": 0.9807333333333335,
-    "a": 1
-  },
-  "configTableBgColor": {
-    "r": 0.9347833333333334,
-    "g": 0.9371666666666667,
-    "b": 0.8895,
-    "a": 1
-  },
-  "configTableBorderWidth": 1,
-  "configTableBorderColor": {
-    "r": 0.30160000000000003,
-    "g": 0.25628800000000007,
-    "b": 0.018400000000000027,
-    "a": 1
-  },
-  "configTablePadding": 14,
-  "configRowSpacing": 4,
-  "configLabelHighlightBgColor": {
-    "r": 0.9551186666666667,
-    "g": 0.9986333333333334,
-    "b": 0.4547,
-    "a": 0.945
-  },
-  "configFontSize": 21,
-  "configInputHeight": 33,
-  "configInputWidth": 101
+  "fields": {
+    "viewportWidth": [
+      791,
+      0
+    ],
+    "viewportHeight": [
+      626,
+      0
+    ],
+    "timeScale": [
+      1,
+      0
+    ],
+    "numBoids": [
+      45,
+      0
+    ],
+    "boidRad": [
+      27,
+      0
+    ],
+    "visionRange": [
+      100,
+      0
+    ],
+    "showRanges": false,
+    "maxSpeed": [
+      305,
+      0
+    ],
+    "momentumFactor": [
+      1,
+      -2
+    ],
+    "cohesionFactor": [
+      128,
+      0
+    ],
+    "alignmentFactor": [
+      0.12999999999999934,
+      -2
+    ],
+    "separationFactor": [
+      42,
+      -1
+    ],
+    "separationPower": [
+      2,
+      -2
+    ],
+    "separationRangeFactor": [
+      1.2600000000000018,
+      -2
+    ],
+    "mouseFactor": [
+      -105,
+      0
+    ],
+    "skyColor": {
+      "r": 0.2943999999999999,
+      "g": 0.9648639999999999,
+      "b": 0.9856000000000001,
+      "a": 1
+    },
+    "configTableBgColor": {
+      "r": 0.9758333333333333,
+      "g": 0.942,
+      "b": 0.6375,
+      "a": 1
+    },
+    "configTableBorderWidth": [
+      1,
+      0
+    ],
+    "configTableBorderColor": {
+      "r": 0.47730000000000006,
+      "g": 0.3619833333333334,
+      "b": 0.016033333333333344,
+      "a": 1
+    },
+    "configTablePadding": [
+      15,
+      0
+    ]
+  }
 }
