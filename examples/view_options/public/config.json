@@ -1,0 +1,48 @@
+{
+  "fields": {
+    "headerFontSize": [
+      52,
+      0
+    ],
+    "configBgColor": {
+      "r": 0.7834666666666668,
+      "g": 0.9533333333333333,
+      "b": 0.7800000000000001,
+      "a": 1
+    },
+    "configPaddingX": [
+      5,
+      0
+    ],
+    "configPaddingY": [
+      10,
+      0
+    ],
+    "configFontSize": [
+      18,
+      0
+    ],
+    "configRowSpacing": [
+      2,
+      0
+    ],
+    "configInputWidth": [
+      80,
+      0
+    ],
+    "configInputSpacing": [
+      1.4000000000000048,
+      -2
+    ],
+    "configLabelHighlightBgColor": {
+      "r": 0.6619999999999999,
+      "g": 0.7640933333333333,
+      "b": 0.9913333333333334,
+      "a": 1
+    },
+    "configSectionSpacing": [
+      17,
+      0
+    ]
+  }
+}

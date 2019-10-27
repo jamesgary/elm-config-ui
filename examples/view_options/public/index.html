@@ -2,12 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Simple Config Example</title>
+    <title>View Options Example</title>
     <style>
       html, body {
         margin: 0;
         padding: 0;
-        height: 100%;
       }
     </style>
   </head>
@@ -25,7 +24,7 @@
     <script>
       ElmConfigUi.init({
         filepath: "./config.json",
-        localStorageKey: "config_example_simple",
+        localStorageKey: "config_example_view_options",
         callback: function(elmConfigUiData) {
           // start main Elm app
           let app = Elm.Main.init({

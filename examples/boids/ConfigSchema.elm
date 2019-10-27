@@ -6,8 +6,9 @@ import Html exposing (Html)
 
 myConfigFields : List ( String, Kind )
 myConfigFields =
-    [ ( "Viewport width (px)", FloatKind "viewportWidth" )
-    , ( "Viewport height (px)", FloatKind "viewportHeight" )
+    [ ( "Viewport width (px)", IntKind "viewportWidth" )
+    , ( "Viewport height (px)", IntKind "viewportHeight" )
+    , ( "Time Scale", FloatKind "timeScale" )
 
     -- boids
     , ( "Boids", SectionKind )

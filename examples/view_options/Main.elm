@@ -109,49 +109,60 @@ update msg model =
             )
 
 
+px : Int -> String
+px num =
+    String.fromInt num ++ "px"
+
+
 view : Model -> Html Msg
 view model =
     Html.div
-        [ style "background" (Color.toCssString model.config.bgColor)
-        , style "font-size" "22px"
-        , style "padding" "20px"
-        , style "height" "100%"
-        , style "font-family" "sans-serif"
+        [ style "font-family" "sans-serif"
         ]
         [ Html.h1
-            [ style "font-size" (String.fromInt model.config.headerFontSize ++ "px")
-            , style "line-height" "0"
+            [ style "font-size" (px model.config.headerFontSize)
             ]
             [ Html.text "Some Header Text" ]
-        , Html.p
-            [ style "font-size" (String.fromInt model.config.bodyFontSize ++ "px") ]
-            [ Html.text "I am the body text!" ]
-        , Html.div
-            [ style "padding" "12px"
-            , style "background" "#eec"
-            , style "border" "1px solid #444"
-            , style "position" "absolute"
-            , style "height" "calc(100% - 80px)"
-            , style "right" "20px"
-            , style "top" "20px"
+        , viewConfig model
+        ]
+
+
+viewConfig : Model -> Html Msg
+viewConfig { config, configForm } =
+    Html.div
+        [ style "padding"
+            (px config.configPaddingX ++ " " ++ px config.configPaddingY)
+        , style "background" (Color.toCssString config.configBgColor)
+        , style "border" "1px solid #444"
+        , style "position" "absolute"
+        , style "height" "calc(100% - 80px)"
+        , style "right" "20px"
+        , style "top" "20px"
+        , style "overflow-y" "scroll"
+        ]
+        [ ConfigForm.view
+            (ConfigForm.viewOptions
+                |> ConfigForm.withInputWidth config.configInputWidth
+                |> ConfigForm.withInputSpacing config.configInputSpacing
+                |> ConfigForm.withFontSize config.configFontSize
+                |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
+                |> ConfigForm.withRowSpacing config.configRowSpacing
+                |> ConfigForm.withSectionSpacing config.configSectionSpacing
+            )
+            Config.logics
+            configForm
+            |> Html.map ConfigFormMsg
+        , Html.hr [] []
+        , Html.text "Copy this json to config.json:"
+        , Html.br [] []
+        , Html.textarea
+            [ style "width" "100%"
+            , style "height" "100px"
+            , Html.Attributes.readonly True
             ]
-            [ ConfigForm.view
-                ConfigForm.viewOptions
-                Config.logics
-                model.configForm
-                |> Html.map ConfigFormMsg
-            , Html.hr [] []
-            , Html.text "Copy this json to config.json:"
-            , Html.br [] []
-            , Html.textarea
-                [ style "width" "100%"
-                , style "height" "100px"
-                , Html.Attributes.readonly True
-                ]
-                [ ConfigForm.encode model.configForm
-                    |> Json.Encode.encode 2
-                    |> Html.text
-                ]
+            [ ConfigForm.encode configForm
+                |> Json.Encode.encode 2
+                |> Html.text
             ]
         ]
 

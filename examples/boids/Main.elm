@@ -29,24 +29,7 @@ import Svg.Attributes
 import Vector2d exposing (Vector2d)
 
 
-log : String -> a -> a
-log msg val =
-    let
-        {--
-        _ =
-            Debug.log msg val
-
-        --}
-        _ =
-            0
-    in
-    val
-
-
 port sendToPort : JD.Value -> Cmd msg
-
-
-port receiveFromPort : (JD.Value -> msg) -> Sub msg
 
 
 main =
@@ -65,7 +48,6 @@ type alias ModelResult =
 type alias Model =
     { config : Config
     , configForm : ConfigForm
-    , isConfigOpen : Bool
     , boids : Array Boid
     , seed : Random.Seed
     , mousePos : Maybe Point2d
@@ -87,9 +69,6 @@ type alias Boid =
 
 type Msg
     = ConfigFormMsg (ConfigForm.Msg Config)
-    | ReceivedFromPort JE.Value
-    | ClickedOpenConfig
-    | ClickedCloseConfig
     | Tick Float
     | MouseMoved Point2d
     | MouseClicked Point2d
@@ -102,33 +81,16 @@ type Msg
 
 
 type alias Flags =
-    { localStorage : LocalStorage
-    , configFile : JE.Value
+    { elmConfigUiData : JE.Value
     , timestamp : Int
-    }
-
-
-type alias LocalStorage =
-    { configForm : JE.Value
-
-    -- other things you may not necessarily want in your config form
-    , isConfigOpen : Bool
     }
 
 
 decodeFlags : JD.Decoder Flags
 decodeFlags =
     JD.succeed Flags
-        |> JDP.required "localStorage" decodeLocalStorage
-        |> JDP.required "configFile" JD.value
+        |> JDP.required "elmConfigUiData" JD.value
         |> JDP.required "timestamp" JD.int
-
-
-decodeLocalStorage : JD.Decoder LocalStorage
-decodeLocalStorage =
-    JD.succeed LocalStorage
-        |> JDP.optional "configForm" JD.value (JE.object [])
-        |> JDP.optional "isConfigOpen" JD.bool False
 
 
 
@@ -142,8 +104,7 @@ init jsonFlags =
             let
                 ( config, configForm ) =
                     ConfigForm.init
-                        { configJson = flags.configFile
-                        , configFormJson = flags.localStorage.configForm
+                        { flags = flags.elmConfigUiData
                         , logics = Config.logics
                         , emptyConfig =
                             Config.empty
@@ -163,7 +124,6 @@ init jsonFlags =
             ( Ok
                 { config = config
                 , configForm = configForm
-                , isConfigOpen = flags.localStorage.isConfigOpen
                 , boids = boids
                 , seed = seed
                 , mousePos = Nothing
@@ -195,8 +155,8 @@ boidGenerator config =
             , color = color
             }
         )
-        (Random.float 0 config.viewportWidth)
-        (Random.float 0 config.viewportHeight)
+        (Random.float 0 (toFloat config.viewportWidth))
+        (Random.float 0 (toFloat config.viewportHeight))
         (Random.float 0 (2 * pi))
         colorGenerator
 
@@ -224,7 +184,7 @@ update msg model =
 
         ConfigFormMsg configFormMsg ->
             let
-                ( newConfig, newConfigForm, maybeJsonCmd ) =
+                ( newConfig, newConfigForm ) =
                     ConfigForm.update
                         Config.logics
                         model.config
@@ -239,109 +199,34 @@ update msg model =
             in
             ( newModel
                 |> updateBoidCount
-            , Cmd.batch
-                [ saveToLocalStorageCmd newModel
-                , case maybeJsonCmd of
-                    Just jsonCmd ->
-                        sendToPort
-                            (JE.object
-                                [ ( "id", JE.string "CONFIG" )
-                                , ( "val", jsonCmd )
-                                ]
-                            )
-
-                    Nothing ->
-                        Cmd.none
-                ]
+            , Cmd.none
             )
-
-        ReceivedFromPort portJson ->
-            case JD.decodeValue fromPortDecoder portJson of
-                Ok receiveMsg ->
-                    case receiveMsg of
-                        ConfigFormPortMsg json ->
-                            let
-                                ( newConfig, newConfigForm, maybeJsonCmd ) =
-                                    ConfigForm.updateFromJson
-                                        Config.logics
-                                        model.config
-                                        model.configForm
-                                        json
-
-                                newModel =
-                                    { model
-                                        | config = newConfig
-                                        , configForm = newConfigForm
-                                    }
-                            in
-                            ( newModel
-                                |> updateBoidCount
-                            , Cmd.batch
-                                [ saveToLocalStorageCmd newModel
-                                , case maybeJsonCmd of
-                                    Just jsonCmd ->
-                                        sendToPort
-                                            (JE.object
-                                                [ ( "id", JE.string "CONFIG" )
-                                                , ( "val", jsonCmd )
-                                                ]
-                                            )
-
-                                    Nothing ->
-                                        Cmd.none
-                                ]
-                            )
-
-                Err err ->
-                    let
-                        _ =
-                            log "Could not decode incoming port msg: " (JD.errorToString err)
-                    in
-                    ( model, Cmd.none )
 
         ClickedResetToDefault ->
-            let
-                ( config, configForm ) =
-                    ConfigForm.resetToDefault
-                        Config.logics
-                        model.config
-                        model.configForm
-
-                newModel =
-                    { model
-                        | config = config
-                        , configForm = configForm
-                    }
-            in
-            ( newModel
-            , Cmd.batch
-                [ saveToLocalStorageCmd newModel ]
-            )
-
-        ClickedOpenConfig ->
-            let
-                newModel =
-                    { model | isConfigOpen = True }
-            in
-            ( newModel
-            , saveToLocalStorageCmd newModel
-            )
-
-        ClickedCloseConfig ->
-            let
-                newModel =
-                    { model | isConfigOpen = False }
-            in
-            ( newModel
-            , saveToLocalStorageCmd newModel
-            )
+            --let
+            --    ( config, configForm ) =
+            --        ConfigForm.resetToDefault
+            --            Config.logics
+            --            model.config
+            --            model.configForm
+            --    newModel =
+            --        { model
+            --            | config = config
+            --            , configForm = configForm
+            --        }
+            --in
+            --( newModel
+            --, Cmd.batch
+            --    [ saveToLocalStorageCmd newModel ]
+            --)
+            ( model, Cmd.none )
 
         MouseMoved pos ->
             ( { model
                 | mousePos =
                     pos
                         |> Point2d.coordinates
-                        |> (\( x, y ) -> ( x, model.config.viewportHeight - y ))
+                        |> (\( x, y ) -> ( x, toFloat model.config.viewportHeight - y ))
                         |> Point2d.fromCoordinates
                         |> Just
               }
@@ -491,7 +376,9 @@ moveBoid config maybeMousePos delta otherBoids boid =
         velFromRule : Point2d -> Float -> (List Boid -> Vector2d) -> Vector2d
         velFromRule pos range ruleFunc =
             boidsInRange
-                ( config.viewportWidth, config.viewportHeight )
+                ( toFloat config.viewportWidth
+                , toFloat config.viewportHeight
+                )
                 range
                 otherBoids
                 pos
@@ -642,24 +529,29 @@ moveBoid config maybeMousePos delta otherBoids boid =
                             v
                    )
 
+        ( w, h ) =
+            ( toFloat config.viewportWidth
+            , toFloat config.viewportHeight
+            )
+
         newPos =
             boid.pos
                 |> Point2d.translateBy (Vector2d.scaleBy (delta / 1000) newVel)
                 |> Point2d.coordinates
                 |> (\( x, y ) ->
                         ( if x < 0 then
-                            config.viewportWidth - abs x
+                            w - abs x
 
-                          else if x > config.viewportWidth then
-                            x - config.viewportWidth
+                          else if x > w then
+                            x - w
 
                           else
                             x
                         , if y < 0 then
-                            config.viewportHeight - abs y
+                            h - abs y
 
-                          else if y > config.viewportHeight then
-                            y - config.viewportHeight
+                          else if y > h then
+                            y - h
 
                           else
                             y
@@ -762,25 +654,6 @@ fromPortDecoder =
             )
 
 
-saveToLocalStorageCmd : Model -> Cmd Msg
-saveToLocalStorageCmd model =
-    sendToPort <|
-        JE.object
-            [ ( "id", JE.string "SAVE" )
-            , ( "val"
-              , JE.object
-                    [ ( "configForm"
-                      , ConfigForm.encodeConfigForm
-                            model.configForm
-                      )
-                    , ( "isConfigOpen"
-                      , JE.bool model.isConfigOpen
-                      )
-                    ]
-              )
-            ]
-
-
 view : ModelResult -> Html Msg
 view modelResult =
     case modelResult of
@@ -792,11 +665,8 @@ view modelResult =
                 , style "font-family" "sans-serif"
                 , style "box-sizing" "border-box"
                 ]
-                [ --viewBoids model
-                  viewBoidsWebGL model
+                [ viewBoidsWebGL model
                 , viewConfig model
-
-                --, viewInspector model
                 ]
 
         Err err ->
@@ -809,7 +679,7 @@ viewConfig ({ config } as model) =
         [ style "right" "20px"
         , style "top" "20px"
         , style "position" "absolute"
-        , style "height" "100%"
+        , style "height" "calc(100% - 80px)"
         , style "font-size" "22px"
         ]
         [ Html.div
@@ -819,47 +689,26 @@ viewConfig ({ config } as model) =
             , style "border" ("1px solid " ++ Color.toCssString config.configTableBorderColor)
             , style "height" "100%"
             ]
-            (if model.isConfigOpen then
-                [ Html.button
-                    [ style "text-align" "right"
-                    , Html.Events.onClick ClickedCloseConfig
-                    ]
-                    [ Html.text "Close Config"
-                    ]
-                , ConfigForm.view
-                    (ConfigForm.viewOptions
-                        |> ConfigForm.withRowSpacing config.configRowSpacing
-                        |> ConfigForm.withLabelHighlightBgColor config.configLabelHighlightBgColor
-                        |> ConfigForm.withInputWidth config.configInputWidth
-                        |> ConfigForm.withInputHeight config.configInputHeight
-                        |> ConfigForm.withFontSize config.configFontSize
-                    )
-                    Config.logics
-                    model.configForm
-                    |> Html.map ConfigFormMsg
-                , Html.textarea
-                    [ Html.Attributes.value
-                        (ConfigForm.encode
-                            Config.logics
-                            model.config
-                            |> JE.encode 2
-                        )
-                    ]
-                    []
-                , Html.br [] []
-                , Html.button
-                    [ Html.Events.onClick ClickedResetToDefault ]
-                    [ Html.text "Reset to default" ]
-                ]
+            [ ConfigForm.view
+                ConfigForm.viewOptions
+                Config.logics
+                model.configForm
+                |> Html.map ConfigFormMsg
 
-             else
-                [ Html.button
-                    [ style "text-align" "right"
-                    , Html.Events.onClick ClickedOpenConfig
-                    ]
-                    [ Html.text "Open Config" ]
-                ]
-            )
+            --, Html.textarea
+            --    [ Html.Attributes.value
+            --        (ConfigForm.encode
+            --            Config.logics
+            --            model.config
+            --            |> JE.encode 2
+            --        )
+            --    ]
+            --    []
+            , Html.br [] []
+            , Html.button
+                [ Html.Events.onClick ClickedResetToDefault ]
+                [ Html.text "Reset to default" ]
+            ]
         ]
 
 
@@ -870,8 +719,8 @@ viewBoidsWebGL model =
             2 * model.config.boidRad
 
         ( w, h ) =
-            ( model.config.viewportWidth
-            , model.config.viewportHeight
+            ( toFloat model.config.viewportWidth
+            , toFloat model.config.viewportHeight
             )
 
         boidRenderables =
@@ -982,8 +831,7 @@ subscriptions modelResult =
     case modelResult of
         Ok model ->
             Sub.batch
-                [ receiveFromPort ReceivedFromPort
-                , Browser.Events.onAnimationFrameDelta Tick
+                [ Browser.Events.onAnimationFrameDelta Tick
                 ]
 
         Err _ ->

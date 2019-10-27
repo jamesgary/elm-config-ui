@@ -1,0 +1,22 @@
+{
+  "fields": {
+    "headerFontSize": [
+      70,
+      1
+    ],
+    "bodyFontSize": [
+      59,
+      0
+    ],
+    "fZZZZZZZZZZZZloatyTest": [
+      0.604,
+      -3
+    ],
+    "bgColor": {
+      "r": 0.9148000000000001,
+      "g": 0.8931279999999999,
+      "b": 0.6052,
+      "a": 1
+    }
+  }
+}
