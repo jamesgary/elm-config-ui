@@ -150,8 +150,7 @@ type alias Defaults =
 
 {-| InitOptions are used to initialize your config and ConfigForm.
 
-    { configJson = flags.configFile
-    , configFormJson = flags.localStorage.json
+    { flags = flagsFromJavascript
     , logics = Config.logics
     , emptyConfig = Config.empty
     }
