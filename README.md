@@ -212,22 +212,14 @@ view model =
 
 New features
 
-- Undo/redo (maybe just one? for easy toggling of before/after)
-- Indicator for vals that differ from file
+- Undo/redo
+- Reset to default
+- Indicator for vals that differ from file (or that are entirely new)
 - Save scrolltop
 - Fancy (or custom) kinds, like css or elm-ui attributes?
 
 Optimizations
 
-- Cleaner run script (remove duplication, tmp file)
+- Cleaner run script (remove duplication and tmp file?)
 
 Tests!
-
-# Questions
-
-- How opinionated should this be?
-  - Should I allow users to skip pointerlock or even saving?
-  - Should I include the toggleable form container and JSON preview textarea by default, including the toggle functionality? Or is that best left to the dev to control?
-- Is there any way to let users create new vals, like xy or elm-ui attrs?
-  - I could add them myself with only non-breaking minor updates
-- How customizable should the view be?
