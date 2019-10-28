@@ -1,7 +1,7 @@
 module ConfigForm exposing
     ( ConfigForm, init, InitOptions, Defaults
     , Msg
-    , update, resetToDefault
+    , update
     , encode
     , view
     , viewOptions, withFontSize, withRowSpacing, withInputWidth, withInputSpacing, withLabelHighlightBgColor, withSectionSpacing
@@ -28,7 +28,7 @@ Also, `Value` is shorthand for `Json.Encode.Value`.
 
 # Update
 
-@docs update, resetToDefault
+@docs update
 
 
 # Encoding
@@ -205,25 +205,8 @@ init options =
                         )
                     )
                 |> OrderedDict.fromList
-
-        --config =
-        --    decodeConfig
-        --        options.logics
-        --        options.emptyConfig
-        --        flags
-        --configForm =
-        --    decodeConfigForm
-        --        options.logics
-        --        config
-        --        flags
-        --        |> Debug.log "FIUNAL"
-        --configFormRecord =
-        --    case configForm of
-        --        ConfigForm record ->
-        --            record
     in
-    ( --configFromConfigForm options.logics configFormRecord.fields config
-      configFromFields options.logics mergedFields options.emptyConfig
+    ( configFromFields options.logics mergedFields options.emptyConfig
     , ConfigForm
         { fields = mergedFields
         , fileFields = fileFields
@@ -366,49 +349,8 @@ type Msg config
 
 {-| Encodes the current Config (with some metadata) in your ConfigForm. Usually used for both localStorage and as a .json file.
 -}
-
-
-
---encode : List (Logic config) -> config -> ConfigForm -> JE.Value
---encode logics config (ConfigForm configForm) =
-
-
 encode : ConfigForm -> JE.Value
 encode (ConfigForm configForm) =
-    --logics
-    --    |> List.filterMap
-    --        (\logic ->
-    --            case logic.kind of
-    --                IntLogic getter _ ->
-    --                    Just
-    --                        ( logic.fieldName
-    --                        , JE.int (getter config)
-    --                        )
-    --                FloatLogic getter _ ->
-    --                    Just
-    --                        ( logic.fieldName
-    --                        , JE.float (getter config)
-    --                        )
-    --                StringLogic getter _ ->
-    --                    Just
-    --                        ( logic.fieldName
-    --                        , JE.string (getter config)
-    --                        )
-    --                BoolLogic getter _ ->
-    --                    Just
-    --                        ( logic.fieldName
-    --                        , JE.bool (getter config)
-    --                        )
-    --                ColorLogic getter _ ->
-    --                    Just
-    --                        ( logic.fieldName
-    --                        , getter config
-    --                            |> encodeColor
-    --                        )
-    --                SectionLogic ->
-    --                    Nothing
-    --        )
-    --    |> JE.object
     JE.object
         [ ( "fields", encodeFields configForm.fields )
         ]
@@ -430,21 +372,6 @@ encodeColor col =
 
 {-| Encodes the current data of your config form to be persisted, including meta-data. This is typically used to save to localStorage.
 -}
-
-
-
---encodeConfigForm : ConfigForm -> JE.Value
---encodeConfigForm (ConfigForm configForm) =
---    {-
---       do i even need a config at all?
---       does configform even need config?
---       only need it for view...
---    -}
---    JE.object
---        [ ( "fields", encodeFields configForm.fields )
---        ]
-
-
 encodeFields : OrderedDict String Field -> JE.Value
 encodeFields fields =
     fields
@@ -699,11 +626,6 @@ poweredInt power val =
 poweredFloat : Int -> Float -> Float
 poweredFloat power val =
     Round.roundNum -power val
-
-
-
---decodeConfigForm : List (Logic config) -> config -> Flags -> ConfigForm
---decodeConfigForm logics emptyConfig ({ file, localStorage } as flags) =
 
 
 decodeFields : List (Logic config) -> JE.Value -> Dict String Field
@@ -1209,7 +1131,6 @@ resizeAttrs options configForm logic =
 
 inputFieldVertPadding : ViewOptions -> Float
 inputFieldVertPadding options =
-    --3
     toFloat options.fontSize * options.inputSpacing
 
 
@@ -1218,8 +1139,6 @@ viewChanger options (ConfigForm configForm) i logic =
     let
         defaultAttrs =
             [ style "width" (pxInt options.inputWidth)
-
-            --, style "height" (pxInt (options.fontSize + (4 + inputFieldVertPadding * 2)))
             , style "height" (px (inputFieldVertPadding options))
             ]
 
@@ -1419,9 +1338,6 @@ viewChanger options (ConfigForm configForm) i logic =
                                , style "border" "1px solid rgba(0,0,0,0.3)"
                                , style "border-radius" "3px"
                                , style "box-sizing" "border-box"
-
-                               --, style "height" (pxInt (19 + options.fontSize))
-                               --, style "height" (px (toFloat options.fontSize + inputFieldVertPadding options))
                                , Html.Events.onMouseDown
                                     (ChangedConfigForm
                                         logic.fieldName
@@ -1461,8 +1377,6 @@ textInputHelper options { label, valStr, attrs, setterMsg } =
         ([ Html.Attributes.value valStr
          , Html.Events.onInput setterMsg
          , style "font-size" "inherit"
-
-         --, style "padding" ("3px " ++ px (0.25 * inputFieldVertPadding options))
          , style "height" "200px"
          ]
             ++ attrs
@@ -1553,25 +1467,3 @@ px num =
 pxInt : Int -> String
 pxInt num =
     String.fromInt num ++ "px"
-
-
-
--- NEW/EXPERIMENTAL
-
-
-{-| Resets your `config` and `ConfigForm` to their default state. This is equivalent to clearing your cache and relying on just your .json file.
--}
-resetToDefault : List (Logic config) -> config -> ConfigForm -> ( config, ConfigForm )
-resetToDefault logics config (ConfigForm configForm) =
-    --let
-    --    newConfig =
-    --        decodeConfig logics config configForm.fileJson
-    --in
-    --( newConfig
-    --, dzzecodeConfigForm
-    --    logics
-    --    newConfig
-    --    (JE.object [])
-    --    configForm.fileJson
-    --)
-    ( config, ConfigForm configForm )
