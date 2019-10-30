@@ -1,55 +1,71 @@
-// From https://github.com/jamesgary/elm-config-ui/blob/master/elm-config-ui-helper.js
+window.ElmConfigUi = {
+  init: function({filepath, localStorageKey, callback}) {
+    this.localStorageKey = localStorageKey;
 
-// See pointerlock docs at https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
-
-let hasFirstMouseMoveEventPassedDueToWebkitBug = false;
-
-let ConfigForm = {
-  init: function(app) {
-    function updatePosition(e) {
-      if (hasFirstMouseMoveEventPassedDueToWebkitBug) {
-        app.ports.receiveFromPort.send({
-          id: "CONFIG",
-          val: {
-            id: "MOUSE_MOVE",
-            x: e.movementX,
-          },
+    fetch(filepath)
+      .then(function(resp) { return resp.json() })
+      .then(function(fileJson) {
+        callback({
+          file: fileJson,
+          localStorage: JSON.parse(localStorage.getItem(localStorageKey)),
         });
-      } else {
-        console.log("Ignoring dumb bad movementX:", e.movementX);
-        hasFirstMouseMoveEventPassedDueToWebkitBug = true;
-      }
+      });
+
+    window.customElements.define('elm-config-ui-slider', ElmConfigUiSlider);
+    window.customElements.define('elm-config-ui-json', ElmConfigUiJson);
+  },
+};
+
+class ElmConfigUiSlider extends HTMLElement {
+  constructor() {
+    return super();
+  }
+
+  connectedCallback() {
+    let self = this;
+
+    function updatePosition(e) {
+      self.dispatchEvent(new CustomEvent('pl', {
+        detail: { x: e.movementX },
+      }));
     }
 
     function mouseUp(e) {
       document.exitPointerLock();
-      app.ports.receiveFromPort.send({
-        id: "CONFIG",
-        val: {
-          id: "MOUSE_UP",
-        },
-      });
+      self.dispatchEvent(new CustomEvent('plMouseUp', e));
     }
 
+    self.addEventListener('mousedown', function() {
+      self.requestPointerLock();
+    });
+
     document.addEventListener('pointerlockchange', function() {
-      if (document.pointerLockElement === node) {
+      if (document.pointerLockElement === self) {
         document.addEventListener("mousemove", updatePosition, false);
         document.addEventListener("mouseup", mouseUp, false);
-        hasFirstMouseMoveEventPassedDueToWebkitBug = false;
       } else {
         document.removeEventListener("mousemove", updatePosition, false);
         document.removeEventListener("mouseup", mouseUp, false);
       }
     }, false);
-  },
+  }
+}
 
-  receivePortMsg: function(effect, node) {
-    switch (effect) {
-      case "LOCK_POINTER":
-        node.requestPointerLock();
-        break;
-      default:
-        console.error("Unknown ConfigEffect", effect.val);
-    }
-  },
-};
+class ElmConfigUiJson extends HTMLElement {
+  constructor() {
+    return super();
+  }
+
+  connectedCallback() {
+    let self = this;
+  }
+
+  static get observedAttributes() {
+    return ['data-encoded-config'];
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    console.log("localStorageKey", window.ElmConfigUi.localStorageKey);
+    localStorage.setItem(window.ElmConfigUi.localStorageKey, newValue);
+  }
+}
